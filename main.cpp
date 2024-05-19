@@ -8,14 +8,13 @@
 
 #include "Camera/Camera.h"
 
-#include "Math/Transform.h"
-
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
 int main(){
     Window windowHandler;
-    windowHandler.InitializeWindow();
+
+    Camera camera{&windowHandler};
 
     std::vector<Vertex> vertices;
 

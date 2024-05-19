@@ -1,37 +1,37 @@
 #pragma once
 
+#include "Event/Event.h"
+
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
 #include <string>
+#include <memory>
+#include <functional>
 
-class Window
-{
+DECLARE_EVENT(KeyboardKeyPressed, int, int);
+
+class Window {
 public:
-	void InitializeWindow();
+    Window();
+
+    Window(int width, int height, const std::string& windowName);
+
 	bool ShouldWindowClose();
 	void Update();
 
     static void Clear();
 
-    /*
-     * \brief Gets the width of the window.
-     * \return Width of the window.
-     */
-    int GetWidth() const;
-
-    /*
-     * \brief Gets the height of the window.
-     * \return height of the window.
-     */
-    int GetHeight() const;
+    KeyboardKeyPressed& OnKeyboardKeyPressed();
 
 private:
-	GLFWwindow* _window = nullptr;
-	std::string _windowName = {"Thot-engine"};
-	static constexpr int _width = 800;
-	static constexpr int _height = 600;
+	GLFWwindow* _window{nullptr};
 
+    KeyboardKeyPressed _onKeyboardKeyPressed;
+
+    void _initializeWindow(int width = 800, int height = 600, const std::string& windowName = "VishEngine");
 	void _setFramebufferSizeCallback();
+
+    void _setKeyPressedCallback();
 };

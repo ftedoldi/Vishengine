@@ -49,33 +49,12 @@ static void TerminateProgram(){
     std::exit(1);
 }
 
-void Window::InitializeWindow(){
-    if (!glfwInit())
-        std::exit(EXIT_FAILURE);
+Window::Window() {
+    _initializeWindow();
+}
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    _window = glfwCreateWindow(_width, _height, _windowName.c_str(), nullptr, nullptr);
-    if (!_window){
-        std::cout << "Failed to create the window" << std::endl;
-        TerminateProgram();
-    }
-
-    glfwMakeContextCurrent(_window);
-
-    if (int version{gladLoadGL(glfwGetProcAddress)}; version == 0){
-        std::cout << "Failed to initialize GLAD" << std::endl;
-        TerminateProgram();
-    }
-
-    glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback(message_callback, nullptr);
-
-    _setFramebufferSizeCallback();
-
-    Camera::PerspectiveMatrix = glm::perspective(glm::radians(45.f), static_cast<float>(_width) / static_cast<float>(_height), 0.1f, 100.f);
+Window::Window(const int width, const int height, const std::string& windowName) {
+    _initializeWindow(width, height, windowName);
 }
 
 bool Window::ShouldWindowClose(){
@@ -88,6 +67,48 @@ void Window::Update()
     glfwPollEvents();
 }
 
+void Window::Clear() {
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
+KeyboardKeyPressed& Window::OnKeyboardKeyPressed() {
+    return _onKeyboardKeyPressed;
+}
+
+void Window::_initializeWindow(const int width, const int height, const std::string &windowName) {
+    if (!glfwInit())
+        std::exit(EXIT_FAILURE);
+
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    _window = glfwCreateWindow(width, height, windowName.c_str(), nullptr, nullptr);
+    if (!_window){
+        std::cout << "Failed to create the window" << std::endl;
+        TerminateProgram();
+    }
+
+    glfwMakeContextCurrent(_window);
+
+    if (const int version{gladLoadGL(glfwGetProcAddress)}; version == 0){
+        std::cout << "Failed to initialize GLAD" << std::endl;
+        TerminateProgram();
+    }
+
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(message_callback, nullptr);
+
+    // Sets the window user pointer to this so that in the glfw callbacks the pointer to this can be taken
+    glfwSetWindowUserPointer(_window, this);
+
+    _setFramebufferSizeCallback();
+    _setKeyPressedCallback();
+
+    Camera::PerspectiveMatrix = glm::perspective(glm::radians(45.f), static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.f);
+}
+
 void Window::_setFramebufferSizeCallback()
 {
     auto framebufferSizeCallback = [](GLFWwindow*, int width, int height) {
@@ -98,15 +119,11 @@ void Window::_setFramebufferSizeCallback()
     glfwSetFramebufferSizeCallback(_window, framebufferSizeCallback);
 }
 
-void Window::Clear() {
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-}
+void Window::_setKeyPressedCallback() {
+    auto keyCallback = [](GLFWwindow* window, int key, int, int action, int) {
+        auto *const selfWindow{static_cast<Window*>(glfwGetWindowUserPointer(window))};
+        selfWindow->_onKeyboardKeyPressed.Broadcast(key, action);
+    };
 
-int Window::GetWidth() const {
-    return _width;
-}
-
-int Window::GetHeight() const {
-    return _height;
+    glfwSetKeyCallback(_window, keyCallback);
 }
