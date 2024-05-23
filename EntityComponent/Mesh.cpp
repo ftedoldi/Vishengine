@@ -8,6 +8,9 @@ Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>&
 
     _vertices = vertices;
     _indices = indices;
+
+    _transform.SetTranslation({0.4, 0, -6});
+    _transform.SetRotation({0,0,0,1});
 }
 
 Mesh::~Mesh() {
@@ -21,6 +24,8 @@ void Mesh::Start() {
 }
 
 void Mesh::Update() {
+    _updateMesh();
+
     glBindVertexArray(_vao);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(_indices.size()), GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
@@ -52,4 +57,13 @@ void Mesh::_setupMesh() {
 
     glVertexArrayAttribBinding(_vao, 0, 0);
     glVertexArrayAttribBinding(_vao, 1, 0);
+}
+
+void Mesh::_updateMesh() {
+    assert(_camera && _shader);
+
+    auto viewTransform{_transform.CumulateWith(_camera->GetTransform().Inverse())};
+
+    _shader->SetUniformVec3("Translation", viewTransform.Translation);
+    _shader->SetUniformQuat("Rotation", viewTransform.Rotation);
 }

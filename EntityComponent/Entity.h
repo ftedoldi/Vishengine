@@ -12,7 +12,7 @@ class Entity
 public:
 	Entity();
 
-	void AddComponent(std::unique_ptr<Component>&& component);
+	void AddComponent(std::unique_ptr<Component> component);
 
     void StartComponents() const;
     void UpdateComponents() const;

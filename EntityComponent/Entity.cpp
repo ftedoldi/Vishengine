@@ -1,4 +1,5 @@
 #include "Entity.h"
+#include "Mesh.h"
 
 Entity::Entity(){
     std::random_device rd;
@@ -20,6 +21,6 @@ void Entity::UpdateComponents() const {
     }
 }
 
-void Entity::AddComponent(std::unique_ptr<Component>&& component){
+void Entity::AddComponent(std::unique_ptr<Component> component){
 	_components.push_back(std::move(component));
 }

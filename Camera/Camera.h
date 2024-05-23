@@ -20,15 +20,26 @@ public:
 
     void Update() override;
 
-    void OnMovementKeyPressed(int key, int action);
+    glm::mat4 GetPerspectiveMatrix() const;
 
-    // TODO: change the scope of this matrix
-    static glm::mat4 PerspectiveMatrix;
+    Transform GetTransform() const;
+
+    void ProcessInput(InputManager& inputManager);
 
 private:
+    void _onMovementKeyPressed(GLFWwindow* window, int key, int action);
+
+    void _onFramebufferSizeChanged(int width, int height);
+
     Window* _window;
+
     Transform _transform;
+
     glm::vec3 _position{};
     glm::vec3 _direction{};
     glm::vec3 _up{};
+
+    glm::mat4 _perspectiveMatrix{};
+
+    static inline const float _cameraSpeed{0.05f};
 };

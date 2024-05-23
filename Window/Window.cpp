@@ -1,9 +1,5 @@
 #include "Window.h"
 
-#include "../Camera/Camera.h"
-
-#include "glm/ext/matrix_clip_space.hpp"
-
 static void message_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei, const GLchar* message, const void*){
     const auto* const src_str = [source]() {
         switch (source)
@@ -44,7 +40,7 @@ static void message_callback(GLenum source, GLenum type, GLuint id, GLenum sever
     std::cout << src_str << ", " << type_str << ", " << severity_str << ", " << id << ": " << message << '\n';
 }
 
-static void TerminateProgram(){
+static void TerminateProgram() {
     glfwTerminate();
     std::exit(1);
 }
@@ -57,14 +53,25 @@ Window::Window(const int width, const int height, const std::string& windowName)
     _initializeWindow(width, height, windowName);
 }
 
-bool Window::ShouldWindowClose(){
+Window::~Window() {
+    glfwDestroyWindow(_window);
+}
+
+bool Window::ShouldWindowClose() const {
     return glfwWindowShouldClose(_window);
 }
 
-void Window::Update()
-{
+void Window::Update() const {
     glfwSwapBuffers(_window);
     glfwPollEvents();
+}
+
+int Window::GetWidth() const {
+    return _width;
+}
+
+int Window::GetHeight() const {
+    return _height;
 }
 
 void Window::Clear() {
@@ -76,6 +83,14 @@ KeyboardKeyPressed& Window::OnKeyboardKeyPressed() {
     return _onKeyboardKeyPressed;
 }
 
+FramebufferSizeChanged& Window::OnFramebufferSizeChanged() {
+    return _onFramebufferSizeChanged;
+}
+
+InputManager Window::CreateInputManager() {
+    return InputManager{_window};
+}
+
 void Window::_initializeWindow(const int width, const int height, const std::string &windowName) {
     if (!glfwInit())
         std::exit(EXIT_FAILURE);
@@ -83,6 +98,9 @@ void Window::_initializeWindow(const int width, const int height, const std::str
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    _width = width;
+    _height = height;
 
     _window = glfwCreateWindow(width, height, windowName.c_str(), nullptr, nullptr);
     if (!_window){
@@ -106,23 +124,28 @@ void Window::_initializeWindow(const int width, const int height, const std::str
     _setFramebufferSizeCallback();
     _setKeyPressedCallback();
 
-    Camera::PerspectiveMatrix = glm::perspective(glm::radians(45.f), static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.f);
+    // Sets the window close event
+    _onKeyboardKeyPressed.AddFunction([this](GLFWwindow*, int, int){
+        if (glfwGetKey(_window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            glfwSetWindowShouldClose(_window, true);
+    });
 }
 
-void Window::_setFramebufferSizeCallback()
-{
-    auto framebufferSizeCallback = [](GLFWwindow*, int width, int height) {
+void Window::_setFramebufferSizeCallback() const {
+    auto framebufferSizeCallback = [](GLFWwindow* window, int width, int height) {
         glViewport(0, 0, width, height);
-        Camera::PerspectiveMatrix = glm::perspective(glm::radians(45.f), static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.f);
+
+        auto *const selfWindow{static_cast<Window*>(glfwGetWindowUserPointer(window))};
+        selfWindow->_onFramebufferSizeChanged.Broadcast(width, height);
     };
 
     glfwSetFramebufferSizeCallback(_window, framebufferSizeCallback);
 }
 
-void Window::_setKeyPressedCallback() {
+void Window::_setKeyPressedCallback() const {
     auto keyCallback = [](GLFWwindow* window, int key, int, int action, int) {
         auto *const selfWindow{static_cast<Window*>(glfwGetWindowUserPointer(window))};
-        selfWindow->_onKeyboardKeyPressed.Broadcast(key, action);
+        selfWindow->_onKeyboardKeyPressed.Broadcast(window, key, action);
     };
 
     glfwSetKeyCallback(_window, keyCallback);

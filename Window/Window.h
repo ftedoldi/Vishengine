@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Event/Event.h"
+#include "Input/InputManager.h"
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -10,28 +11,44 @@
 #include <memory>
 #include <functional>
 
-DECLARE_EVENT(KeyboardKeyPressed, int, int);
+DECLARE_EVENT(KeyboardKeyPressed, GLFWwindow*, int, int);
+
+DECLARE_EVENT(FramebufferSizeChanged, int, int);
 
 class Window {
 public:
     Window();
 
+    ~Window();
+
     Window(int width, int height, const std::string& windowName);
 
-	bool ShouldWindowClose();
-	void Update();
+	bool ShouldWindowClose() const;
+	void Update() const;
+
+    int GetWidth() const;
+
+    int GetHeight() const;
 
     static void Clear();
 
     KeyboardKeyPressed& OnKeyboardKeyPressed();
 
+    FramebufferSizeChanged& OnFramebufferSizeChanged();
+
+    InputManager CreateInputManager();
+
 private:
 	GLFWwindow* _window{nullptr};
 
     KeyboardKeyPressed _onKeyboardKeyPressed;
+    FramebufferSizeChanged _onFramebufferSizeChanged;
+
+    int _width{0};
+    int _height{0};
 
     void _initializeWindow(int width = 800, int height = 600, const std::string& windowName = "VishEngine");
-	void _setFramebufferSizeCallback();
+	void _setFramebufferSizeCallback() const;
 
-    void _setKeyPressedCallback();
+    void _setKeyPressedCallback() const;
 };
