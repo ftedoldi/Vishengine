@@ -8,14 +8,15 @@
 
 #include "Camera/Camera.h"
 
-#include "Math/Transform.h"
-
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
 int main(){
     Window windowHandler;
-    windowHandler.InitializeWindow();
+
+    InputManager inputManager = windowHandler.CreateInputManager();
+
+    Camera camera{&windowHandler};
 
     std::vector<Vertex> vertices;
 
@@ -33,21 +34,24 @@ int main(){
     Vertex vertex4{glm::vec3{-0.5f,  0.5f, 0.0f}, glm::vec2{0.0f, 1.0f}};
     vertices.emplace_back(vertex4);
 
+    std::string vertexPath = "../../Shaders/vertex.glsl";
+    std::string fragmentPath = "../../Shaders/fragment.glsl";
+
+    Shader shader(vertexPath, fragmentPath);
+
     EntityManager entityManager;
     Entity entity;
 
     auto mesh{make_unique<Mesh>(vertices, indices)};
+
+    mesh->_camera = &camera;
+    mesh->_shader = &shader;
 
     entity.AddComponent(std::move(mesh));
 
     entityManager.AddEntity(std::move(entity));
 
     entityManager.StartEntities();
-
-    std::string vertexPath = "../../Shaders/vertex.glsl";
-    std::string fragmentPath = "../../Shaders/fragment.glsl";
-
-    Shader shader(vertexPath, fragmentPath);
 
     Texture tex1;
     tex1.createTexture("../../Assets/container.jpg");
@@ -62,11 +66,11 @@ int main(){
     glm::quat quaternion{0,0,0,1};
     quaternion = glm::angleAxis(glm::radians(0.f), glm::vec3{0.f, 0.f, 1.f});
 
-    // Devo fare l'inversa perche' io sto passando da un punto in sistema di riferimento globale ad un punto
-    // in sistema di riferimento della camera. La camera sara' posizionata SEMPRE in 0,0,0 guardando 0,0,-1
-    // Trasformando un punto da global space a view space (che e' lo spazio generato dalla look at), e' necessario
-    // che inverta lo spazio creato dalla lookat per fare questa trasformazione inversa.
-    quaternion *= -glm::quatLookAtRH(glm::vec3{0,0,-1}, glm::vec3{0, 1, 0});
+    Transform transform;
+    transform.SetTranslation({ 0.4, 0, -6 });
+    transform.SetRotation(quaternion);
+
+    //quaternion *= -glm::quatLookAtRH(glm::vec3{0,0,-1}, glm::vec3{0, 1, 0});
 
     //auto quat1{glm::angleAxis(glm::radians(90.f), glm::vec3{0, 0, 1})};
 
@@ -82,10 +86,12 @@ int main(){
 
         shader.UseProgram();
 
-        shader.SetUniformVec3("Translation", { 0.4, 0, -6 });
-        shader.SetUniformQuat("Rotation", quaternion);
+        camera.ProcessInput(inputManager);
 
-        shader.SetUniformMat4("Perspective", Camera::PerspectiveMatrix);
+        //shader.SetUniformVec3("Translation", { 0.4, 0, -6 });
+        //shader.SetUniformQuat("Rotation", quaternion);
+
+        shader.SetUniformMat4("Perspective", camera.GetPerspectiveMatrix());
         
         entityManager.UpdateEntities();
 

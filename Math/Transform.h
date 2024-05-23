@@ -5,12 +5,22 @@
 
 class Transform {
 public:
+    Transform() = default;
     Transform(glm::vec3 translation, float scaling, glm::quat rotation);
 
-    glm::vec3 ApplyToPoint(glm::vec3 point);
+    void SetTranslation(glm::vec3 translation);
+    void SetScaling(float scaling);
+    void SetRotation(glm::quat rotation);
 
-private:
-    glm::vec3 _translation;
-    float _scaling;
-    glm::quat _rotation;
+    glm::vec3 ApplyToPoint(glm::vec3 point) const;
+
+    Transform operator*(const Transform& otherTransform) const;
+
+    Transform CumulateWith(const Transform& otherTransform) const;
+
+    Transform Inverse() const;
+
+    glm::vec3 Translation{};
+    float Scaling{1.f};
+    glm::quat Rotation{};
 };

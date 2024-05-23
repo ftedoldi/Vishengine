@@ -1,37 +1,54 @@
 #pragma once
 
+#include "Event/Event.h"
+#include "Input/InputManager.h"
+
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
 #include <string>
+#include <memory>
+#include <functional>
 
-class Window
-{
+DECLARE_EVENT(KeyboardKeyPressed, GLFWwindow*, int, int);
+
+DECLARE_EVENT(FramebufferSizeChanged, int, int);
+
+class Window {
 public:
-	void InitializeWindow();
-	bool ShouldWindowClose();
-	void Update();
+    Window();
+
+    ~Window();
+
+    Window(int width, int height, const std::string& windowName);
+
+	bool ShouldWindowClose() const;
+	void Update() const;
+
+    int GetWidth() const;
+
+    int GetHeight() const;
 
     static void Clear();
 
-    /*
-     * \brief Gets the width of the window.
-     * \return Width of the window.
-     */
-    int GetWidth() const;
+    KeyboardKeyPressed& OnKeyboardKeyPressed();
 
-    /*
-     * \brief Gets the height of the window.
-     * \return height of the window.
-     */
-    int GetHeight() const;
+    FramebufferSizeChanged& OnFramebufferSizeChanged();
+
+    InputManager CreateInputManager();
 
 private:
-	GLFWwindow* _window = nullptr;
-	std::string _windowName = {"Thot-engine"};
-	static constexpr int _width = 800;
-	static constexpr int _height = 600;
+	GLFWwindow* _window{nullptr};
 
-	void _setFramebufferSizeCallback();
+    KeyboardKeyPressed _onKeyboardKeyPressed;
+    FramebufferSizeChanged _onFramebufferSizeChanged;
+
+    int _width{0};
+    int _height{0};
+
+    void _initializeWindow(int width = 800, int height = 600, const std::string& windowName = "VishEngine");
+	void _setFramebufferSizeCallback() const;
+
+    void _setKeyPressedCallback() const;
 };
