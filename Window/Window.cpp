@@ -79,12 +79,12 @@ void Window::Clear() {
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
-KeyboardKeyPressed& Window::OnKeyboardKeyPressed() {
-    return _onKeyboardKeyPressed;
-}
-
 FramebufferSizeChanged& Window::OnFramebufferSizeChanged() {
     return _onFramebufferSizeChanged;
+}
+
+MouseMoved& Window::OnMouseMoved() {
+    return _onMouseMoved;
 }
 
 InputManager Window::CreateInputManager() {
@@ -123,12 +123,16 @@ void Window::_initializeWindow(const int width, const int height, const std::str
 
     _setFramebufferSizeCallback();
     _setKeyPressedCallback();
+    _setMouseMovedCallback();
 
     // Sets the window close event
     _onKeyboardKeyPressed.AddFunction([this](GLFWwindow*, int, int){
         if (glfwGetKey(_window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(_window, true);
     });
+
+    // Sets mouse callback
+    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 void Window::_setFramebufferSizeCallback() const {
@@ -149,4 +153,13 @@ void Window::_setKeyPressedCallback() const {
     };
 
     glfwSetKeyCallback(_window, keyCallback);
+}
+
+void Window::_setMouseMovedCallback() const {
+    auto mouseCallback = [](GLFWwindow* window, double xPos, double yPos) {
+        auto *const selfWindow{static_cast<Window*>(glfwGetWindowUserPointer(window))};
+        selfWindow->_onMouseMoved.Broadcast(xPos, yPos);
+    };
+
+    glfwSetCursorPosCallback(_window, mouseCallback);
 }

@@ -6,6 +6,8 @@
 #include "EntityComponent/Entity.h"
 #include "EntityComponent/EntityManager.h"
 
+#include "Time/Time.h"
+
 #include "Camera/Camera.h"
 
 #include <glm/glm.hpp>
@@ -80,6 +82,8 @@ int main(){
 
     while (!windowHandler.ShouldWindowClose()) {
         Window::Clear();
+
+        Time::UpdateDeltaTime();
 
         tex1.bindTexture(0);
         tex2.bindTexture(1);

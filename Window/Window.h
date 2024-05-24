@@ -15,6 +15,8 @@ DECLARE_EVENT(KeyboardKeyPressed, GLFWwindow*, int, int);
 
 DECLARE_EVENT(FramebufferSizeChanged, int, int);
 
+DECLARE_EVENT(MouseMoved, double, double);
+
 class Window {
 public:
     Window();
@@ -32,9 +34,9 @@ public:
 
     static void Clear();
 
-    KeyboardKeyPressed& OnKeyboardKeyPressed();
-
     FramebufferSizeChanged& OnFramebufferSizeChanged();
+
+    MouseMoved& OnMouseMoved();
 
     InputManager CreateInputManager();
 
@@ -43,12 +45,14 @@ private:
 
     KeyboardKeyPressed _onKeyboardKeyPressed;
     FramebufferSizeChanged _onFramebufferSizeChanged;
+    MouseMoved _onMouseMoved;
 
     int _width{0};
     int _height{0};
 
     void _initializeWindow(int width = 800, int height = 600, const std::string& windowName = "VishEngine");
-	void _setFramebufferSizeCallback() const;
 
+	void _setFramebufferSizeCallback() const;
     void _setKeyPressedCallback() const;
+    void _setMouseMovedCallback() const;
 };
