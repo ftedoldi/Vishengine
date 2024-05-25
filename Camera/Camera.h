@@ -43,10 +43,10 @@ private:
 
     bool _firstTimeMovingMouse{true};
 
-    double _lastX = 400.0;
-    double _lastY = 300.0;
+    double _lastX{0.0};
+    double _lastY{0.0};
 
-    double _cameraYaw{-90.0};
+    double _cameraYaw{0.0};
     double _cameraPitch{0.0};
 
     static inline const float _cameraSpeed{2.5f};

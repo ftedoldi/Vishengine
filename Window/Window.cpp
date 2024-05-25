@@ -121,6 +121,9 @@ void Window::_initializeWindow(const int width, const int height, const std::str
     // Sets the window user pointer to this so that in the glfw callbacks the pointer to this can be taken
     glfwSetWindowUserPointer(_window, this);
 
+    // Sets mouse callback
+    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
     _setFramebufferSizeCallback();
     _setKeyPressedCallback();
     _setMouseMovedCallback();
@@ -130,9 +133,6 @@ void Window::_initializeWindow(const int width, const int height, const std::str
         if (glfwGetKey(_window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(_window, true);
     });
-
-    // Sets mouse callback
-    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 void Window::_setFramebufferSizeCallback() const {

@@ -1,21 +1,21 @@
 #include "Transform.h"
 
-Transform::Transform(const glm::vec3 translation, const float scaling, const glm::quat rotation) : Translation(translation), Scaling(scaling), Rotation(rotation) {}
+Transform::Transform(const glm::vec3 translation, const float scaling, const glm::quat rotation) : _translation(translation), _scaling(scaling), _rotation(rotation) {}
 
 void Transform::SetTranslation(const glm::vec3 translation) {
-    Translation = translation;
+    _translation = translation;
 }
 
 void Transform::SetScaling(const float scaling) {
-    Scaling = scaling;
+    _scaling = scaling;
 }
 
 void Transform::SetRotation(const glm::quat rotation) {
-    Rotation = rotation;
+    _rotation = rotation;
 }
 
 glm::vec3 Transform::ApplyToPoint(const glm::vec3 point) const {
-    return Rotation * (point * Scaling) + Translation;
+    return _rotation * (point * _scaling) + _translation;
 }
 
 Transform Transform::operator*(const Transform &otherTransform) const {
@@ -24,23 +24,40 @@ Transform Transform::operator*(const Transform &otherTransform) const {
 
 Transform Transform::CumulateWith(const Transform &otherTransform) const {
     Transform result;
-    result.Scaling = Scaling * otherTransform.Scaling;
-    result.Rotation = Rotation * otherTransform.Rotation;
-    // check
-    result.Translation = Rotation * (Translation * otherTransform.Scaling) + otherTransform.Translation;
+
+    const auto scaling{_scaling * otherTransform.GetScaling()};
+    const auto rotation{_rotation * otherTransform.GetRotation()};
+    const auto translation{otherTransform.GetRotation() * (_translation * otherTransform.GetScaling()) + otherTransform.GetTranslation()};
+
+    result.SetScaling(scaling);
+    result.SetRotation(rotation);
+    result.SetTranslation(translation);
+
     return result;
 }
 
 Transform Transform::Inverse() const {
     Transform transform;
 
-    float scaling{1.f / Scaling};
-    glm::quat rotation{glm::inverse(Rotation)};
-    glm::vec3 translation = rotation * (-Translation * scaling);
+    const auto scaling{1.f / _scaling};
+    const auto rotation{glm::inverse(_rotation)};
+    const auto translation{rotation * (-_translation * scaling)};
 
-    transform.Translation = translation;
-    transform.Rotation = rotation;
-    transform.Scaling = scaling;
+    transform.SetTranslation(translation);
+    transform.SetRotation(rotation);
+    transform.SetScaling(scaling);
 
     return transform;
+}
+
+glm::vec3 Transform::GetTranslation() const {
+    return _translation;
+}
+
+float Transform::GetScaling() const {
+    return _scaling;
+}
+
+glm::quat Transform::GetRotation() const {
+    return _rotation;
 }

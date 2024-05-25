@@ -15,9 +15,9 @@ public:
         _functions.emplace_back(std::move(function));
     }
 
-    void Broadcast(Args&&... args) {
+    void Broadcast(Args... args) {
         for (const auto& function: _functions) {
-            function(std::forward<Args>(args)...);
+            function(std::move(args)...);
         }
     }
 

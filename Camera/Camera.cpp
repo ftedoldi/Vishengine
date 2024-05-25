@@ -4,17 +4,17 @@
 
 #include "GLFW/glfw3.h"
 
-Camera::Camera(Window* window, const glm::vec3 front, const glm::vec3 up, const glm::vec3 direction) :
-    _window(window), _position(front), _up(up), _front(direction) {
-    _transform.SetRotation(glm::quatLookAtRH(direction, up));
-    _transform.SetTranslation(front);
+Camera::Camera(Window* window, const glm::vec3 position, const glm::vec3 up, const glm::vec3 front) :
+    _window(window), _position(position), _up(up), _front(front) {
+    _transform.SetRotation(glm::quatLookAtRH(front, up));
+    _transform.SetTranslation(position);
 
-    _right = glm::normalize(glm::cross(up, front));
+    _right = glm::normalize(glm::cross(front, up));
 
     // Set framebuffer size changed event
     _window->OnFramebufferSizeChanged().AddFunction([this](const int width, const int height) { _onFramebufferSizeChanged(width, height); });
 
-    _window->OnMouseMoved().AddFunction([this](const int xPos, const int yPos){ _onMouseMoved(xPos, yPos);});
+    _window->OnMouseMoved().AddFunction([this](const double xPos, const double yPos){ _onMouseMoved(xPos, yPos);});
 
     _perspectiveMatrix = glm::perspective(glm::radians(45.f), static_cast<float>(window->GetWidth()) / static_cast<float>(window->GetHeight()), 0.1f, 100.f);
 }
@@ -24,6 +24,7 @@ void Camera::Start() {
 }
 
 void Camera::Update() {
+
 }
 
 glm::mat4 Camera::GetPerspectiveMatrix() const {
@@ -82,14 +83,14 @@ void Camera::_onMouseMoved(const double xPos, const double yPos) {
     if(_cameraPitch < -89.0)
         _cameraPitch = -89.0;
 
-    glm::vec3 direction;
-    direction.x = static_cast<float>(std::cos(glm::radians(_cameraYaw)) * std::cos(glm::radians(_cameraPitch)));
-    direction.y = static_cast<float>(std::sin(glm::radians(_cameraPitch)));
-    direction.z = static_cast<float>(std::sin(glm::radians(_cameraYaw)) * std::cos(glm::radians(_cameraPitch)));
+    // TODO: remove this ugly C-style cast [when I'll start using doubles (maybe with another lib)]
+    const auto qx{glm::angleAxis(static_cast<float>(glm::radians(_cameraPitch / 2.f)), glm::vec3{1.0, 0.0, 0.0})};
+    const auto qy{glm::angleAxis(static_cast<float>(glm::radians(-_cameraYaw / 2.f)), glm::vec3{0.0, 1.0, 0.0})};
+    const auto q{qy * qx};
 
-    _front = glm::normalize(direction);
-    _right = glm::normalize(glm::cross(_up, _front));
-    _up = glm::normalize(glm::cross(_front, _right));
+    _front = glm::normalize(q * glm::vec3{0.0, 0.0, -1.0});
+    _right = glm::normalize(q * glm::vec3{1.0, 0.0, 0.0});
+    _up = glm::normalize(q * glm::vec3{0.0, 1.0, 0.0});
 
     _transform.SetRotation(glm::quatLookAtRH(_front, _up));
 }

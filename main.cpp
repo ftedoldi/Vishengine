@@ -11,7 +11,6 @@
 #include "Camera/Camera.h"
 
 #include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
 
 int main(){
     Window windowHandler;
@@ -65,21 +64,6 @@ int main(){
     shader.SetUniformInt("texture1", 0);
     shader.SetUniformInt("texture2", 1);
 
-    glm::quat quaternion{0,0,0,1};
-    quaternion = glm::angleAxis(glm::radians(0.f), glm::vec3{0.f, 0.f, 1.f});
-
-    Transform transform;
-    transform.SetTranslation({ 0.4, 0, -6 });
-    transform.SetRotation(quaternion);
-
-    //quaternion *= -glm::quatLookAtRH(glm::vec3{0,0,-1}, glm::vec3{0, 1, 0});
-
-    //auto quat1{glm::angleAxis(glm::radians(90.f), glm::vec3{0, 0, 1})};
-
-    // quat multiplication is done in this order: roll -> yaw -> pitch
-
-    //quaternion *= quat1;
-
     while (!windowHandler.ShouldWindowClose()) {
         Window::Clear();
 
@@ -91,9 +75,6 @@ int main(){
         shader.UseProgram();
 
         camera.ProcessInput(inputManager);
-
-        //shader.SetUniformVec3("Translation", { 0.4, 0, -6 });
-        //shader.SetUniformQuat("Rotation", quaternion);
 
         shader.SetUniformMat4("Perspective", camera.GetPerspectiveMatrix());
         
