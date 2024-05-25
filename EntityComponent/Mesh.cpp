@@ -2,14 +2,14 @@
 
 #include <glad/gl.h>
 
-Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices){
+Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {
     _vertices.reserve(vertices.size());
     _indices.reserve(indices.size());
 
     _vertices = vertices;
     _indices = indices;
 
-    _transform.SetTranslation({0.4, 0, -6});
+    _transform.SetTranslation({0, 0, -6});
     _transform.SetRotation({0,0,0,1});
 }
 
@@ -64,6 +64,6 @@ void Mesh::_updateMesh() {
 
     auto viewTransform{_transform.CumulateWith(_camera->GetTransform().Inverse())};
 
-    _shader->SetUniformVec3("Translation", viewTransform.Translation);
-    _shader->SetUniformQuat("Rotation", viewTransform.Rotation);
+    _shader->SetUniformVec3("Translation", viewTransform.GetTranslation());
+    _shader->SetUniformQuat("Rotation", viewTransform.GetRotation());
 }
