@@ -11,13 +11,13 @@ class Event {
 public:
     using FunctionType = std::function<void(Args...)>;
 
-    void AddFunction(FunctionType&& function) {
+    void AddFunction(FunctionType function) {
         _functions.emplace_back(std::move(function));
     }
 
     void Broadcast(Args... args) {
         for (const auto& function: _functions) {
-            function(args...);
+            function(std::move(args)...);
         }
     }
 
