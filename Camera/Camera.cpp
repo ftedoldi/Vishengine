@@ -35,12 +35,14 @@ Transform Camera::GetTransform() const {
     return _transform;
 }
 
-void Camera::ProcessInput(InputManager& inputManager) {
+void Camera::ProcessInput(InputManager inputManager) {
     if (inputManager.isKeyPressed(GLFW_KEY_W)) {
+        _position.y = _cameraYPosition;
         _position += _front * _cameraSpeed * Time::GetDeltaTime();
         _transform.SetTranslation(_position);
     }
     if (inputManager.isKeyPressed(GLFW_KEY_S)) {
+        _position.y = _cameraYPosition;
         _position -= _front * _cameraSpeed * Time::GetDeltaTime();
         _transform.SetTranslation(_position);
     }
@@ -51,6 +53,16 @@ void Camera::ProcessInput(InputManager& inputManager) {
     if (inputManager.isKeyPressed(GLFW_KEY_D)) {
         _position += glm::normalize(glm::cross(_front, _up)) * _cameraSpeed * Time::GetDeltaTime();
         _transform.SetTranslation(_position);
+    }
+    if (inputManager.isKeyPressed(GLFW_KEY_E)) {
+        _position += glm::vec3{0, 1, 0} * _cameraSpeed * Time::GetDeltaTime();
+        _transform.SetTranslation(_position);
+        _cameraYPosition = _position.y;
+    }
+    if (inputManager.isKeyPressed(GLFW_KEY_Q)) {
+        _position -= glm::vec3{0, 1, 0} * _cameraSpeed * Time::GetDeltaTime();
+        _transform.SetTranslation(_position);
+        _cameraYPosition = _position.y;
     }
 }
 
@@ -71,7 +83,7 @@ void Camera::_onMouseMoved(const double xPos, const double yPos) {
     _lastX = xPos;
     _lastY = yPos;
 
-    double sensitivity{0.1f};
+    const float sensitivity{0.1f};
     xOffset *= sensitivity;
     yOffset *= sensitivity;
 
@@ -83,7 +95,6 @@ void Camera::_onMouseMoved(const double xPos, const double yPos) {
     if(_cameraPitch < -89.0)
         _cameraPitch = -89.0;
 
-    // TODO: remove this ugly C-style cast [when I'll start using doubles (maybe with another lib)]
     const auto qx{glm::angleAxis(static_cast<float>(glm::radians(_cameraPitch / 2.f)), glm::vec3{1.0, 0.0, 0.0})};
     const auto qy{glm::angleAxis(static_cast<float>(glm::radians(-_cameraYaw / 2.f)), glm::vec3{0.0, 1.0, 0.0})};
     const auto q{qy * qx};

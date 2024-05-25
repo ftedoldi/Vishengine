@@ -24,7 +24,7 @@ public:
 
     Transform GetTransform() const;
 
-    void ProcessInput(InputManager& inputManager);
+    void ProcessInput(InputManager inputManager);
 
 private:
     void _onFramebufferSizeChanged(int width, int height);
@@ -48,6 +48,8 @@ private:
 
     double _cameraYaw{0.0};
     double _cameraPitch{0.0};
+
+    float _cameraYPosition{0.f};
 
     static inline const float _cameraSpeed{2.5f};
 };
