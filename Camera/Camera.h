@@ -1,55 +1,32 @@
 #pragma once
 
-#include "EntityComponent/Component.h"
-#include "Math/Transform.h"
-#include "Window/Window.h"
+#include "Components/Transform.h"
 
 #include <glm/mat4x4.hpp>
 
 #include <GLFW/glfw3.h>
 
-class Camera : public Component
+// Editor camera
+class Camera
 {
 public:
-    explicit Camera(Window* window,
-                    glm::vec3 front = glm::vec3{0.f, 0.f, 0.f},
+    explicit Camera(glm::vec3 front = glm::vec3{0.f, 0.f, 0.f},
                     glm::vec3 up = glm::vec3{0.f, 1.f, 0.f},
                     glm::vec3 direction = glm::vec3{0.f, 0.f, -1.f});
 
-    void Start() override;
+    glm::vec3 Position{};
+    glm::vec3 Front{};
+    glm::vec3 Up{};
 
-    void Update() override;
+    static inline const float CameraSpeed{10.f};
 
-    glm::mat4 GetPerspectiveMatrix() const;
+    glm::mat4 PerspectiveMatrix{};
 
-    Transform GetTransform() const;
+    bool FirstTimeMovingMouse{true};
 
-    void ProcessInput(InputManager inputManager);
+    double LastX{0.0};
+    double LastY{0.0};
 
-private:
-    void _onFramebufferSizeChanged(int width, int height);
-    void _onMouseMoved(double xPos, double yPos);
-
-    Window* _window;
-
-    Transform _transform;
-
-    glm::vec3 _position{};
-    glm::vec3 _front{};
-    glm::vec3 _up{};
-    glm::vec3 _right{};
-
-    glm::mat4 _perspectiveMatrix{};
-
-    bool _firstTimeMovingMouse{true};
-
-    double _lastX{0.0};
-    double _lastY{0.0};
-
-    double _cameraYaw{0.0};
-    double _cameraPitch{0.0};
-
-    float _cameraYPosition{0.f};
-
-    static inline const float _cameraSpeed{2.5f};
+    double CameraYaw{0.0};
+    double CameraPitch{0.0};
 };

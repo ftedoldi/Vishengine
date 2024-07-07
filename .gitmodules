@@ -13,3 +13,6 @@
 [submodule "Libs/glm"]
 	path = Libs/glm
 	url = https://github.com/g-truc/glm
+[submodule "Libs/entt"]
+	path = Libs/entt
+	url = https://github.com/skypjack/entt

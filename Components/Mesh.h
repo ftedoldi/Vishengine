@@ -1,9 +1,7 @@
 #pragma once
 
-#include "Component.h"
-
 #include "Camera/Camera.h"
-#include "Math/Transform.h"
+#include "Components/Transform.h"
 #include "Shaders/Shader.h"
 
 #include <glm/vec2.hpp>
@@ -20,27 +18,15 @@ struct Vertex {
     glm::vec2 TextureCoord;
 };
 
-class Mesh : public Component {
+class Mesh {
 public:
     Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
-    ~Mesh() override;
+    ~Mesh();
 
-    void Start() override;
-    void Update() override;
+	std::vector<Vertex> Vertices{};
+	std::vector<unsigned int> Indices{};
 
-    Camera* _camera{nullptr};
-    Shader* _shader{nullptr};
-
-private:
-    void _setupMesh();
-    void _updateMesh();
-
-	std::vector<Vertex> _vertices{};
-	std::vector<unsigned int> _indices{};
-
-	unsigned int _vbo{0};
-    unsigned int _vao{0};
-    unsigned int _ebo{0};
-
-    Transform _transform;
+	unsigned Vbo{0};
+    unsigned Vao{0};
+    unsigned Ebo{0};
 };

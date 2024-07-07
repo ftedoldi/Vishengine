@@ -7,8 +7,11 @@
 #include <iostream>
 #include <filesystem>
 
-Shader::Shader(const std::string& vertexShaderPath, const std::string& fragmentShaderPath)
-{
+Shader::Shader(const std::string& vertexShaderRelativePath, const std::string& fragmentShaderRelativePath) {
+    //std::filesystem::path basePath{std::filesystem::current_path()};
+    //std::filesystem::path vertexShaderPath{basePath / vertexShaderRelativePath};
+    //std::filesystem::path fragmentShaderPath{basePath / fragmentShaderRelativePath};
+
     std::string vertexCode;
     std::string fragmentCode;
     std::ifstream vShaderFile;
@@ -18,8 +21,8 @@ Shader::Shader(const std::string& vertexShaderPath, const std::string& fragmentS
     fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     try
     {
-        vShaderFile.open(vertexShaderPath);
-        fShaderFile.open(fragmentShaderPath);
+        vShaderFile.open(vertexShaderRelativePath);
+        fShaderFile.open(fragmentShaderRelativePath);
         std::stringstream vShaderStream, fShaderStream;
 
         vShaderStream << vShaderFile.rdbuf();

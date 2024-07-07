@@ -7,10 +7,9 @@
 
 #include <string>
 
-class Shader
-{
+class Shader {
 public:
-    Shader(const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
+    Shader(const std::string&vertexShaderRelativePath, const std::string&fragmentShaderRelativePath);
 
 	void UseProgram() const;
 	void DeleteProgram() const;

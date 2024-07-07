@@ -11,6 +11,8 @@ option(ASSIMP_BUILD_SAMPLES OFF)
 option(ASSIMP_BUILD_TESTS OFF)
 add_subdirectory(Libs/assimp)
 
+add_subdirectory(Libs/entt)
+
 find_package(OpenGL REQUIRED)
 
 if(MSVC)
@@ -33,12 +35,12 @@ include_directories(Libs/assimp/include/
                     ${CMAKE_SOURCE_DIR})
 
 file(GLOB LIBS_SOURCES Libs/glad/src/gl.c)
-file(GLOB PROJECT_HEADERS EntityComponent/*.h Math/*.h Shaders/*.h Texture/*.h Camera/*.h Window/*.h Scene/*.h Event/*.h Input/*.h Time/*.h)
-file(GLOB PROJECT_SOURCES EntityComponent/*.cpp Math/*.cpp Shaders/*.cpp Texture/*.cpp Camera/*.cpp Window/*.cpp ./*.cpp Scene/*.cpp Event/*.cpp Input/*.cpp Time/*.cpp)
-file(GLOB PROJECT_SHADERS Shaders/*.comp
-                          Shaders/*.frag
-                          Shaders/*.geom
-                          Shaders/*.vert)
+file(GLOB PROJECT_HEADERS Core/*.h Shaders/*.h Texture/*.h Camera/*.h  Time/*.h Components/*.h Components/EventComponents/*.h Systems/*.h)
+file(GLOB PROJECT_SOURCES Core/*.cpp Shaders/*.cpp Texture/*.cpp Camera/*.cpp ./*.cpp Time/*.cpp Components/*.cpp Systems/*.cpp)
+file(GLOB PROJECT_SHADERS Shaders/GlslShaders/*.comp
+                          Shaders/GlslShaders/*.frag
+                          Shaders/GlslShaders/*.geom
+                          Shaders/GlslShaders/*.vert)
 file(GLOB PROJECT_CONFIGS CMakeLists.txt
         Readme.md
         .gitattributes
@@ -52,7 +54,9 @@ add_executable(${PROJECT_NAME} ${PROJECT_SOURCES} ${PROJECT_HEADERS}
         ${PROJECT_SHADERS} ${PROJECT_CONFIGS}
         ${LIBS_SOURCES})
 
-target_link_libraries(${PROJECT_NAME} assimp glfw
+target_include_directories(${PROJECT_NAME} PRIVATE Libs/entt/src)
+
+target_link_libraries(${PROJECT_NAME} assimp glfw EnTT::EnTT
         ${GLFW_LIBRARIES} ${GLAD_LIBRARIES} ${OPENGL_LIBRARIES})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

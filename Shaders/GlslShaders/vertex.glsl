@@ -19,8 +19,6 @@ void main()
     vec3 rotatedPoint = rotateVectorByQuaternion(Rotation, aPos).xyz;
 
     gl_Position = Perspective * vec4(rotatedPoint + Translation, 1.0);
-    //gl_Position = vec4(rotatedPoint + Translation, 1.0);
-    //gl_Position = vec4(aPos, 1.0);
 }
 
 vec4 quatMultiply(vec4 first, vec4 second)

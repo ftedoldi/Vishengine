@@ -5,7 +5,7 @@
 float Time::_deltaTime{0.f};
 float Time::_lastFrame{0.f};
 
-float Time:: GetDeltaTime(){
+float Time::GetDeltaTime(){
     return _deltaTime;
 }
 
