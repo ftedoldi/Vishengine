@@ -1,8 +1,11 @@
 #pragma once
 
-#include "Camera/Camera.h"
+#include "Components/CameraComponents/Camera.h"
+#include "InputManager/InputManager.h"
 #include "Shaders/Shader.h"
 
+#include "Systems/CameraMoveSystem.h"
+#include "Systems/CreateCameraSystem.h"
 #include "Systems/CreateMeshSystem.h"
 #include "Systems/DrawMeshesSystem.h"
 #include "Systems/WindowHandlerSystem.h"
@@ -20,17 +23,19 @@ public:
     void Clear();
 
 private:
+    void _setupEditorCamera();
+
     // TODO: check if maybe it's needed more than a generic registry for all the entities
     entt::registry _registry;
 
     entt::entity _editorCamera;
 
+    entt::entity _mainWindow;
+
     std::unique_ptr<Shader> _mainShader;
 
-    // TODO: ofc to change position in a "EditorCameraSystem" or something like that
-    float _cameraYPosition{};
-
     std::unique_ptr<DrawMeshesSystem> _drawMeshesSystem;
-    std::unique_ptr<CreateMeshSystem> _createMeshSystem;
     std::unique_ptr<WindowHandlerSystem> _windowHandlerSystem;
+    std::unique_ptr<InputManager> _inputManager;
+    std::unique_ptr<CameraMoveSystem> _cameraMoveSystem;
 };

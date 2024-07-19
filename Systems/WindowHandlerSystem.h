@@ -9,7 +9,7 @@
 
 class WindowHandlerSystem {
 public:
-    explicit WindowHandlerSystem(entt::registry& registry);
+    explicit WindowHandlerSystem(entt::registry& registry, entt::entity mainWindow);
 
     void InitializeWindow(int width = 800, int height = 600, const std::string& windowName = "VishEngine");
 

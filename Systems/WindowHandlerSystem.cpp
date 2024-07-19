@@ -51,11 +51,10 @@ void message_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GL
 }
 }
 
-WindowHandlerSystem::WindowHandlerSystem(entt::registry& registry) : _registry{registry} {
-    auto windowEntity{_registry.create()};
+WindowHandlerSystem::WindowHandlerSystem(entt::registry& registry, entt::entity mainWindow) : _registry{registry} {
 
-    _window = &_registry.emplace<Window>(windowEntity, registry);
-    _keyPressedEvent = &_registry.emplace<KeyPressedEventComponent>(windowEntity);
+    _window = &_registry.emplace<Window>(mainWindow, registry);
+    _keyPressedEvent = &_registry.emplace<KeyPressedEventComponent>(mainWindow);
 }
 
 void WindowHandlerSystem::InitializeWindow(const int width, const int height, const std::string& windowName) {
@@ -67,6 +66,9 @@ void WindowHandlerSystem::InitializeWindow(const int width, const int height, co
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     assert(_window);
+
+    _window->Height = height;
+    _window->Width = width;
 
     _window->GlfwWindow = glfwCreateWindow(width, height, windowName.c_str(), nullptr, nullptr);
     if (!_window->GlfwWindow){
@@ -124,7 +126,9 @@ void WindowHandlerSystem::_setFramebufferSizeCallback() const {
         auto view{selfWindow->Registry.view<FramebufferSizeEventComponent>()};
 
         view.each([window, width, height](const FramebufferSizeEventComponent &event) {
-            event.OnFramebufferSizeChanged(window, width, height);
+            if(const auto onFramebufferSizeChanged{event.OnFramebufferSizeChanged}; onFramebufferSizeChanged) {
+                onFramebufferSizeChanged(window, width, height);
+            }
         });
     };
 
@@ -138,7 +142,9 @@ void WindowHandlerSystem::_setKeyPressedCallback() const {
         auto view{selfWindow->Registry.view<KeyPressedEventComponent>()};
 
         view.each([window, key, scancode, action, mods](const KeyPressedEventComponent& event) {
-            event.OnKeyPressed(window, key, scancode, action, mods);
+            if(const auto onKeyPressed{event.OnKeyPressed}; onKeyPressed) {
+                onKeyPressed(window, key, scancode, action, mods);
+            }
         });
     };
 
@@ -152,7 +158,9 @@ void WindowHandlerSystem::_setMouseMovedCallback() const {
         auto view{selfWindow->Registry.view<MouseMovedEventComponent>()};
 
         view.each([window, xPos, yPos](const MouseMovedEventComponent &event) {
-            event.OnMouseMoved(window, xPos, yPos);
+            if(const auto onMouseMoved{event.OnMouseMoved}; onMouseMoved) {
+                onMouseMoved(window, xPos, yPos);
+            }
         });
     };
 

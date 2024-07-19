@@ -1,6 +1,6 @@
 #include "Time.h"
 
-#include <GLFW/glfw3.h>
+#include "GLFW/glfw3.h"
 
 float Time::_deltaTime{0.f};
 float Time::_lastFrame{0.f};

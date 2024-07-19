@@ -9,4 +9,7 @@ struct Window {
 
     GLFWwindow* GlfwWindow{nullptr};
     entt::registry& Registry;
+
+    int Width{};
+    int Height{};
 };

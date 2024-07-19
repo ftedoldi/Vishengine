@@ -1,5 +1,7 @@
 #include "DrawMeshesSystem.h"
 
+#include "Components/CameraComponents/Perspective.h"
+
 DrawMeshesSystem::DrawMeshesSystem(entt::registry& registry, Shader* const shader, const entt::entity currentCamera)
     : _currentCameraToRender{currentCamera}, _registry{registry}, _shader{shader}{
 }
@@ -42,16 +44,18 @@ void DrawMeshesSystem::_drawTexturedMeshes() {
 }
 
 void DrawMeshesSystem::_drawMesh(Mesh& mesh, Transform& transform) {
-    const auto& cameraComponents{_registry.get<Camera, Transform>(_currentCameraToRender)};
-    auto& camera{std::get<Camera&>(cameraComponents)};
+    // TODO: be able to also draw on a camera with an orthogonal matrix when needed.
+    const auto& cameraComponents{_registry.get<Camera, Transform, Perspective>(_currentCameraToRender)};
+
     const auto& cameraTransform{std::get<Transform&>(cameraComponents)};
+    const auto& perspective{std::get<Perspective&>(cameraComponents)};
 
     auto viewTransform{transform.CumulateWith(cameraTransform.Inverse())};
 
     assert(_shader);
     _shader->SetUniformVec3("Translation", viewTransform.Translation);
     _shader->SetUniformQuat("Rotation", viewTransform.Rotation);
-    _shader->SetUniformMat4("Perspective", camera.PerspectiveMatrix);
+    _shader->SetUniformMat4("Perspective", perspective.Matrix);
 
     glBindVertexArray(mesh.Vao);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.Indices.size()), GL_UNSIGNED_INT, nullptr);

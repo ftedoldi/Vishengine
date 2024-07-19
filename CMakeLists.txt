@@ -35,8 +35,25 @@ include_directories(Libs/assimp/include/
                     ${CMAKE_SOURCE_DIR})
 
 file(GLOB LIBS_SOURCES Libs/glad/src/gl.c)
-file(GLOB PROJECT_HEADERS Core/*.h Shaders/*.h Texture/*.h Camera/*.h  Time/*.h Components/*.h Components/EventComponents/*.h Systems/*.h)
-file(GLOB PROJECT_SOURCES Core/*.cpp Shaders/*.cpp Texture/*.cpp Camera/*.cpp ./*.cpp Time/*.cpp Components/*.cpp Systems/*.cpp)
+
+file(GLOB PROJECT_HEADERS Core/*.h
+        Shaders/*.h
+        Texture/*.h
+        Platform/*.h
+        Components/*.h Components/EventComponents/*.h Components/CameraComponents/*.h
+        Systems/*.h
+        InputManager/*.h)
+
+file(GLOB PROJECT_SOURCES
+        Core/*.cpp
+        Shaders/*.cpp
+        Texture/*.cpp
+        Platform/*.cpp
+        Components/*.cpp Components/CameraComponents/*.cpp
+        Systems/*.cpp
+        InputManager/*.cpp
+        ./*.cpp)
+
 file(GLOB PROJECT_SHADERS Shaders/GlslShaders/*.comp
                           Shaders/GlslShaders/*.frag
                           Shaders/GlslShaders/*.geom

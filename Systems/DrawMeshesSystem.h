@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Camera/Camera.h"
+#include "Components/CameraComponents/Camera.h"
 #include "Components/Mesh.h"
-#include "Shaders/Shader.h"
 #include "Components/TextureList.h"
+#include "Shaders/Shader.h"
 
 #include <entt/entt.hpp>
 

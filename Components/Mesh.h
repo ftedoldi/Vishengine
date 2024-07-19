@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Camera/Camera.h"
+#include "Components/CameraComponents/Camera.h"
 #include "Components/Transform.h"
 #include "Shaders/Shader.h"
 
