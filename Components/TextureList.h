@@ -5,5 +5,7 @@
 #include <vector>
 
 struct TextureList {
-    std::vector<Texture> Textures{};
+    std::vector<Texture> TexturesDiffuse{};
+    std::vector<Texture> TexturesSpecular{};
+    std::vector<Texture> TexturesNormal{};
 };

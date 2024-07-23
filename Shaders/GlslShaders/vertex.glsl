@@ -12,8 +12,7 @@ uniform mat4 Perspective;
 
 vec3 rotateVectorByQuaternion(vec4 rotationQuat, vec3 position);
 
-void main()
-{
+void main() {
     TexCoord = aTexCoord;
 
     vec3 rotatedPoint = rotateVectorByQuaternion(Rotation, aPos).xyz;
@@ -21,8 +20,7 @@ void main()
     gl_Position = Perspective * vec4(rotatedPoint + Translation, 1.0);
 }
 
-vec4 quatMultiply(vec4 first, vec4 second)
-{
+vec4 quatMultiply(vec4 first, vec4 second) {
     const float q1x = first.x;
     const float q1y = first.y;
     const float q1z = first.z;
@@ -39,8 +37,7 @@ vec4 quatMultiply(vec4 first, vec4 second)
                 q1w * q2w - q1x * q2x - q1y * q2y - q1z * q2z);
 }
 
-vec3 rotateVectorByQuaternion(vec4 rotationQuat, vec3 position)
-{
+vec3 rotateVectorByQuaternion(vec4 rotationQuat, vec3 position) {
     vec4 quatConj = vec4(-rotationQuat.x, -rotationQuat.y, -rotationQuat.z, rotationQuat.w);
     vec4 quatPoint = vec4(position, 0.0);
 

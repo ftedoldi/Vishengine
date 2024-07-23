@@ -14,16 +14,26 @@ void DrawMeshesSystem::Update(float) {
     assert(&_currentCameraToRender);
 
     _drawTexturedMeshes();
-    _drawNonTexturedMeshes();
+    //_drawNonTexturedMeshes();
 }
 
 void DrawMeshesSystem::_bindTextures(TextureList& textureList) {
     assert(_shader);
     _shader->UseProgram();
 
-    for (unsigned i{0}; i < textureList.Textures.size(); ++i) {
-        _shader->SetUniformInt("texture" + std::to_string(i), i);
-        textureList.Textures.at(i).bindTexture(i);
+    for (unsigned i{0}; i < textureList.TexturesDiffuse.size(); ++i) {
+        _shader->SetUniformInt("TextureDiffuse" + std::to_string(i), i);
+        textureList.TexturesDiffuse.at(i).BindTexture(i);
+    }
+
+    for (unsigned i{0}; i < textureList.TexturesSpecular.size(); ++i) {
+        _shader->SetUniformInt("TextureSpecular" + std::to_string(i), i);
+        textureList.TexturesSpecular.at(i).BindTexture(i);
+    }
+
+    for (unsigned i{0}; i < textureList.TexturesNormal.size(); ++i) {
+        _shader->SetUniformInt("TextureNormal" + std::to_string(i), i);
+        textureList.TexturesNormal.at(i).BindTexture(i);
     }
 }
 
@@ -59,5 +69,6 @@ void DrawMeshesSystem::_drawMesh(Mesh& mesh, Transform& transform) {
 
     glBindVertexArray(mesh.Vao);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.Indices.size()), GL_UNSIGNED_INT, nullptr);
+    //glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
 }

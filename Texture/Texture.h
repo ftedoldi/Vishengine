@@ -7,9 +7,9 @@
 
 class Texture {
 public:
-	void createTexture(const std::string& path);
-	void bindTexture(unsigned int texNum) const;
+	void CreateTexture(const std::string& path);
+	void BindTexture(unsigned texNum) const;
 
 private:
-	unsigned int _id = 0;
+	unsigned _id = 0;
 };

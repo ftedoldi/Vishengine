@@ -2,12 +2,14 @@
 
 #include "glad/gl.h"
 
-Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {
-    Vertices.reserve(vertices.size());
+Mesh::Mesh(std::vector<glm::vec3> positions, std::vector<glm::vec2> textureCoords, std::vector<unsigned int> indices) {
+    Vertices.reserve(positions.size());
+    TextureCoords.reserve(textureCoords.size());
     Indices.reserve(indices.size());
 
-    Vertices = vertices;
-    Indices = indices;
+    Vertices = std::move(positions);
+    TextureCoords = std::move(textureCoords);
+    Indices = std::move(indices);
 }
 
 Mesh::~Mesh() {

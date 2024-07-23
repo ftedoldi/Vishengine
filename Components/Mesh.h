@@ -11,19 +11,14 @@
 #include <vector>
 #include <memory>
 
-struct Vertex {
-    Vertex(glm::vec3 position, glm::vec2 textureCoord) : Position(position), TextureCoord(textureCoord){}
-
-    glm::vec3 Position;
-    glm::vec2 TextureCoord;
-};
-
 class Mesh {
 public:
-    Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
+    Mesh() = default;
+    Mesh(std::vector<glm::vec3> positions, std::vector<glm::vec2> textureCoords, std::vector<unsigned int> indices = {});
     ~Mesh();
 
-	std::vector<Vertex> Vertices{};
+    std::vector<glm::vec3> Vertices{};
+    std::vector<glm::vec2> TextureCoords{};
 	std::vector<unsigned int> Indices{};
 
 	unsigned Vbo{0};

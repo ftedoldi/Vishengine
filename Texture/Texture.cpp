@@ -3,7 +3,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-void Texture::createTexture(const std::string& path){
+void Texture::CreateTexture(const std::string& path) {
 	glCreateTextures(GL_TEXTURE_2D, static_cast<GLsizei>(1), &_id);
 
 	glTextureParameteri(_id, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -15,16 +15,16 @@ void Texture::createTexture(const std::string& path){
 	int width, height, nrChannels;
 
 	stbi_set_flip_vertically_on_load(true);
-	auto* const textureData = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+	auto* const textureData{stbi_load(path.c_str(), &width, &height, &nrChannels, 0)};
 	stbi_set_flip_vertically_on_load(false);
 
 	// TODO: remove magic numbers with actual parameters
 
-	if (textureData){
+	if (textureData) {
 		int sizedInternalFormat{};
 		int internalFormat{};
 
-        switch(nrChannels){
+        switch(nrChannels) {
             case 1:
                 internalFormat = GL_RED;
                 sizedInternalFormat = GL_R8;
@@ -55,6 +55,6 @@ void Texture::createTexture(const std::string& path){
 	stbi_image_free(textureData);
 }
 
-void Texture::bindTexture(const unsigned int texNum) const{
+void Texture::BindTexture(const unsigned texNum) const {
 	glBindTextureUnit(texNum, _id);
 }
