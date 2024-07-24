@@ -18,7 +18,7 @@ public:
     void Update(float deltaTime);
 
 private:
-    void _bindTextures(TextureList& textureList);
+    void _bindTextures(const Mesh& mesh);
     void _drawNonTexturedMeshes();
     void _drawTexturedMeshes();
     void _drawMesh(Mesh& mesh, Transform& transform);

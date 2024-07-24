@@ -30,9 +30,6 @@ EntityManager::EntityManager() : _mainWindow{_registry.create()} {
 
     _cameraMoveSystem = std::make_unique<CameraMoveSystem>(_registry, _editorCamera, _inputManager.get());
 
-    //CreateMeshSystem createMeshSystem{_registry};
-    //createMeshSystem.CreateMesh();
-
     LoadModelSystem loadModelSystem{_registry};
     loadModelSystem.ImportModel("../../Assets/Backpack/backpack.obj");
 

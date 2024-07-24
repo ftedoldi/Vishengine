@@ -18,24 +18,24 @@ void DrawMeshesSystem::Update(float) {
     //_drawNonTexturedMeshes();
 }
 
-void DrawMeshesSystem::_bindTextures(TextureList& textureList) {
+void DrawMeshesSystem::_bindTextures(const Mesh& mesh) {
     assert(_shader);
     _shader->UseProgram();
 
-    for (unsigned i{0}; i < textureList.TexturesDiffuse.size(); ++i) {
+    for (unsigned i{0}; i < mesh.TexturesDiffuse.size(); ++i) {
         _shader->SetUniformInt("TextureDiffuse" + std::to_string(i), i);
-        textureList.TexturesDiffuse.at(i).BindTexture(i);
+        mesh.TexturesDiffuse.at(i).BindTexture(i);
     }
 
-    for (unsigned i{0}; i < textureList.TexturesSpecular.size(); ++i) {
+    /*for (unsigned i{0}; i < mesh.TexturesSpecular.size(); ++i) {
         _shader->SetUniformInt("TextureSpecular" + std::to_string(i), i);
-        textureList.TexturesSpecular.at(i).BindTexture(i);
+        mesh.TexturesSpecular.at(i).BindTexture(i);
     }
 
-    for (unsigned i{0}; i < textureList.TexturesNormal.size(); ++i) {
+    for (unsigned i{0}; i < mesh.TexturesNormal.size(); ++i) {
         _shader->SetUniformInt("TextureNormal" + std::to_string(i), i);
-        textureList.TexturesNormal.at(i).BindTexture(i);
-    }
+        mesh.TexturesNormal.at(i).BindTexture(i);
+    }*/
 }
 
 void DrawMeshesSystem::_drawNonTexturedMeshes() {
@@ -46,11 +46,11 @@ void DrawMeshesSystem::_drawNonTexturedMeshes() {
 }
 
 void DrawMeshesSystem::_drawTexturedMeshes() {
-    auto view{_registry.view<MeshObject, Transform, TextureList>()};
+    auto view{_registry.view<MeshObject, Transform>()};
 
-    for(const auto& [_, meshObject, transform, textureList]: view.each()) {
-        _bindTextures(textureList);
+    for(const auto& [_, meshObject, transform]: view.each()) {
         for(auto& mesh : meshObject.Meshes) {
+            _bindTextures(*mesh);
             _drawMesh(*mesh, transform);
         }
     }

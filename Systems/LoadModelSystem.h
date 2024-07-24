@@ -24,14 +24,11 @@ private:
 
     void _processMesh(aiMesh* aiMesh, const aiScene* scene);
 
-    void _loadMaterialTextures(aiMaterial* mat, aiTextureType type);
-
-    void _createTexture();
+    std::vector<Texture> _loadMaterialTextures(aiMaterial* mat, aiTextureType type);
 
     entt::registry& _registry;
 
     Transform* _transform{};
-    TextureList* _textureList{};
 
     Assimp::Importer _importer{};
 

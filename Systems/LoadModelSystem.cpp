@@ -23,7 +23,6 @@ void LoadModelSystem::ImportModel(const std::string& modelPath) {
     _meshObject = &_registry.emplace<MeshObject>(meshEntity);
 
     _transform = &_registry.emplace<Transform>(meshEntity, glm::vec3{0, 0, -6}, 1.f, glm::quat{0, 0, 0, 1});
-    _textureList = &_registry.emplace<TextureList>(meshEntity);
 
     _modelDirectory = modelPath.substr(0, modelPath.find_last_of('/'));
 
@@ -72,14 +71,18 @@ void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const sc
         }
     }
 
-    auto* const material{scene->mMaterials[aiMesh->mMaterialIndex]};
-    _loadMaterialTextures(material, aiTextureType_DIFFUSE);
+    auto mesh{std::make_shared<Mesh>(vertices, textureCoords, indices)};
 
-    _meshObject->Meshes.emplace_back(std::make_shared<Mesh>(vertices, textureCoords, indices));
+    auto* const material{scene->mMaterials[aiMesh->mMaterialIndex]};
+    mesh->TexturesDiffuse = _loadMaterialTextures(material, aiTextureType_DIFFUSE);
+    mesh->TexturesNormal = _loadMaterialTextures(material, aiTextureType_NORMALS);
+    mesh->TexturesSpecular = _loadMaterialTextures(material, aiTextureType_SPECULAR);
+
+    _meshObject->Meshes.emplace_back(std::move(mesh));
 }
 
-void LoadModelSystem::_loadMaterialTextures(aiMaterial* mat, aiTextureType type) {
-    //std::vector<Texture> textures;
+std::vector<Texture> LoadModelSystem::_loadMaterialTextures(aiMaterial* mat, const aiTextureType type) {
+    std::vector<Texture> textures;
 
     for(unsigned i{0}; i < mat->GetTextureCount(type); ++i) {
         aiString str;
@@ -97,14 +100,10 @@ void LoadModelSystem::_loadMaterialTextures(aiMaterial* mat, aiTextureType type)
         if(!textureAlreadyLoaded) {
             Texture texture;
             texture.CreateTexture(texturePath);
-            _textureList->TexturesDiffuse.emplace_back(texture);
+            textures.emplace_back(texture);
 
             _loadedTextures.emplace_back(std::move(texturePath));
         }
     }
-    //return textures;
-}
-
-void LoadModelSystem::_createTexture() {
-
+    return textures;
 }
