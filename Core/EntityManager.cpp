@@ -34,7 +34,7 @@ EntityManager::EntityManager() : _mainWindow{_registry.create()} {
     //createMeshSystem.CreateMesh();
 
     LoadModelSystem loadModelSystem{_registry};
-    loadModelSystem.ImportModel("../../Assets/datsun.obj");
+    loadModelSystem.ImportModel("../../Assets/Backpack/backpack.obj");
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 }

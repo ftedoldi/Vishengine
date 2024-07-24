@@ -13,15 +13,16 @@
 
 class Mesh {
 public:
-    Mesh() = default;
-    Mesh(std::vector<glm::vec3> positions, std::vector<glm::vec2> textureCoords, std::vector<unsigned int> indices = {});
+    Mesh(std::vector<glm::vec3> vertices, std::vector<glm::vec2> textureCoords, std::vector<unsigned int> indices = {});
     ~Mesh();
 
-    std::vector<glm::vec3> Vertices{};
-    std::vector<glm::vec2> TextureCoords{};
-	std::vector<unsigned int> Indices{};
-
-	unsigned Vbo{0};
+    std::vector<unsigned int> Indices{};
     unsigned Vao{0};
-    unsigned Ebo{0};
+
+private:
+    std::vector<glm::vec3> _vertices{};
+    std::vector<glm::vec2> _textureCoords{};
+
+	unsigned _vbo{0};
+    unsigned _ebo{0};
 };

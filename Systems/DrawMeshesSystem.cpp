@@ -1,6 +1,7 @@
 #include "DrawMeshesSystem.h"
 
 #include "Components/CameraComponents/Perspective.h"
+#include "Components/MeshObject.h"
 
 DrawMeshesSystem::DrawMeshesSystem(entt::registry& registry, Shader* const shader, const entt::entity currentCamera)
     : _currentCameraToRender{currentCamera}, _registry{registry}, _shader{shader}{
@@ -45,11 +46,13 @@ void DrawMeshesSystem::_drawNonTexturedMeshes() {
 }
 
 void DrawMeshesSystem::_drawTexturedMeshes() {
-    auto view{_registry.view<Mesh, Transform, TextureList>()};
+    auto view{_registry.view<MeshObject, Transform, TextureList>()};
 
-    for(const auto& [_, mesh, transform, textureList]: view.each()) {
+    for(const auto& [_, meshObject, transform, textureList]: view.each()) {
         _bindTextures(textureList);
-        _drawMesh(mesh, transform);
+        for(auto& mesh : meshObject.Meshes) {
+            _drawMesh(*mesh, transform);
+        }
     }
 }
 
@@ -69,6 +72,5 @@ void DrawMeshesSystem::_drawMesh(Mesh& mesh, Transform& transform) {
 
     glBindVertexArray(mesh.Vao);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.Indices.size()), GL_UNSIGNED_INT, nullptr);
-    //glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
 }

@@ -6,7 +6,6 @@
 
 #include "Systems/CameraMoveSystem.h"
 #include "Systems/CreateCameraSystem.h"
-#include "Systems/CreateMeshSystem.h"
 #include "Systems/DrawMeshesSystem.h"
 #include "Systems/WindowHandlerSystem.h"
 

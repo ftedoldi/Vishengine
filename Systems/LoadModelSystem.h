@@ -3,6 +3,7 @@
 #include "Components/Mesh.h"
 #include "Components/Transform.h"
 #include "Components/TextureList.h"
+#include "Components/MeshObject.h"
 
 #include <entt/entt.hpp>
 
@@ -29,7 +30,6 @@ private:
 
     entt::registry& _registry;
 
-    Mesh* _mesh{};
     Transform* _transform{};
     TextureList* _textureList{};
 
@@ -38,4 +38,6 @@ private:
     std::string _modelDirectory;
 
     std::vector<std::string> _loadedTextures{};
+
+    MeshObject* _meshObject{};
 };
