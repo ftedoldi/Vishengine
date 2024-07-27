@@ -15,8 +15,11 @@ public:
 	void DeleteProgram() const;
 
 	void SetUniformVec3(const std::string& uniformName, float x, float y, float z) const;
+
 	void SetUniformVec3(const std::string& uniformName, glm::vec3 vector) const;
+
 	void SetUniformVec4(const std::string& uniformName, float x, float y, float z, float w) const;
+
 	void SetUniformVec4(const std::string& uniformName, const glm::vec4& vector) const;
 
     void SetUniformQuat(const std::string& uniformName, const glm::quat& quaternion) const;
@@ -24,7 +27,10 @@ public:
 	void SetUniformMat4(const std::string& uniformName, const glm::mat4& matrix) const;
 
 	void SetUniformFloat(const std::string& uniformName, float value) const;
+
 	void SetUniformInt(const std::string& uniformName, int value) const;
+
+    void SetBool(const std::string& uniformName, bool value) const;
 
 private:
 	unsigned int _programID = 0;

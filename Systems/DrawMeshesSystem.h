@@ -18,10 +18,11 @@ public:
     void Update(float deltaTime);
 
 private:
-    void _bindTextures(TextureList& textureList);
-    void _drawNonTexturedMeshes();
-    void _drawTexturedMeshes();
-    void _drawMesh(Mesh& mesh, Transform& transform);
+    void _bindTextures(const Mesh& mesh);
+    void _drawMeshes();
+    void _drawMesh(const Mesh& mesh, Transform& transform);
+
+    void _setUniformColors(const Mesh& mesh);
 
     entt::entity _currentCameraToRender{};
     entt::registry& _registry;

@@ -3,8 +3,7 @@
 #include "glm/gtc/quaternion.hpp"
 #include "glm/vec3.hpp"
 
-class Transform {
-public:
+struct Transform {
     Transform() = default;
     Transform(glm::vec3 translation, float scaling, glm::quat rotation);
 

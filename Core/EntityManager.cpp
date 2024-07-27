@@ -6,6 +6,8 @@
 #include "Components/Mesh.h"
 #include "Components/CameraComponents/Perspective.h"
 
+#include "Systems/LoadModelSystem.h"
+
 #include "Platform/Time.h"
 #include "Platform/Mouse.h"
 
@@ -32,8 +34,10 @@ EntityManager::EntityManager() : _mainWindow{_registry.create()} {
 
     _imGuiHandlerSystem->Init();
 
-    CreateMeshSystem createMeshSystem{_registry};
-    createMeshSystem.CreateMesh();
+    LoadModelSystem loadModelSystem{_registry};
+    loadModelSystem.ImportModel("../../Assets/Backpack/backpack.obj");
+
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 }
 
 void EntityManager::Update() {
