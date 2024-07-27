@@ -1,5 +1,9 @@
 #include "LoadModelSystem.h"
 
+#include "Components/Position.h"
+#include "Components/Rotation.h"
+#include "Components/Scale.h"
+
 #include "Texture/Texture.h"
 
 #include <iostream>
@@ -22,7 +26,10 @@ std::optional<entt::entity> LoadModelSystem::ImportModel(const std::string& mode
     auto meshEntity{_registry.create()};
     _meshObject = &_registry.emplace<MeshObject>(meshEntity);
 
-    _transform = &_registry.emplace<Transform>(meshEntity, glm::vec3{0, 0, -6}, 1.f, glm::quat{0, 0, 0, 1});
+    _registry.emplace<Position>(meshEntity, glm::vec3{0.f, 0.f, -6.f});
+    _registry.emplace<Rotation>(meshEntity, glm::quat{0.f, 0.f, 0.f, 1.f});
+    _registry.emplace<Scale>(meshEntity, 1.f);
+
 
     _modelDirectory = modelPath.substr(0, modelPath.find_last_of('/'));
 

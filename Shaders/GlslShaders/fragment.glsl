@@ -11,8 +11,13 @@ uniform bool HasTextureSpecular;
 uniform vec4 DiffuseColor;
 uniform vec3 SpecularColor;
 
+uniform vec3 LightColor;
+
 void main() {
+    float ambientStrength = 0.1;
+    vec3 ambient = ambientStrength * LightColor;
+
     vec4 color = HasTextureDiffuse ? texture(TextureDiffuse0, TexCoord) : DiffuseColor;
 
-    FragColor = color;
+    FragColor = vec4(ambient, 1.0) * color;
 } 

@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Components/CameraComponents/Camera.h"
-#include "Components/Transform.h"
+#include "Components/Position.h"
+#include "Components/Rotation.h"
+
 #include "InputManager/InputManager.h"
 
 #include <entt/entt.hpp>
@@ -16,8 +18,9 @@ private:
     entt::registry& _registry;
     InputManager* _inputManager;
     Camera* _camera;
-    Transform* _cameraTransform;
 
-    // TODO: change where this is put
+    Position* _position;
+    Rotation* _rotation;
+
     float _cameraYPosition{0.f};
 };

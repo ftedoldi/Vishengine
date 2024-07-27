@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Components/CameraComponents/Camera.h"
-#include "Components/Transform.h"
 
 #include "Texture/Texture.h"
 #include "Shaders/Shader.h"

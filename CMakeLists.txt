@@ -41,7 +41,7 @@ file(GLOB PROJECT_HEADERS Core/*.h
         Shaders/*.h
         Texture/*.h
         Platform/*.h
-        Components/*.h Components/EventComponents/*.h Components/CameraComponents/*.h
+        Components/*.h Components/EventComponents/*.h Components/CameraComponents/*.h Components/Light/*.h
         Systems/*.h
         InputManager/*.h)
 

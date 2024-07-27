@@ -6,9 +6,9 @@
 
 #include "Systems/CameraMoveSystem.h"
 #include "Systems/CreateCameraSystem.h"
-#include "Systems/DrawMeshesSystem.h"
-#include "Systems/WindowHandlerSystem.h"
 #include "Systems/ImGuiHandlerSystem.h"
+#include "Systems/RendererSystem.h"
+#include "Systems/WindowHandlerSystem.h"
 
 #include <entt/entt.hpp>
 
@@ -25,6 +25,8 @@ public:
 private:
     void _setupEditorCamera();
 
+    void _addLight();
+
     // TODO: check if maybe it's needed more than a generic registry for all the entities
     entt::registry _registry;
 
@@ -34,7 +36,7 @@ private:
 
     std::unique_ptr<Shader> _mainShader;
 
-    std::unique_ptr<DrawMeshesSystem> _drawMeshesSystem;
+    std::unique_ptr<RendererSystem> _drawMeshesSystem;
     std::unique_ptr<WindowHandlerSystem> _windowHandlerSystem;
     std::unique_ptr<InputManager> _inputManager;
     std::unique_ptr<CameraMoveSystem> _cameraMoveSystem;
