@@ -4,9 +4,7 @@
 
 class ImGuiHandlerSystem {
 public:
-    ImGuiHandlerSystem(entt::registry& registry, entt::entity window);
-
-    void Init();
+    ImGuiHandlerSystem(entt::registry& registry, entt::entity windowEntity);
 
     void StartFrame();
 

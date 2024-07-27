@@ -19,9 +19,10 @@ public:
 
 private:
     void _bindTextures(const Mesh& mesh);
-    void _drawNonTexturedMeshes();
-    void _drawTexturedMeshes();
-    void _drawMesh(Mesh& mesh, Transform& transform);
+    void _drawMeshes();
+    void _drawMesh(const Mesh& mesh, Transform& transform);
+
+    void _setUniformColors(const Mesh& mesh);
 
     entt::entity _currentCameraToRender{};
     entt::registry& _registry;

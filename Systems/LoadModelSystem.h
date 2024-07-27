@@ -12,12 +12,13 @@
 #include <assimp/postprocess.h>
 
 #include <string>
+#include <optional>
 
 class LoadModelSystem {
 public:
     explicit LoadModelSystem(entt::registry& registry);
 
-    void ImportModel(const std::string& modelPath);
+    std::optional<entt::entity> ImportModel(const std::string& modelPath);
 
 private:
     void _processNode(aiNode* node, const aiScene* scene);

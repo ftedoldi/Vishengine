@@ -51,3 +51,35 @@ Mesh::~Mesh() {
     glDeleteBuffers(1, &_vbo);
     glDeleteBuffers(1, &_ebo);
 }
+
+void Mesh::SetColorDiffuse(const glm::vec4 colorDiffuse) {
+    _colorDiffuse = colorDiffuse;
+}
+
+glm::vec4 Mesh::GetColorDiffuse() const {
+    return _colorDiffuse;
+}
+
+void Mesh::SetColorSpecular(const glm::vec3 colorSpecular) {
+    _colorSpecular = colorSpecular;
+}
+
+glm::vec3 Mesh::GetColorSpecular() const {
+    return _colorSpecular;
+}
+
+void Mesh::SetHasTextureDiffuse(const bool hasTextureDiffuse) {
+    _hasTextureDiffuse = hasTextureDiffuse;
+}
+
+bool Mesh::GetHasTextureDiffuse() const {
+    return _hasTextureDiffuse;
+}
+
+void Mesh::SetHasTextureSpecular(const bool hasTextureSpecular) {
+    _hasTextureSpecular = hasTextureSpecular;
+}
+
+bool Mesh::GetHasTextureSpecular() const {
+    return _hasTextureSpecular;
+}

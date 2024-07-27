@@ -6,11 +6,7 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 
-ImGuiHandlerSystem::ImGuiHandlerSystem(entt::registry &registry, const entt::entity window) :_registry{registry}, _window{window} {
-
-}
-
-void ImGuiHandlerSystem::Init() {
+ImGuiHandlerSystem::ImGuiHandlerSystem(entt::registry &registry, const entt::entity windowEntity) :_registry{registry}, _window{windowEntity} {
     auto& window{_registry.get<Window>(_window)};
 
     // Setup Dear ImGui context
@@ -25,11 +21,14 @@ void ImGuiHandlerSystem::Init() {
     ImGui_ImplOpenGL3_Init();
 }
 
+
 void ImGuiHandlerSystem::StartFrame() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    ImGui::ShowDemoWindow(); // Show demo window! :)
+    //ImGui::ShowDemoWindow(); // Show demo window! :)
+
+    //ImGui::Checkbox("Demo Window", &show_demo_window);
 }
 
 void ImGuiHandlerSystem::Render() {
@@ -42,4 +41,3 @@ void ImGuiHandlerSystem::Clear() {
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 }
-
