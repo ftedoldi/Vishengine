@@ -9,6 +9,7 @@
 #include "Systems/CreateMeshSystem.h"
 #include "Systems/DrawMeshesSystem.h"
 #include "Systems/WindowHandlerSystem.h"
+#include "Systems/ImGuiHandlerSystem.h"
 
 #include <entt/entt.hpp>
 
@@ -38,4 +39,5 @@ private:
     std::unique_ptr<WindowHandlerSystem> _windowHandlerSystem;
     std::unique_ptr<InputManager> _inputManager;
     std::unique_ptr<CameraMoveSystem> _cameraMoveSystem;
+    std::unique_ptr<ImGuiHandlerSystem> _imGuiHandlerSystem;
 };

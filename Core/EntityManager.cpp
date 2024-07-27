@@ -28,12 +28,19 @@ EntityManager::EntityManager() : _mainWindow{_registry.create()} {
 
     _cameraMoveSystem = std::make_unique<CameraMoveSystem>(_registry, _editorCamera, _inputManager.get());
 
+    _imGuiHandlerSystem = std::make_unique<ImGuiHandlerSystem>(_registry, _mainWindow);
+
+    _imGuiHandlerSystem->Init();
+
     CreateMeshSystem createMeshSystem{_registry};
     createMeshSystem.CreateMesh();
 }
 
 void EntityManager::Update() {
     while(!_windowHandlerSystem->ShouldWindowClose()) {
+        glfwPollEvents();
+
+        _imGuiHandlerSystem->StartFrame();
 
         WindowHandlerSystem::Clear();
 
@@ -41,14 +48,18 @@ void EntityManager::Update() {
 
         _drawMeshesSystem->Update(Time::GetDeltaTime());
 
-        _windowHandlerSystem->Update();
-
         _cameraMoveSystem->Update(Time::GetDeltaTime());
+
+        _imGuiHandlerSystem->Render();
+        // Last (glfwSwapBuffers())
+        _windowHandlerSystem->Update();
     }
 }
 
 void EntityManager::Clear() {
     _mainShader->DeleteProgram();
+    _imGuiHandlerSystem->Clear();
+
     glfwTerminate();
 }
 

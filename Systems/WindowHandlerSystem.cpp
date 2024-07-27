@@ -101,6 +101,7 @@ void WindowHandlerSystem::InitializeWindow(const int width, const int height, co
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
     };
+
 }
 
 bool WindowHandlerSystem::ShouldWindowClose() const {
@@ -108,8 +109,9 @@ bool WindowHandlerSystem::ShouldWindowClose() const {
 }
 
 void WindowHandlerSystem::Update() const {
+    //glfwPollEvents();
+
     glfwSwapBuffers(_window->GlfwWindow);
-    glfwPollEvents();
 }
 
 void WindowHandlerSystem::Clear() {

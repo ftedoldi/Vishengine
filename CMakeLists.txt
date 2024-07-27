@@ -12,6 +12,7 @@ option(ASSIMP_BUILD_TESTS OFF)
 add_subdirectory(Libs/assimp)
 
 add_subdirectory(Libs/entt)
+add_subdirectory(Libs/imgui)
 
 find_package(OpenGL REQUIRED)
 
@@ -73,7 +74,7 @@ add_executable(${PROJECT_NAME} ${PROJECT_SOURCES} ${PROJECT_HEADERS}
 
 target_include_directories(${PROJECT_NAME} PRIVATE Libs/entt/src)
 
-target_link_libraries(${PROJECT_NAME} assimp glfw EnTT::EnTT
+target_link_libraries(${PROJECT_NAME} assimp glfw EnTT::EnTT imgui
         ${GLFW_LIBRARIES} ${GLAD_LIBRARIES} ${OPENGL_LIBRARIES})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
