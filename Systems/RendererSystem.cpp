@@ -35,16 +35,25 @@ void RendererSystem::SetCurrentCamera(const entt::entity camera) {
 }
 
 void RendererSystem::Update(float) {
-    assert(&_currentCameraToRender);
-
-    _drawMeshes();
-    _drawLights();
-}
-
-void RendererSystem::_bindTextures(const Mesh& mesh) {
     assert(_shader);
     _shader->UseProgram();
 
+    const auto& cameraComponents{_registry.get<Camera, Position, Rotation, Scale, Perspective>(_currentCameraToRender)};
+
+    const auto& perspective{std::get<Perspective&>(cameraComponents)};
+    _shader->SetUniformMat4("Perspective", perspective.Matrix);
+
+    const auto& cameraPosition{std::get<Position&>(cameraComponents)};
+    const auto& cameraRotation{std::get<Rotation&>(cameraComponents)};
+    const auto& cameraScale{std::get<Scale&>(cameraComponents)};
+
+    RendererUtils::Transform cameraTransform{cameraPosition.Vector, cameraRotation.Quaternion, cameraScale.Value};
+
+    _drawMeshes(cameraTransform);
+    _drawLights(cameraTransform);
+}
+
+void RendererSystem::_bindTextures(const Mesh& mesh) {
     for (unsigned i{0}; i < mesh.TexturesDiffuse.size(); ++i) {
         _shader->SetUniformInt("TextureDiffuse" + std::to_string(i), i);
         mesh.TexturesDiffuse.at(i).BindTexture(i);
@@ -61,7 +70,7 @@ void RendererSystem::_bindTextures(const Mesh& mesh) {
     }*/
 }
 
-void RendererSystem::_drawMeshes() {
+void RendererSystem::_drawMeshes(const RendererUtils::Transform& cameraTransform) {
     auto view{_registry.view<MeshObject, Position, Rotation, Scale>()};
 
     for(const auto& [_, meshObject, position, rotation, scale]: view.each()) {
@@ -70,31 +79,22 @@ void RendererSystem::_drawMeshes() {
             _bindTextures(*mesh);
 
             RendererUtils::Transform meshTransform{position.Vector, rotation.Quaternion, scale.Value};
-            _drawMesh(*mesh, meshTransform);
+            _drawMesh(*mesh, meshTransform, cameraTransform);
         }
     }
 }
 
-void RendererSystem::_drawMesh(const Mesh& mesh, const RendererUtils::Transform& meshTransform) {
+void RendererSystem::_drawMesh(const Mesh& mesh, const RendererUtils::Transform& meshTransform, const RendererUtils::Transform& cameraTransform) {
     // TODO: be able to also draw on a camera with an orthogonal matrix when needed.
-    const auto& cameraComponents{_registry.get<Camera, Position, Rotation, Scale, Perspective>(_currentCameraToRender)};
-
-    const auto& cameraPosition{std::get<Position&>(cameraComponents)};
-    const auto& cameraRotation{std::get<Rotation&>(cameraComponents)};
-    const auto& cameraScale{std::get<Scale&>(cameraComponents)};
-
-    const auto& perspective{std::get<Perspective&>(cameraComponents)};
-
-    RendererUtils::Transform cameraTransform{cameraPosition.Vector, cameraRotation.Quaternion, cameraScale.Value};
 
     const auto inverseCameraTransform{RendererUtils::InvertTransform(cameraTransform)};
     const auto viewTransform{RendererUtils::CumulateTransforms(meshTransform, inverseCameraTransform)};
 
     assert(_shader);
-    _shader->SetUniformVec3("Translation", viewTransform.Position);
-    _shader->SetUniformQuat("Rotation", viewTransform.Rotation);
-    // TODO: Set float
-    _shader->SetUniformMat4("Perspective", perspective.Matrix);
+    _shader->SetUniformVec3("ViewPosition", viewTransform.Position);
+    _shader->SetUniformQuat("ViewRotation", viewTransform.Rotation);
+
+    // TODO: Set scaling
     _shader->SetBool("HasTextureDiffuse", mesh.GetHasTextureDiffuse());
     _shader->SetBool("HasTextureSpecular", mesh.GetHasTextureSpecular());
 
@@ -103,13 +103,18 @@ void RendererSystem::_drawMesh(const Mesh& mesh, const RendererUtils::Transform&
     glBindVertexArray(0);
 }
 
-void RendererSystem::_drawLights() {
-    auto view{_registry.view<Light>()};
+void RendererSystem::_drawLights(const RendererUtils::Transform& cameraTransform) {
+    auto view{_registry.view<Light, Position>()};
 
-    view.each([this](Light& light) {
+    view.each([this, &cameraTransform = std::as_const(cameraTransform)](const Light light, const Position lightPosition) {
         _shader->SetUniformVec3("LightColor", light.Diffuse);
-    });
 
+        RendererUtils::Transform lightTransform{lightPosition.Vector};
+        const auto inverseCameraTransform{RendererUtils::InvertTransform(cameraTransform)};
+        const auto viewTransform{RendererUtils::CumulateTransforms(lightTransform, inverseCameraTransform)};
+
+        _shader->SetUniformVec3("LightPosition", viewTransform.Position);
+    });
 }
 
 void RendererSystem::_setUniformColors(const Mesh& mesh) {

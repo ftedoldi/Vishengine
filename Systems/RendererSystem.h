@@ -11,11 +11,11 @@
 
 namespace RendererUtils {
 struct Transform {
-    Transform(glm::vec3 position, glm::quat rotation, float scale) : Position{position}, Rotation{rotation}, Scale{scale} {}
+    explicit Transform(glm::vec3 position, glm::quat rotation = {0.f, 0.f, 0.f, 1.f}, float scale = 1.f) : Position{position}, Rotation{rotation}, Scale{scale} {}
 
     glm::vec3 Position{};
     glm::quat Rotation{};
-    float Scale{1.f};
+    float Scale{};
 };
 }
 
@@ -29,10 +29,10 @@ public:
 
 private:
     void _bindTextures(const Mesh& mesh);
-    void _drawMeshes();
-    void _drawMesh(const Mesh& mesh, const RendererUtils::Transform& meshTransform);
+    void _drawMeshes(const RendererUtils::Transform& cameraTransform);
+    void _drawMesh(const Mesh& mesh, const RendererUtils::Transform& meshTransform, const RendererUtils::Transform& cameraTransform);
 
-    void _drawLights();
+    void _drawLights(const RendererUtils::Transform& cameraTransform);
 
     void _setUniformColors(const Mesh& mesh);
 

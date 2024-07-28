@@ -31,11 +31,11 @@ EntityManager::EntityManager() : _mainWindow{_registry.create()} {
 
     _cameraMoveSystem = std::make_unique<CameraMoveSystem>(_registry, _editorCamera, _inputManager.get());
 
-    _imGuiHandlerSystem = std::make_unique<ImGuiHandlerSystem>(_registry, _mainWindow);
+    //_imGuiHandlerSystem = std::make_unique<ImGuiHandlerSystem>(_registry, _mainWindow);
 
     LoadModelSystem loadModelSystem{_registry};
     //loadModelSystem.ImportModel("../../Assets/noTexCube.obj");
-    loadModelSystem.ImportModel("../../Assets/Backpack/backpack.obj");
+    loadModelSystem.ImportModel("../../Assets/planeTest.obj");
 
     _addLight();
 
@@ -64,7 +64,7 @@ void EntityManager::Update() {
 
 void EntityManager::Clear() {
     _mainShader->DeleteProgram();
-    _imGuiHandlerSystem->Clear();
+    //_imGuiHandlerSystem->Clear();
 
     glfwTerminate();
 }
@@ -95,10 +95,10 @@ void EntityManager::_setupEditorCamera() {
         camera.YawAngle += xOffset;
         camera.PitchAngle += yOffset;
 
-        if(camera.PitchAngle > 89.0)
-            camera.PitchAngle = 89.0;
-        if(camera.PitchAngle < -89.0)
-            camera.PitchAngle = -89.0;
+        if(camera.PitchAngle > 179.0)
+            camera.PitchAngle = 179.0;
+        if(camera.PitchAngle < -179.0)
+            camera.PitchAngle = -179.0;
 
         const auto qx{glm::angleAxis(static_cast<float>(glm::radians(camera.PitchAngle / 2.f)), glm::vec3{1.0, 0.0, 0.0})};
         const auto qy{glm::angleAxis(static_cast<float>(glm::radians(-camera.YawAngle / 2.f)), glm::vec3{0.0, 1.0, 0.0})};
@@ -124,11 +124,11 @@ void EntityManager::_addLight() {
     LoadModelSystem loadModelSystem{_registry};
     const auto entity{loadModelSystem.ImportModel("../../Assets/noTexCube.obj")};
 
-    auto& light{_registry.emplace<Light>(*entity)};
+    if(entity) {
+        auto& light{_registry.emplace<Light>(*entity)};
+        light.Diffuse = {1.0, 1.0, 1.0};
 
-    light.Diffuse = {1.0, 0.0, 0.0};
-
-    auto& position{_registry.get<Position>(*entity)};
-
-    position.Vector = {10.f, 0.f, -6.f};
+        auto& position{_registry.get<Position>(*entity)};
+        position.Vector = {0.f, 8.f, -6.f};
+    }
 }
