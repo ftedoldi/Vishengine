@@ -54,17 +54,19 @@ void RendererSystem::Update(float) {
 }
 
 void RendererSystem::_bindTextures(const Mesh& mesh) {
+    int currentTextureIndex{0};
+
     for (unsigned i{0}; i < mesh.TexturesDiffuse.size(); ++i) {
-        _shader->SetUniformInt("TextureDiffuse" + std::to_string(i), i);
-        mesh.TexturesDiffuse.at(i).BindTexture(i);
+        _shader->SetUniformInt("TextureDiffuse" + std::to_string(i), currentTextureIndex);
+        mesh.TexturesDiffuse.at(i).BindTexture(currentTextureIndex++);
     }
 
-    /*for (unsigned i{0}; i < mesh.TexturesSpecular.size(); ++i) {
-        _shader->SetUniformInt("TextureSpecular" + std::to_string(i), i);
-        mesh.TexturesSpecular.at(i).BindTexture(i);
+    for (unsigned i{0}; i < mesh.TexturesSpecular.size(); ++i) {
+        _shader->SetUniformInt("TextureSpecular" + std::to_string(i), currentTextureIndex);
+        mesh.TexturesSpecular.at(i).BindTexture(currentTextureIndex++);
     }
 
-    for (unsigned i{0}; i < mesh.TexturesNormal.size(); ++i) {
+    /*for (unsigned i{0}; i < mesh.TexturesNormal.size(); ++i) {
         _shader->SetUniformInt("TextureNormal" + std::to_string(i), i);
         mesh.TexturesNormal.at(i).BindTexture(i);
     }*/
