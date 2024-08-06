@@ -34,7 +34,7 @@ EntityManager::EntityManager() : _mainWindow{_registry.create()} {
     //_imGuiHandlerSystem = std::make_unique<ImGuiHandlerSystem>(_registry, _mainWindow);
 
     LoadModelSystem loadModelSystem{_registry};
-    loadModelSystem.ImportModel("../../Assets/Backpack/backpack.obj");
+    loadModelSystem.ImportModel("../../Assets/Car/scene.gltf");
     //loadModelSystem.ImportModel("../../Assets/planeTest.obj");
 
     _addLight();
