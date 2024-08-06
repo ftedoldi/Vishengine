@@ -2,6 +2,9 @@
 
 #include "Components/CameraComponents/Perspective.h"
 #include "Components/Window.h"
+#include "Components/Position.h"
+#include "Components/Rotation.h"
+#include "Components/Scale.h"
 
 CreateCameraSystem::CreateCameraSystem(entt::registry& registry, entt::entity window) : _registry{registry}, _window{window} {
 
@@ -11,12 +14,15 @@ entt::entity CreateCameraSystem::CreateCamera(CameraType cameraType) const {
     auto cameraEntity{_registry.create()};
 
     auto& camera{_registry.emplace<Camera>(cameraEntity)};
-    auto& transform{_registry.emplace<Transform>(cameraEntity)};
+    //auto& transform{_registry.emplace<Transform>(cameraEntity)};
+    auto& position{_registry.emplace<Position>(cameraEntity)};
+    auto& rotation{_registry.emplace<Rotation>(cameraEntity)};
+    auto& scale{_registry.emplace<Scale>(cameraEntity)};
 
-    transform.Translation = camera.Position;
+    //transform.Translation = camera.Position;
 
     if(cameraType == CameraType::Perspective) {
-        transform.Rotation = glm::quatLookAtRH(camera.Front, camera.Up);
+        rotation.Quaternion = glm::quatLookAtRH(camera.Front, camera.Up);
         _setupPerspective(cameraEntity);
     }
     else if(cameraType == CameraType::Orthogonal) {

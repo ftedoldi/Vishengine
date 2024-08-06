@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Components/CameraComponents/Camera.h"
-#include "Components/Transform.h"
 
 #include "Texture/Texture.h"
 #include "Shaders/Shader.h"
@@ -15,7 +14,10 @@
 
 class Mesh {
 public:
-    Mesh(std::vector<glm::vec3> vertices, std::vector<glm::vec2> textureCoords, std::vector<unsigned int> indices);
+    Mesh(std::vector<glm::vec3> vertices,
+         std::vector<glm::vec2> textureCoords,
+         std::vector<unsigned int> indices,
+         std::vector<glm::vec3> normals);
     ~Mesh();
 
     std::vector<unsigned int> Indices{};
@@ -40,13 +42,13 @@ public:
 private:
     std::vector<glm::vec3> _vertices{};
     std::vector<glm::vec2> _textureCoords{};
+    std::vector<glm::vec3> _normals{};
 
     glm::vec4 _colorDiffuse{};
     glm::vec3 _colorSpecular{};
 
     bool _hasTextureDiffuse{};
     bool _hasTextureSpecular{};
-
 
 	unsigned _vbo{0};
     unsigned _ebo{0};

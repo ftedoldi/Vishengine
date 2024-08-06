@@ -1,5 +1,9 @@
 #include "LoadModelSystem.h"
 
+#include "Components/Position.h"
+#include "Components/Rotation.h"
+#include "Components/Scale.h"
+
 #include "Texture/Texture.h"
 
 #include <iostream>
@@ -22,7 +26,9 @@ std::optional<entt::entity> LoadModelSystem::ImportModel(const std::string& mode
     auto meshEntity{_registry.create()};
     _meshObject = &_registry.emplace<MeshObject>(meshEntity);
 
-    _transform = &_registry.emplace<Transform>(meshEntity, glm::vec3{0, 0, -6}, 1.f, glm::quat{0, 0, 0, 1});
+    _registry.emplace<Position>(meshEntity, glm::vec3{0.f, 0.f, -6.f});
+    _registry.emplace<Rotation>(meshEntity, glm::quat{0.f, 0.f, 0.f, 1.f});
+    _registry.emplace<Scale>(meshEntity, 1.f);
 
     _modelDirectory = modelPath.substr(0, modelPath.find_last_of('/'));
 
@@ -46,19 +52,18 @@ void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const sc
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec2> textureCoords;
     std::vector<unsigned int> indices;
+    std::vector<glm::vec3> normals;
 
     // Process vertices
     for(unsigned i{0}; i < aiMesh->mNumVertices; ++i) {
-        auto currentAiMeshVertex{aiMesh->mVertices[i]};
+        vertices.emplace_back(aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z);
 
-        glm::vec3 vertex{currentAiMeshVertex.x, currentAiMeshVertex.y, currentAiMeshVertex.z};
-        vertices.push_back(vertex);
+        if(aiMesh->HasNormals()) {
+            normals.emplace_back(aiMesh->mNormals[i].x, aiMesh->mNormals[i].y, aiMesh->mNormals[i].z);
+        }
 
         if(aiMesh->mTextureCoords[0]) {
-            glm::vec2 vec{};
-            vec.x = aiMesh->mTextureCoords[0][i].x;
-            vec.y = aiMesh->mTextureCoords[0][i].y;
-            textureCoords.push_back(vec);
+            textureCoords.emplace_back(aiMesh->mTextureCoords[0][i].x, aiMesh->mTextureCoords[0][i].y);
         }
         else {
             textureCoords.emplace_back(0.f, 0.f);
@@ -73,7 +78,7 @@ void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const sc
         }
     }
 
-    auto mesh{std::make_shared<Mesh>(vertices, textureCoords, indices)};
+    auto mesh{std::make_shared<Mesh>(vertices, textureCoords, indices, normals)};
 
     auto* const material{scene->mMaterials[aiMesh->mMaterialIndex]};
 

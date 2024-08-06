@@ -2,11 +2,15 @@
 
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec2 aTexCoord;
+layout (location = 2) in vec3 aNormal;
   
 out vec2 TexCoord;
+out vec3 VertexNormal;
+out vec3 FragViewPosition;
+out vec3 NormalViewPosition;
 
-uniform vec3 Translation;
-uniform vec4 Rotation;
+uniform vec3 ViewPosition;
+uniform vec4 ViewRotation;
 
 uniform mat4 Perspective;
 
@@ -14,10 +18,12 @@ vec3 rotateVectorByQuaternion(vec4 rotationQuat, vec3 position);
 
 void main() {
     TexCoord = aTexCoord;
+    VertexNormal = aNormal;
 
-    vec3 rotatedPoint = rotateVectorByQuaternion(Rotation, aPos).xyz;
+    NormalViewPosition = rotateVectorByQuaternion(ViewRotation, aNormal).xyz;
+    FragViewPosition = rotateVectorByQuaternion(ViewRotation, aPos).xyz + ViewPosition;
 
-    gl_Position = Perspective * vec4(rotatedPoint + Translation, 1.0);
+    gl_Position = Perspective * vec4(FragViewPosition, 1.0);
 }
 
 vec4 quatMultiply(vec4 first, vec4 second) {

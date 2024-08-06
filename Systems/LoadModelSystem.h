@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Components/Mesh.h"
-#include "Components/Transform.h"
 #include "Components/TextureList.h"
 #include "Components/MeshObject.h"
 
@@ -28,8 +27,6 @@ private:
     std::vector<Texture> _loadMaterialTextures(aiMaterial* mat, aiTextureType type);
 
     entt::registry& _registry;
-
-    Transform* _transform{};
 
     Assimp::Importer _importer{};
 
