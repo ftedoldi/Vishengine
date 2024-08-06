@@ -34,6 +34,8 @@ private:
 
     void _drawLights(const RendererUtils::Transform& cameraTransform);
 
+    RendererUtils::Transform _calculateWorldTransform(entt::entity parent, const RendererUtils::Transform& transform);
+
     void _setUniformColors(const Mesh& mesh);
 
     entt::entity _currentCameraToRender{};

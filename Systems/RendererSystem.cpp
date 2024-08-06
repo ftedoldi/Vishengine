@@ -6,11 +6,12 @@
 #include "Components/Position.h"
 #include "Components/Rotation.h"
 #include "Components/Scale.h"
+#include "Components/Relationship.h"
 
 namespace RendererUtils {
 
 Transform CumulateTransforms(const Transform& firstTransform, const Transform& otherTransform) {
-    const auto position{otherTransform.Rotation * (firstTransform.Position * otherTransform.Scale) + otherTransform.Position};
+    const auto position{firstTransform.Rotation * (otherTransform.Position * firstTransform.Scale) + firstTransform.Position};
     const auto rotation{firstTransform.Rotation * otherTransform.Rotation};
     const auto scale{firstTransform.Scale * otherTransform.Scale};
 
@@ -75,13 +76,19 @@ void RendererSystem::_bindTextures(const Mesh& mesh) {
 void RendererSystem::_drawMeshes(const RendererUtils::Transform& cameraTransform) {
     auto view{_registry.view<MeshObject, Position, Rotation, Scale>()};
 
-    for(const auto& [_, meshObject, position, rotation, scale]: view.each()) {
-        for(auto& mesh : meshObject.Meshes) {
+    for(const auto& [meshEntity, meshObject, position, rotation, scale]: view.each()) {
+        for(const auto& mesh : meshObject.Meshes) {
+
             _setUniformColors(*mesh);
             _bindTextures(*mesh);
 
-            RendererUtils::Transform meshTransform{position.Vector, rotation.Quaternion, scale.Value};
-            _drawMesh(*mesh, meshTransform, cameraTransform);
+            glm::vec3 vecFbx{position.Vector.x / 100.f, position.Vector.y / 100.f, position.Vector.z / 100.f};
+            RendererUtils::Transform meshTransform{vecFbx, rotation.Quaternion, scale.Value / 100.f};
+
+            //RendererUtils::Transform meshTransform{position.Vector, rotation.Quaternion, scale.Value};
+            auto worldTransform{_calculateWorldTransform(meshEntity, meshTransform)};
+
+            _drawMesh(*mesh, worldTransform, cameraTransform);
         }
     }
 }
@@ -90,13 +97,13 @@ void RendererSystem::_drawMesh(const Mesh& mesh, const RendererUtils::Transform&
     // TODO: be able to also draw on a camera with an orthogonal matrix when needed.
 
     const auto inverseCameraTransform{RendererUtils::InvertTransform(cameraTransform)};
-    const auto viewTransform{RendererUtils::CumulateTransforms(meshTransform, inverseCameraTransform)};
+    const auto viewTransform{RendererUtils::CumulateTransforms(inverseCameraTransform, meshTransform)};
 
     assert(_shader);
     _shader->SetUniformVec3("ViewPosition", viewTransform.Position);
     _shader->SetUniformQuat("ViewRotation", viewTransform.Rotation);
+    _shader->SetUniformFloat("Scale", viewTransform.Scale);
 
-    // TODO: Set scaling
     _shader->SetBool("HasTextureDiffuse", mesh.GetHasTextureDiffuse());
     _shader->SetBool("HasTextureSpecular", mesh.GetHasTextureSpecular());
 
@@ -113,7 +120,7 @@ void RendererSystem::_drawLights(const RendererUtils::Transform& cameraTransform
 
         RendererUtils::Transform lightTransform{lightPosition.Vector};
         const auto inverseCameraTransform{RendererUtils::InvertTransform(cameraTransform)};
-        const auto viewTransform{RendererUtils::CumulateTransforms(lightTransform, inverseCameraTransform)};
+        const auto viewTransform{RendererUtils::CumulateTransforms(inverseCameraTransform, lightTransform)};
 
         _shader->SetUniformVec3("LightPosition", viewTransform.Position);
     });
@@ -124,3 +131,20 @@ void RendererSystem::_setUniformColors(const Mesh& mesh) {
     _shader->SetUniformVec3("SpecularColor", mesh.GetColorSpecular());
 }
 
+RendererUtils::Transform RendererSystem::_calculateWorldTransform(const entt::entity entity, const RendererUtils::Transform& transform) {
+    auto& entityRelationship{_registry.get<Relationship>(entity)};
+
+    if(entityRelationship.parent == entt::null) {
+        return transform;
+    }
+
+    auto& position{_registry.get<Position>(entityRelationship.parent)};
+    auto& rotation{_registry.get<Rotation>(entityRelationship.parent)};
+    auto& scale{_registry.get<Scale>(entityRelationship.parent)};
+
+    RendererUtils::Transform parentTransform{position.Vector, rotation.Quaternion, scale.Value};
+
+    const auto cumulatedTransform{RendererUtils::CumulateTransforms(transform, parentTransform)};
+
+    return _calculateWorldTransform(entityRelationship.parent, cumulatedTransform);
+}
