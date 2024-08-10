@@ -35,4 +35,6 @@ private:
     std::string _modelDirectory;
 
     std::vector<std::string> _loadedTextures{};
+
+    entt::entity _rootEntity{entt::null};
 };

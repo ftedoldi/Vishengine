@@ -25,25 +25,11 @@ std::optional<entt::entity> LoadModelSystem::ImportModel(const std::string& mode
         return std::nullopt;
     }
 
-    /*auto meshEntity{_registry.create()};
-    _meshObject = &_registry.emplace<MeshObject>(meshEntity);
-
-    _registry.emplace<Position>(meshEntity, glm::vec3{0.f, 0.f, -6.f});
-    _registry.emplace<Rotation>(meshEntity, glm::quat{0.f, 0.f, 0.f, 1.f});
-    _registry.emplace<Scale>(meshEntity, 1.f);*/
-
     _modelDirectory = modelPath.substr(0, modelPath.find_last_of('/'));
 
-    auto entityTry{_registry.create()};
-    _registry.emplace<Relationship>(entityTry);
+    _processNode(scene->mRootNode, scene, entt::null, aiMatrix4x4{});
 
-    _registry.emplace<Position>(entityTry, glm::vec3{0.f, 0.f, 0.f});
-    _registry.emplace<Rotation>(entityTry, glm::quat{0.f, 0.f, 0.f, 1.f});
-    _registry.emplace<Scale>(entityTry, 1.f);
-
-    _processNode(scene->mRootNode, scene, entityTry, aiMatrix4x4{});
-
-    return entityTry;
+    return _rootEntity;
 }
 
 void LoadModelSystem::_processNode(aiNode* const node, const aiScene* const scene, entt::entity parentEntity, const aiMatrix4x4& accTransform) {
@@ -55,8 +41,8 @@ void LoadModelSystem::_processNode(aiNode* const node, const aiScene* const scen
     if(node->mNumMeshes > 0) {
         entt::entity newEntity{_registry.create()};
 
-        aiVector3f aiTranslation;
-        aiQuaternion aiRotation;
+        aiVector3f aiTranslation{};
+        aiQuaternion aiRotation{};
 
         const auto newTransform{node->mTransformation * transform};
 
@@ -83,6 +69,11 @@ void LoadModelSystem::_processNode(aiNode* const node, const aiScene* const scen
 
         currentEntity = newEntity;
         transform = aiMatrix4x4{};
+
+        if(_rootEntity == entt::null){
+            _rootEntity = newEntity;
+        }
+
     } else {
         currentEntity = parentEntity;
 
@@ -130,8 +121,6 @@ void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const sc
     auto& meshObject{_registry.get<MeshObject>(meshEntity)};
 
     auto mesh{std::make_shared<Mesh>(vertices, textureCoords, indices, normals)};
-
-    //auto& mesh{_registry.emplace<Mesh>(meshEntity, vertices, textureCoords, indices, normals)};
 
     auto* const material{scene->mMaterials[aiMesh->mMaterialIndex]};
 
