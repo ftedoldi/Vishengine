@@ -3,8 +3,11 @@
 #include "Components/Position.h"
 #include "Components/Rotation.h"
 #include "Components/Scale.h"
+#include "Components/Relationship.h"
 
 #include "Texture/Texture.h"
+
+#include "stb_image.h"
 
 #include <iostream>
 
@@ -16,46 +19,83 @@ std::optional<entt::entity> LoadModelSystem::ImportModel(const std::string& mode
     const aiScene* const scene{_importer.ReadFile(modelPath,aiProcess_Triangulate |
                                                                         aiProcess_JoinIdenticalVertices |
                                                                         aiProcess_OptimizeMeshes |
-                                                                        aiProcess_OptimizeGraph |
-                                                                        aiProcess_FlipUVs)};
+                                                                        aiProcess_OptimizeGraph)};
     if(!scene) {
         std::cout << "Error while loading a model" << std::endl;
         return std::nullopt;
     }
 
-    auto meshEntity{_registry.create()};
-    _meshObject = &_registry.emplace<MeshObject>(meshEntity);
-
-    _registry.emplace<Position>(meshEntity, glm::vec3{0.f, 0.f, -6.f});
-    _registry.emplace<Rotation>(meshEntity, glm::quat{0.f, 0.f, 0.f, 1.f});
-    _registry.emplace<Scale>(meshEntity, 1.f);
-
     _modelDirectory = modelPath.substr(0, modelPath.find_last_of('/'));
 
-    _processNode(scene->mRootNode, scene);
+    _processNode(scene->mRootNode, scene, entt::null, aiMatrix4x4{});
 
-    return meshEntity;
+    return _rootEntity;
 }
 
-void LoadModelSystem::_processNode(aiNode* const node, const aiScene* const scene) {
-    for(unsigned i{0}; i < node->mNumMeshes; ++i) {
-        auto* const mesh{scene->mMeshes[node->mMeshes[i]]};
-        _processMesh(mesh, scene);
+void LoadModelSystem::_processNode(aiNode* const node, const aiScene* const scene, entt::entity parentEntity, const aiMatrix4x4& accTransform) {
+    entt::entity currentEntity;
+
+    aiMatrix4x4 transform{};
+
+    // Only create an entity if the node has meshes
+    if(node->mNumMeshes > 0) {
+        entt::entity newEntity{_registry.create()};
+
+        aiVector3f aiTranslation{};
+        aiQuaternion aiRotation{};
+
+        const auto newTransform{node->mTransformation * transform};
+
+        newTransform.DecomposeNoScaling(aiRotation, aiTranslation);
+
+        glm::vec3 translation{aiTranslation.x, aiTranslation.y, aiTranslation.z};
+        glm::quat rotation{aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w};
+
+        // Add components to the current entity
+        _registry.emplace<Position>(newEntity, translation);
+        _registry.emplace<Rotation>(newEntity, rotation);
+        _registry.emplace<Scale>(newEntity, 1.f);
+
+        _registry.emplace<MeshObject>(newEntity);
+
+        auto& relationship{_registry.emplace<Relationship>(newEntity)};
+        relationship.parent = parentEntity;  // Set the parent entity
+
+        // Process all meshes in this node
+        for(uint32_t i{0}; i < node->mNumMeshes; ++i) {
+            auto* const mesh{scene->mMeshes[node->mMeshes[i]]};
+            _processMesh(mesh, scene, newEntity);
+        }
+
+        currentEntity = newEntity;
+        transform = aiMatrix4x4{};
+
+        if(_rootEntity == entt::null){
+            _rootEntity = newEntity;
+        }
+
+    } else {
+        currentEntity = parentEntity;
+
+        transform = node->mTransformation * accTransform;
     }
 
-    for(unsigned i{0}; i < node->mNumChildren; ++i) {
-        _processNode(node->mChildren[i], scene);
+    // Recursively process each child node, passing the current entity as the parent
+    for(uint32_t i{0}; i < node->mNumChildren; ++i) {
+        _processNode(node->mChildren[i], scene, currentEntity, transform);
     }
 }
 
-void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const scene) {
+void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const scene, const entt::entity meshEntity) {
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec2> textureCoords;
     std::vector<unsigned int> indices;
     std::vector<glm::vec3> normals;
 
+    vertices.reserve(aiMesh->mNumVertices);
+
     // Process vertices
-    for(unsigned i{0}; i < aiMesh->mNumVertices; ++i) {
+    for(uint32_t i{0}; i < aiMesh->mNumVertices; ++i) {
         vertices.emplace_back(aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z);
 
         if(aiMesh->HasNormals()) {
@@ -71,19 +111,24 @@ void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const sc
     }
 
     // Process indices
-    for(unsigned i{0}; i < aiMesh->mNumFaces; ++i) {
+    for(uint32_t i{0}; i < aiMesh->mNumFaces; ++i) {
         const auto face{aiMesh->mFaces[i]};
-        for(unsigned j{0}; j < face.mNumIndices; ++j) {
+        for(uint32_t j{0}; j < face.mNumIndices; ++j) {
             indices.push_back(face.mIndices[j]);
         }
     }
+
+    auto& meshObject{_registry.get<MeshObject>(meshEntity)};
 
     auto mesh{std::make_shared<Mesh>(vertices, textureCoords, indices, normals)};
 
     auto* const material{scene->mMaterials[aiMesh->mMaterialIndex]};
 
     if(material->GetTextureCount(aiTextureType_DIFFUSE) > 0) [[likely]] {
-        mesh->TexturesDiffuse = _loadMaterialTextures(material, aiTextureType_DIFFUSE);
+
+        mesh->TexturesDiffuse = _loadEmbeddedTextures(scene, material, aiTextureType_DIFFUSE);
+        //mesh.TexturesDiffuse = _loadMaterialTextures(material, aiTextureType_DIFFUSE);
+
         mesh->SetHasTextureDiffuse(true);
     } else [[unlikely]] {
         aiColor4D diffuseColor{};
@@ -114,10 +159,10 @@ void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const sc
 
     mesh->TexturesNormal = _loadMaterialTextures(material, aiTextureType_NORMALS);
 
-    _meshObject->Meshes.emplace_back(std::move(mesh));
+    meshObject.Meshes.emplace_back(mesh);
 }
 
-std::vector<Texture> LoadModelSystem::_loadMaterialTextures(aiMaterial* mat, const aiTextureType type) {
+std::vector<Texture> LoadModelSystem::_loadMaterialTextures(aiMaterial* const mat, const aiTextureType type) {
     std::vector<Texture> textures;
 
     for(unsigned i{0}; i < mat->GetTextureCount(type); ++i) {
@@ -141,5 +186,20 @@ std::vector<Texture> LoadModelSystem::_loadMaterialTextures(aiMaterial* mat, con
             _loadedTextures.emplace_back(std::move(texturePath));
         }
     }
+    return textures;
+}
+
+std::vector<Texture> LoadModelSystem::_loadEmbeddedTextures(const aiScene* const scene, aiMaterial* const material, const aiTextureType type) {
+    std::vector<Texture> textures;
+
+    aiString texture_file;
+    material->Get(AI_MATKEY_TEXTURE(type, 0), texture_file);
+
+    if(const auto* aiTexture{scene->GetEmbeddedTexture(texture_file.C_Str())}){
+        Texture texture;
+        texture.CreateEmbeddedTexture(aiTexture);
+        textures.emplace_back(texture);
+    }
+
     return textures;
 }

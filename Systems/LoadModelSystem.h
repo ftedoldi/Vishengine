@@ -20,11 +20,13 @@ public:
     std::optional<entt::entity> ImportModel(const std::string& modelPath);
 
 private:
-    void _processNode(aiNode* node, const aiScene* scene);
+    void _processNode(aiNode* node, const aiScene* scene, entt::entity parentEntity, const aiMatrix4x4& accTransform);
 
-    void _processMesh(aiMesh* aiMesh, const aiScene* scene);
+    void _processMesh(aiMesh* aiMesh, const aiScene* scene, entt::entity meshEntity);
 
     std::vector<Texture> _loadMaterialTextures(aiMaterial* mat, aiTextureType type);
+
+    std::vector<Texture> _loadEmbeddedTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type);
 
     entt::registry& _registry;
 
@@ -34,5 +36,5 @@ private:
 
     std::vector<std::string> _loadedTextures{};
 
-    MeshObject* _meshObject{};
+    entt::entity _rootEntity{entt::null};
 };

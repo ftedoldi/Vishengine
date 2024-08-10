@@ -11,6 +11,7 @@ out vec3 NormalViewPosition;
 
 uniform vec3 ViewPosition;
 uniform vec4 ViewRotation;
+uniform float Scale;
 
 uniform mat4 Perspective;
 
@@ -21,7 +22,8 @@ void main() {
     VertexNormal = aNormal;
 
     NormalViewPosition = rotateVectorByQuaternion(ViewRotation, aNormal).xyz;
-    FragViewPosition = rotateVectorByQuaternion(ViewRotation, aPos).xyz + ViewPosition;
+    vec3 scaledPosition = vec3(aPos.x * Scale, aPos.y * Scale, aPos.z * Scale);
+    FragViewPosition = rotateVectorByQuaternion(ViewRotation, scaledPosition).xyz + ViewPosition;
 
     gl_Position = Perspective * vec4(FragViewPosition, 1.0);
 }

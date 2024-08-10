@@ -12,7 +12,7 @@ enum class CameraType {
 class Camera {
 public:
     explicit Camera(glm::vec3 up = glm::vec3{0.f, 1.f, 0.f},
-                    glm::vec3 direction = glm::vec3{0.f, 0.f, -1.f});
+                    glm::vec3 front = glm::vec3{0.f, 0.f, -1.f});
 
     glm::vec3 Front{};
     glm::vec3 Up{};

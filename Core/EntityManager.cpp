@@ -31,10 +31,10 @@ EntityManager::EntityManager() : _mainWindow{_registry.create()} {
 
     _cameraMoveSystem = std::make_unique<CameraMoveSystem>(_registry, _editorCamera, _inputManager.get());
 
-    //_imGuiHandlerSystem = std::make_unique<ImGuiHandlerSystem>(_registry, _mainWindow);
+    _imGuiHandlerSystem = std::make_unique<ImGuiHandlerSystem>(_registry, _mainWindow);
 
     LoadModelSystem loadModelSystem{_registry};
-    loadModelSystem.ImportModel("../../Assets/Backpack/backpack.obj");
+    loadModelSystem.ImportModel("../../Assets/hierarchy.fbx");
     //loadModelSystem.ImportModel("../../Assets/planeTest.obj");
 
     _addLight();
@@ -46,7 +46,7 @@ void EntityManager::Update() {
     while(!_windowHandlerSystem->ShouldWindowClose()) {
         glfwPollEvents();
 
-        //_imGuiHandlerSystem->StartFrame();
+        _imGuiHandlerSystem->StartFrame();
 
         WindowHandlerSystem::Clear();
 
@@ -56,7 +56,7 @@ void EntityManager::Update() {
 
         _cameraMoveSystem->Update(Time::GetDeltaTime());
 
-        //_imGuiHandlerSystem->Render();
+        _imGuiHandlerSystem->Render();
         // Last (glfwSwapBuffers())
         _windowHandlerSystem->Update();
     }
