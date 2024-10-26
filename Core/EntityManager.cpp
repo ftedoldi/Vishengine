@@ -6,11 +6,14 @@
 #include "Components/Mesh.h"
 #include "Components/CameraComponents/Perspective.h"
 #include "Components/Light.h"
+#include "Components/Lights/PointLight.h"
+#include "Components/Lights/DirectionalLight.h"
 
 #include "Systems/LoadModelSystem.h"
 
-#include "Platform/Time.h"
+#include "Components/Scale.h"
 #include "Platform/Mouse.h"
+#include "Platform/Time.h"
 
 EntityManager::EntityManager() : _mainWindow{_registry.create()} {
     // Setup window
@@ -34,7 +37,7 @@ EntityManager::EntityManager() : _mainWindow{_registry.create()} {
     _imGuiHandlerSystem = std::make_unique<ImGuiHandlerSystem>(_registry, _mainWindow);
 
     LoadModelSystem loadModelSystem{_registry};
-    loadModelSystem.ImportModel("../../Assets/hierarchy.fbx");
+    loadModelSystem.ImportModel("../../Assets/planeTest.obj");
     //loadModelSystem.ImportModel("../../Assets/planeTest.obj");
 
     _addLight();
@@ -64,7 +67,7 @@ void EntityManager::Update() {
 
 void EntityManager::Clear() {
     _mainShader->DeleteProgram();
-    //_imGuiHandlerSystem->Clear();
+    _imGuiHandlerSystem->Clear();
 
     glfwTerminate();
 }
@@ -92,16 +95,16 @@ void EntityManager::_setupEditorCamera() {
         xOffset *= sensitivity;
         yOffset *= sensitivity;
 
-        camera.YawAngle += xOffset;
-        camera.PitchAngle += yOffset;
+        camera.YawAngle += static_cast<float>(xOffset);
+        camera.PitchAngle += static_cast<float>(yOffset);
 
-        if(camera.PitchAngle > 179.0)
-            camera.PitchAngle = 179.0;
-        if(camera.PitchAngle < -179.0)
-            camera.PitchAngle = -179.0;
+        if(camera.PitchAngle > 89.f)
+            camera.PitchAngle = 89.f;
+        if(camera.PitchAngle < -89.f)
+            camera.PitchAngle = -89.f;
 
-        const auto qx{glm::angleAxis(static_cast<float>(glm::radians(camera.PitchAngle / 2.f)), glm::vec3{1.0, 0.0, 0.0})};
-        const auto qy{glm::angleAxis(static_cast<float>(glm::radians(-camera.YawAngle / 2.f)), glm::vec3{0.0, 1.0, 0.0})};
+        const auto qx{glm::angleAxis(static_cast<float>(glm::radians(camera.PitchAngle)), glm::vec3{1.0, 0.0, 0.0})};
+        const auto qy{glm::angleAxis(static_cast<float>(glm::radians(-camera.YawAngle)), glm::vec3{0.0, 1.0, 0.0})};
         const auto q{qy * qx};
 
         camera.Front = glm::normalize(q * glm::vec3{0.0, 0.0, -1.0});
@@ -121,14 +124,24 @@ void EntityManager::_setupEditorCamera() {
 }
 
 void EntityManager::_addLight() {
-    LoadModelSystem loadModelSystem{_registry};
-    const auto entity{loadModelSystem.ImportModel("../../Assets/noTexCube.obj")};
+    /*const auto pointLightEntity{_registry.create()};
+    auto& light{_registry.emplace<PointLight>(pointLightEntity)};
+    light.Diffuse = {1.0, 1.0, 1.0};
+    light.Ambient = {0.2, 0.2, 0.2};
+    light.Specular = {1.f, 1.f, 1.f};
 
-    if(entity) {
-        auto& light{_registry.emplace<Light>(*entity)};
-        light.Diffuse = {1.0, 1.0, 1.0};
+    auto& position{_registry.emplace<Position>(pointLightEntity)};
+    position.Vector = {0.f, 8.f, 0.f};*/
 
-        auto& position{_registry.get<Position>(*entity)};
-        position.Vector = {0.f, 8.f, -6.f};
-    }
+    const auto dirLightEntity{_registry.create()};
+
+    auto& dirLight{_registry.emplace<DirectionalLight>(dirLightEntity)};
+    dirLight.Direction = {0.f, -1.f, 0.f};
+    dirLight.Ambient = {.1f, .1f, .1f};
+    dirLight.Diffuse = {0.5, 0.5, 0.5};
+    dirLight.Specular = {1.f, 1.f, 1.f};
+}
+
+void EntityManager::_addPointLight() {
+
 }

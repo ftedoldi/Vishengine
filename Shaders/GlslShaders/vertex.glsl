@@ -5,8 +5,8 @@ layout (location = 1) in vec2 aTexCoord;
 layout (location = 2) in vec3 aNormal;
   
 out vec2 TexCoord;
-out vec3 VertexNormal;
 out vec3 FragViewPosition;
+out vec3 FragPos;
 out vec3 NormalViewPosition;
 
 uniform vec3 ViewPosition;
@@ -15,20 +15,19 @@ uniform float Scale;
 
 uniform mat4 Perspective;
 
-vec3 rotateVectorByQuaternion(vec4 rotationQuat, vec3 position);
+vec3 RotateVectorByQuaternion(vec4 quaternion, vec3 vector);
 
 void main() {
     TexCoord = aTexCoord;
-    VertexNormal = aNormal;
 
-    NormalViewPosition = rotateVectorByQuaternion(ViewRotation, aNormal).xyz;
+    NormalViewPosition = RotateVectorByQuaternion(ViewRotation, aNormal).xyz;
     vec3 scaledPosition = vec3(aPos.x * Scale, aPos.y * Scale, aPos.z * Scale);
-    FragViewPosition = rotateVectorByQuaternion(ViewRotation, scaledPosition).xyz + ViewPosition;
+    FragViewPosition = RotateVectorByQuaternion(ViewRotation, scaledPosition).xyz + ViewPosition;
 
     gl_Position = Perspective * vec4(FragViewPosition, 1.0);
 }
 
-vec4 quatMultiply(vec4 first, vec4 second) {
+vec4 QuatMultiply(vec4 first, vec4 second) {
     const float q1x = first.x;
     const float q1y = first.y;
     const float q1z = first.z;
@@ -45,12 +44,12 @@ vec4 quatMultiply(vec4 first, vec4 second) {
                 q1w * q2w - q1x * q2x - q1y * q2y - q1z * q2z);
 }
 
-vec3 rotateVectorByQuaternion(vec4 rotationQuat, vec3 position) {
-    vec4 quatConj = vec4(-rotationQuat.x, -rotationQuat.y, -rotationQuat.z, rotationQuat.w);
-    vec4 quatPoint = vec4(position, 0.0);
+vec3 RotateVectorByQuaternion(vec4 quaternion, vec3 vector) {
+    vec4 quatConj = vec4(-quaternion.x, -quaternion.y, -quaternion.z, quaternion.w);
+    vec4 quatPoint = vec4(vector, 0.0);
 
-    vec4 partialQuatMultiply = quatMultiply(rotationQuat, quatPoint);
-    vec4 result = quatMultiply(partialQuatMultiply, quatConj);
+    vec4 partialQuatMultiply = QuatMultiply(quaternion, quatPoint);
+    vec4 result = QuatMultiply(partialQuatMultiply, quatConj);
 
     return result.xyz;
 }

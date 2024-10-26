@@ -26,7 +26,7 @@ private:
 
     std::vector<Texture> _loadMaterialTextures(aiMaterial* mat, aiTextureType type);
 
-    std::vector<Texture> _loadEmbeddedTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type);
+    std::vector<Texture> _loadTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type);
 
     entt::registry& _registry;
 

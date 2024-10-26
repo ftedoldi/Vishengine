@@ -19,6 +19,6 @@ public:
 
     static inline const float Speed{2.5f};
 
-    double YawAngle{0.0};
-    double PitchAngle{0.0};
+    float YawAngle{};
+    float PitchAngle{};
 };

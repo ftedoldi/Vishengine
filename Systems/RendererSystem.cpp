@@ -2,30 +2,14 @@
 
 #include "Components/CameraComponents/Perspective.h"
 #include "Components/MeshObject.h"
-#include "Components/Light.h"
+#include "Components/Lights/PointLight.h"
+#include "Components/Lights/DirectionalLight.h"
 #include "Components/Position.h"
 #include "Components/Rotation.h"
 #include "Components/Scale.h"
 #include "Components/Relationship.h"
 
-namespace RendererUtils {
-
-Transform CumulateTransforms(const Transform& firstTransform, const Transform& otherTransform) {
-    const auto position{firstTransform.Rotation * (otherTransform.Position * firstTransform.Scale) + firstTransform.Position};
-    const auto rotation{firstTransform.Rotation * otherTransform.Rotation};
-    const auto scale{firstTransform.Scale * otherTransform.Scale};
-
-    return Transform{position, rotation, scale};
-}
-
-Transform InvertTransform(const Transform& transform) {
-    const auto scale{1.f / transform.Scale};
-    const auto rotation{glm::inverse(transform.Rotation)};
-    const auto position{rotation * (-transform.Position * scale)};
-
-    return Transform{position, rotation, scale};
-}
-}
+#include "Math/Math.h"
 
 RendererSystem::RendererSystem(entt::registry& registry, Shader* const shader, const entt::entity currentCamera)
     : _currentCameraToRender{currentCamera}, _registry{registry}, _shader{shader}{
@@ -48,13 +32,14 @@ void RendererSystem::Update(float) {
     const auto& cameraRotation{std::get<Rotation&>(cameraComponents)};
     const auto& cameraScale{std::get<Scale&>(cameraComponents)};
 
-    RendererUtils::Transform cameraTransform{cameraPosition.Vector, cameraRotation.Quaternion, cameraScale.Value};
+    Transform cameraTransform{cameraPosition.Vector, cameraRotation.Quaternion, cameraScale.Value};
 
     _drawMeshes(cameraTransform);
     _drawLights(cameraTransform);
 }
 
 void RendererSystem::_bindTextures(const Mesh& mesh) {
+    assert(_shader);
     int currentTextureIndex{0};
 
     for (unsigned i{0}; i < mesh.TexturesDiffuse.size(); ++i) {
@@ -73,19 +58,18 @@ void RendererSystem::_bindTextures(const Mesh& mesh) {
     }*/
 }
 
-void RendererSystem::_drawMeshes(const RendererUtils::Transform& cameraTransform) {
+void RendererSystem::_drawMeshes(const Transform& cameraTransform) {
     auto view{_registry.view<MeshObject, Position, Rotation, Scale>()};
 
     for(const auto& [meshEntity, meshObject, position, rotation, scale]: view.each()) {
         for(const auto& mesh : meshObject.Meshes) {
-
             _setUniformColors(*mesh);
             _bindTextures(*mesh);
 
-            glm::vec3 vecFbx{position.Vector.x / 100.f, position.Vector.y / 100.f, position.Vector.z / 100.f};
-            RendererUtils::Transform meshTransform{vecFbx, rotation.Quaternion, scale.Value / 100.f};
+            //glm::vec3 vecFbx{position.Vector.x / 100.f, position.Vector.y / 100.f, position.Vector.z / 100.f};
+            //Transform meshTransform{vecFbx, rotation.Quaternion, scale.Value / 100.f};
 
-            //RendererUtils::Transform meshTransform{position.Vector, rotation.Quaternion, scale.Value};
+            Transform meshTransform{position.Vector, rotation.Quaternion, scale.Value};
             auto worldTransform{_calculateWorldTransform(meshEntity, meshTransform)};
 
             _drawMesh(*mesh, worldTransform, cameraTransform);
@@ -93,11 +77,9 @@ void RendererSystem::_drawMeshes(const RendererUtils::Transform& cameraTransform
     }
 }
 
-void RendererSystem::_drawMesh(const Mesh& mesh, const RendererUtils::Transform& meshTransform, const RendererUtils::Transform& cameraTransform) {
+void RendererSystem::_drawMesh(const Mesh& mesh, const Transform& meshTransform, const Transform& cameraTransform) {
     // TODO: be able to also draw on a camera with an orthogonal matrix when needed.
-
-    const auto inverseCameraTransform{RendererUtils::InvertTransform(cameraTransform)};
-    const auto viewTransform{RendererUtils::CumulateTransforms(inverseCameraTransform, meshTransform)};
+    const auto viewTransform{_calculateViewTransform(meshTransform, cameraTransform)};
 
     assert(_shader);
     _shader->SetUniformVec3("ViewPosition", viewTransform.Position);
@@ -112,26 +94,56 @@ void RendererSystem::_drawMesh(const Mesh& mesh, const RendererUtils::Transform&
     glBindVertexArray(0);
 }
 
-void RendererSystem::_drawLights(const RendererUtils::Transform& cameraTransform) {
-    auto view{_registry.view<Light, Position>()};
+void RendererSystem::_drawLights(const Transform& cameraTransform) {
+    _drawDirectionalLights(cameraTransform);
+    _drawPointLights(cameraTransform);
+}
 
-    view.each([this, &cameraTransform = std::as_const(cameraTransform)](const Light light, const Position lightPosition) {
-        _shader->SetUniformVec3("LightColor", light.Diffuse);
+void RendererSystem::_drawPointLights(const Transform& cameraTransform) {
+    assert(_shader);
+    auto view{_registry.view<PointLight, Position>()};
 
-        RendererUtils::Transform lightTransform{lightPosition.Vector};
-        const auto inverseCameraTransform{RendererUtils::InvertTransform(cameraTransform)};
-        const auto viewTransform{RendererUtils::CumulateTransforms(inverseCameraTransform, lightTransform)};
+    view.each([this, &cameraTransform = std::as_const(cameraTransform)](const PointLight pointLight, const Position lightPosition) {
+        const auto invertedCameraTransform{cameraTransform.Invert()};
 
-        _shader->SetUniformVec3("LightPosition", viewTransform.Position);
+        const auto lightViewPosition{Math::RotateVectorByQuaternion(invertedCameraTransform.Rotation, lightPosition.Vector)};
+
+        _shader->SetUniformVec3("pointLight.Position", lightViewPosition + invertedCameraTransform.Position);
+        _shader->SetUniformVec3("pointLight.Diffuse", pointLight.Diffuse);
+        _shader->SetUniformVec3("pointLight.Ambient", pointLight.Ambient);
+        _shader->SetUniformVec3("pointLight.Specular", pointLight.Specular);
+
+        _shader->SetUniformFloat("pointLight.Constant", pointLight.Constant);
+        _shader->SetUniformFloat("pointLight.Linear", pointLight.Linear);
+        _shader->SetUniformFloat("pointLight.Quadratic", pointLight.Quadratic);
+    });
+}
+
+void RendererSystem::_drawDirectionalLights(const Transform& cameraTransform) {
+    assert(_shader);
+
+    auto view{_registry.view<DirectionalLight>()};
+
+    view.each([this, &cameraTransform = std::as_const(cameraTransform)](const DirectionalLight dirLight) {
+        const auto invertedCameraTransform{cameraTransform.Invert()};
+        const auto viewDirection{Math::RotateVectorByQuaternion(invertedCameraTransform.Rotation, dirLight.Direction)};
+
+        _shader->SetUniformVec3("dirLight.Direction", viewDirection);
+
+        _shader->SetUniformVec3("dirLight.Diffuse", dirLight.Diffuse);
+        _shader->SetUniformVec3("dirLight.Ambient", dirLight.Ambient);
+        _shader->SetUniformVec3("dirLight.Specular", dirLight.Specular);
     });
 }
 
 void RendererSystem::_setUniformColors(const Mesh& mesh) {
+    assert(_shader);
+
     _shader->SetUniformVec4("DiffuseColor", mesh.GetColorDiffuse());
     _shader->SetUniformVec3("SpecularColor", mesh.GetColorSpecular());
 }
 
-RendererUtils::Transform RendererSystem::_calculateWorldTransform(const entt::entity entity, const RendererUtils::Transform& transform) {
+Transform RendererSystem::_calculateWorldTransform(const entt::entity entity, const Transform& transform) {
     auto& entityRelationship{_registry.get<Relationship>(entity)};
 
     if(entityRelationship.parent == entt::null) {
@@ -142,9 +154,15 @@ RendererUtils::Transform RendererSystem::_calculateWorldTransform(const entt::en
     auto& rotation{_registry.get<Rotation>(entityRelationship.parent)};
     auto& scale{_registry.get<Scale>(entityRelationship.parent)};
 
-    RendererUtils::Transform parentTransform{position.Vector, rotation.Quaternion, scale.Value};
+    Transform parentTransform{position.Vector, rotation.Quaternion, scale.Value};
 
-    const auto cumulatedTransform{RendererUtils::CumulateTransforms(transform, parentTransform)};
+    const auto cumulatedTransform{transform.Cumulate(parentTransform)};
 
     return _calculateWorldTransform(entityRelationship.parent, cumulatedTransform);
+}
+
+Transform RendererSystem::_calculateViewTransform(const Transform& transform, const Transform& cameraTransform) {
+    const auto inverseCameraTransform{cameraTransform.Invert()};
+
+    return transform.Cumulate(inverseCameraTransform);
 }

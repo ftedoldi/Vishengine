@@ -37,7 +37,10 @@ include_directories(Libs/assimp/include/
 
 file(GLOB LIBS_SOURCES Libs/glad/src/gl.c)
 
-file(GLOB PROJECT_HEADERS Core/*.h
+file(GLOB PROJECT_HEADERS
+        Core/*.h
+        Utils/*.h
+        Math/*.h
         Shaders/*.h
         Texture/*.h
         Platform/*.h
@@ -47,6 +50,8 @@ file(GLOB PROJECT_HEADERS Core/*.h
 
 file(GLOB PROJECT_SOURCES
         Core/*.cpp
+        Utils/*.cpp
+        Math/*.cpp
         Shaders/*.cpp
         Texture/*.cpp
         Platform/*.cpp

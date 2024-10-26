@@ -91,7 +91,7 @@ void WindowHandlerSystem::InitializeWindow(const int width, const int height, co
     glfwSetWindowUserPointer(_window->GlfwWindow, _window);
 
     // Sets mouse callback
-    glfwSetInputMode(_window->GlfwWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    glfwSetInputMode(_window->GlfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     _setFramebufferSizeCallback();
     _setKeyPressedCallback();

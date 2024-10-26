@@ -14,12 +14,11 @@ entt::entity CreateCameraSystem::CreateCamera(CameraType cameraType) const {
     auto cameraEntity{_registry.create()};
 
     auto& camera{_registry.emplace<Camera>(cameraEntity)};
-    //auto& transform{_registry.emplace<Transform>(cameraEntity)};
-    auto& position{_registry.emplace<Position>(cameraEntity)};
-    auto& rotation{_registry.emplace<Rotation>(cameraEntity)};
-    auto& scale{_registry.emplace<Scale>(cameraEntity)};
+    //TODO: Currently the camera position is set to 0,0,0 (we can pass to this function even the position)
+    _registry.emplace<Position>(cameraEntity);
 
-    //transform.Translation = camera.Position;
+    auto& rotation{_registry.emplace<Rotation>(cameraEntity)};
+    _registry.emplace<Scale>(cameraEntity);
 
     if(cameraType == CameraType::Perspective) {
         rotation.Quaternion = glm::quatLookAtRH(camera.Front, camera.Up);

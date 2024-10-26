@@ -19,7 +19,7 @@ std::optional<entt::entity> LoadModelSystem::ImportModel(const std::string& mode
     const aiScene* const scene{_importer.ReadFile(modelPath,aiProcess_Triangulate |
                                                                         aiProcess_JoinIdenticalVertices |
                                                                         aiProcess_OptimizeMeshes |
-                                                                        aiProcess_OptimizeGraph)};
+                                                                        aiProcess_OptimizeGraph | aiProcess_FlipUVs)};
     if(!scene) {
         std::cout << "Error while loading a model" << std::endl;
         return std::nullopt;
@@ -124,15 +124,12 @@ void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const sc
 
     auto* const material{scene->mMaterials[aiMesh->mMaterialIndex]};
 
-    if(material->GetTextureCount(aiTextureType_DIFFUSE) > 0) [[likely]] {
-
-        mesh->TexturesDiffuse = _loadEmbeddedTextures(scene, material, aiTextureType_DIFFUSE);
-        //mesh.TexturesDiffuse = _loadMaterialTextures(material, aiTextureType_DIFFUSE);
+    if(material->GetTextureCount(aiTextureType_DIFFUSE) > 0) [[likely]]{
+        mesh->TexturesDiffuse = _loadTextures(scene, material, aiTextureType_DIFFUSE);
 
         mesh->SetHasTextureDiffuse(true);
     } else [[unlikely]] {
         aiColor4D diffuseColor{};
-
         if(material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor) == AI_SUCCESS) {
             mesh->SetColorDiffuse({diffuseColor.r, diffuseColor.g, diffuseColor.b, diffuseColor.a});
         } else {
@@ -145,7 +142,7 @@ void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const sc
     }
 
     if(material->GetTextureCount(aiTextureType_SPECULAR) > 0) [[likely]] {
-        mesh->TexturesSpecular = _loadMaterialTextures(material, aiTextureType_SPECULAR);
+        mesh->TexturesSpecular = _loadTextures(scene, material, aiTextureType_SPECULAR);
         mesh->SetHasTextureSpecular(true);
     } else [[unlikely]] {
         aiColor3D specular{};
@@ -157,7 +154,7 @@ void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const sc
         mesh->SetHasTextureSpecular(false);
     }
 
-    mesh->TexturesNormal = _loadMaterialTextures(material, aiTextureType_NORMALS);
+    mesh->TexturesNormal = _loadTextures(scene, material, aiTextureType_NORMALS);
 
     meshObject.Meshes.emplace_back(mesh);
 }
@@ -189,16 +186,19 @@ std::vector<Texture> LoadModelSystem::_loadMaterialTextures(aiMaterial* const ma
     return textures;
 }
 
-std::vector<Texture> LoadModelSystem::_loadEmbeddedTextures(const aiScene* const scene, aiMaterial* const material, const aiTextureType type) {
-    std::vector<Texture> textures;
+std::vector<Texture> LoadModelSystem::_loadTextures(const aiScene* const scene, aiMaterial* const material, const aiTextureType type) {
+    std::vector<Texture> textures{};
 
-    aiString texture_file;
+    aiString texture_file{};
     material->Get(AI_MATKEY_TEXTURE(type, 0), texture_file);
 
     if(const auto* aiTexture{scene->GetEmbeddedTexture(texture_file.C_Str())}){
-        Texture texture;
+        Texture texture{};
         texture.CreateEmbeddedTexture(aiTexture);
         textures.emplace_back(texture);
+    }
+    else {
+        textures = _loadMaterialTextures(material, type);
     }
 
     return textures;

@@ -27,6 +27,8 @@ private:
 
     void _addLight();
 
+    void _addPointLight();
+
     // TODO: check if maybe it's needed more than a generic registry for all the entities
     entt::registry _registry;
 
