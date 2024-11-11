@@ -4,6 +4,7 @@
 #include "Components/Rotation.h"
 #include "Components/Scale.h"
 #include "Components/Relationship.h"
+#include "Components/Mesh.h"
 
 #include "Texture/Texture.h"
 
@@ -59,7 +60,7 @@ void LoadModelSystem::_processNode(aiNode* const node, const aiScene* const scen
         _registry.emplace<MeshObject>(newEntity);
 
         auto& relationship{_registry.emplace<Relationship>(newEntity)};
-        relationship.parent = parentEntity;  // Set the parent entity
+        relationship.parent = parentEntity;
 
         // Process all meshes in this node
         for(uint32_t i{0}; i < node->mNumMeshes; ++i) {
@@ -87,16 +88,25 @@ void LoadModelSystem::_processNode(aiNode* const node, const aiScene* const scen
 }
 
 void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const scene, const entt::entity meshEntity) {
-    std::vector<glm::vec3> vertices;
-    std::vector<glm::vec2> textureCoords;
-    std::vector<unsigned int> indices;
-    std::vector<glm::vec3> normals;
+    std::vector<glm::vec2> textureCoords{};
+    std::vector<unsigned int> indices{};
+    std::vector<glm::vec3> normals{};
 
-    vertices.reserve(aiMesh->mNumVertices);
+    PointsMass pointsMass{};
+    pointsMass.Positions.reserve(aiMesh->mNumVertices);
+    pointsMass.OldPositions.reserve(aiMesh->mNumVertices);
+    pointsMass.Velocities.reserve(aiMesh->mNumVertices);
+    pointsMass.Masses.reserve(aiMesh->mNumVertices);
+    pointsMass.InverseMasses.reserve(aiMesh->mNumVertices);
 
     // Process vertices
     for(uint32_t i{0}; i < aiMesh->mNumVertices; ++i) {
-        vertices.emplace_back(aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z);
+        // Emplace the vertices of the mesh used for physics calculations
+        pointsMass.Positions.emplace_back(aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z);
+        pointsMass.OldPositions.emplace_back(aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z);
+        pointsMass.Velocities.emplace_back();
+        pointsMass.Masses.emplace_back(1.f);
+        pointsMass.InverseMasses.emplace_back(1.f);
 
         if(aiMesh->HasNormals()) {
             normals.emplace_back(aiMesh->mNormals[i].x, aiMesh->mNormals[i].y, aiMesh->mNormals[i].z);
@@ -120,7 +130,7 @@ void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const sc
 
     auto& meshObject{_registry.get<MeshObject>(meshEntity)};
 
-    auto mesh{std::make_shared<Mesh>(vertices, textureCoords, indices, normals)};
+    auto mesh{std::make_shared<Mesh>(std::move(pointsMass), std::move(textureCoords), std::move(indices), std::move(normals))};
 
     auto* const material{scene->mMaterials[aiMesh->mMaterialIndex]};
 

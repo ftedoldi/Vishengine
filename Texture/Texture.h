@@ -8,12 +8,7 @@
 #include <iostream>
 
 namespace TextureUtils {
-    struct TextureInfo {
-        int width{};
-        int height{};
-        int nrChannels{};
-        uint8_t* textureData{nullptr};
-    };
+    struct TextureInfo;
 }
 
 class Texture {

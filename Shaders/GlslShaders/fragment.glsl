@@ -65,7 +65,7 @@ void main() {
     vec3 dirLightContribution = CalculateDirectionalLight(diffuseStrength, specularStrength, 256.f, normalize(NormalViewPosition), dirLight, viewDirection);
     vec3 pointLightContribution = CalculatePointLight(diffuseStrength, specularStrength, 256.f, normalize(NormalViewPosition), pointLight, viewDirection);
 
-    FragColor = vec4(dirLightContribution, 1.f);
+    FragColor = vec4(pointLightContribution, 1.f);
 }
 
 vec3 CalculateDirectionalLight(vec3 diffuse, vec3 specular, float shininess, vec3 normal, DirectionalLight dirLight, vec3 viewDirection) {
