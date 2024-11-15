@@ -14,17 +14,16 @@ void DistanceConstraint::Project() {
     glm::vec3 delta = _p1 - _p2;
     float currentLength = glm::length(delta);
 
-    // Avoid division by zero
+    // Avoid divisions by zero
     if(currentLength < 0.0001f) return;
+    if(_w1 + _w2 < 0.0001f) return;
 
+    float deltaLength{currentLength - _restLength};
     glm::vec3 correctionDir = delta / currentLength;
-    float correction = (currentLength - _restLength) / (_w1 + _w2);
 
-    if(_w1 > 0.f) {
-        _p1 -= _w1 * correction * correctionDir;
-    }
+    float deltaP1Weights{-_w1 / (_w1 + _w2)};
+    _p1 += deltaP1Weights * deltaLength * correctionDir;
 
-    if(_w2 > 0.f) {
-        _p2 += _w2 * correction * correctionDir;
-    }
+    float deltaP2Weights{_w2 / (_w1 + _w2)};
+    _p2 += deltaP2Weights * deltaLength * correctionDir;
 }

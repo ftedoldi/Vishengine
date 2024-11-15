@@ -12,18 +12,22 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
 
-struct PointsMass {
+struct Particles {
     std::vector<glm::vec3> Positions{};
     std::vector<glm::vec3> OldPositions{};
     std::vector<glm::vec3> Velocities{};
-    std::vector<float> Masses{};
     std::vector<float> InverseMasses{};
 };
 
 class Mesh {
 public:
-    Mesh(PointsMass&& vertices,
+    using VertexIndex = uint32_t;
+    using AdjacencyList = std::unordered_map<VertexIndex, std::unordered_set<VertexIndex>>;
+
+    Mesh(Particles&& particles,
          std::vector<glm::vec2> textureCoords,
          std::vector<unsigned int> indices,
          std::vector<glm::vec3> normals);
@@ -42,10 +46,12 @@ public:
     void SetHasTextureSpecular(bool hasTextureSpecular);
     bool GetHasTextureSpecular() const;
 
-    PointsMass PointsMasses{};
+    Particles ParticlesData{};
     std::vector<DistanceConstraint> DistanceConstraints{};
 
-    std::vector<unsigned int> Indices{};
+    AdjacencyList _adjacencyList{};
+
+    std::vector<uint32_t> Indices{};
 
     GLuint Vao{0};
     GLuint Vbo{0};
@@ -56,7 +62,10 @@ public:
 
 private:
     void _initializeMesh();
+
     void _initializeConstraints();
+
+    void _buildAdjacencyList();
 
     std::vector<glm::vec2> _textureCoords{};
     std::vector<glm::vec3> _normals{};

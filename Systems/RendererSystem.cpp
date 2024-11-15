@@ -70,9 +70,8 @@ void RendererSystem::_drawMeshes(const Transform& cameraTransform) {
             //Transform meshTransform{vecFbx, rotation.Quaternion, scale.Value / 100.f};
 
             Transform meshTransform{position.Vector, rotation.Quaternion, scale.Value};
-            auto worldTransform{_calculateWorldTransform(meshEntity, meshTransform)};
 
-            //worldTransform.Position += glm::vec3{0, 10, 0};
+            auto worldTransform{_calculateWorldTransform(meshEntity, meshTransform)};
 
             _drawMesh(*mesh, worldTransform, cameraTransform);
         }
@@ -91,7 +90,7 @@ void RendererSystem::_drawMesh(const Mesh& mesh, const Transform& meshTransform,
     _shader->SetBool("HasTextureDiffuse", mesh.GetHasTextureDiffuse());
     _shader->SetBool("HasTextureSpecular", mesh.GetHasTextureSpecular());
 
-    glNamedBufferSubData(mesh.Vbo, 0, mesh.PointsMasses.Positions.size() * sizeof(glm::vec3), &mesh.PointsMasses.Positions[0]);
+    glNamedBufferSubData(mesh.Vbo, 0, mesh.ParticlesData.Positions.size() * sizeof(glm::vec3), &mesh.ParticlesData.Positions[0]);
 
     glBindVertexArray(mesh.Vao);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.Indices.size()), GL_UNSIGNED_INT, nullptr);

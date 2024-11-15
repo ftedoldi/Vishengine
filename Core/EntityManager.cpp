@@ -39,7 +39,11 @@ EntityManager::EntityManager() : _mainWindow{_registry.create()} {
     _physicsSystem = std::make_unique<PhysicsSystem>(_registry);
 
     LoadModelSystem loadModelSystem{_registry};
-    loadModelSystem.ImportModel("../../Assets/cubesNew.obj");
+    auto entity = loadModelSystem.ImportModel("../../Assets/cubes.obj");
+
+    auto& position{_registry.get<Position>(entity.value())};
+
+    position.Vector = glm::vec3{0, 10, 0};
     //loadModelSystem.ImportModel("../../Assets/Backpack/backpack.obj");
 
     _addLight();

@@ -2,16 +2,17 @@
 
 #include "glad/gl.h"
 
-Mesh::Mesh(PointsMass&& vertices,
+Mesh::Mesh(Particles&& particles,
            std::vector<glm::vec2> textureCoords,
            std::vector<unsigned int> indices,
            std::vector<glm::vec3> normals)
-    : PointsMasses{std::move(vertices)},
+    : ParticlesData{std::move(particles)},
       _textureCoords{std::move(textureCoords)},
       Indices{std::move(indices)},
       _normals{std::move(normals)}
 {
     _initializeMesh();
+    _buildAdjacencyList();
     _initializeConstraints();
 }
 
@@ -58,14 +59,14 @@ void Mesh::_initializeMesh() {
     glCreateBuffers(1, &Vbo);
 
     // Loads the vertices in the VBO
-    const auto verticesSize{PointsMasses.Positions.size() * sizeof(glm::vec3)};
+    const auto verticesSize{ParticlesData.Positions.size() * sizeof(glm::vec3)};
     const auto texCoordsSize{_textureCoords.size() * sizeof(glm::vec2)};
     const auto normalsSize{_normals.size() * sizeof(glm::vec3)};
 
     const auto totalSize{verticesSize + texCoordsSize + normalsSize};
 
     glNamedBufferData(Vbo, totalSize, nullptr, GL_STATIC_DRAW);
-    glNamedBufferSubData(Vbo, 0, verticesSize, &PointsMasses.Positions[0]);
+    glNamedBufferSubData(Vbo, 0, verticesSize, &ParticlesData.Positions[0]);
     glNamedBufferSubData(Vbo, verticesSize, texCoordsSize, &_textureCoords[0]);
     glNamedBufferSubData(Vbo, verticesSize + texCoordsSize, normalsSize, &_normals[0]);
 
@@ -96,14 +97,35 @@ void Mesh::_initializeMesh() {
 }
 
 void Mesh::_initializeConstraints() {
-    DistanceConstraints.reserve(PointsMasses.Positions.size() - 1);
+    DistanceConstraints.reserve(ParticlesData.Positions.size() * 2);
 
-    for(uint32_t i{0}; i < PointsMasses.Positions.size() - 1; i++) {
-        DistanceConstraints.emplace_back(
-                PointsMasses.Positions[i],
-                PointsMasses.Positions[i + 1],
-                PointsMasses.InverseMasses[i],
-                PointsMasses.InverseMasses[i + 1]
-        );
+    for (uint32_t i = 0; i < ParticlesData.Positions.size(); ++i) {
+        // Access the set of neighbors for vertex i
+        for (const auto neighborIndex : _adjacencyList[i]) {
+            // To prevent duplicate constraints, only add if i < neighborIndex
+            if (i < neighborIndex) {
+                DistanceConstraints.emplace_back(
+                        ParticlesData.Positions[i],
+                        ParticlesData.Positions[neighborIndex],
+                        ParticlesData.InverseMasses[i],
+                        ParticlesData.InverseMasses[neighborIndex]
+                );
+            }
+        }
+    }
+}
+
+void Mesh::_buildAdjacencyList() {
+    for (size_t i = 0; i < Indices.size(); i += 3) {
+        VertexIndex v1 = Indices[i];
+        VertexIndex v2 = Indices[i + 1];
+        VertexIndex v3 = Indices[i + 2];
+
+        _adjacencyList[v1].insert(v2);
+        _adjacencyList[v1].insert(v3);
+        _adjacencyList[v2].insert(v1);
+        _adjacencyList[v2].insert(v3);
+        _adjacencyList[v3].insert(v1);
+        _adjacencyList[v3].insert(v2);
     }
 }

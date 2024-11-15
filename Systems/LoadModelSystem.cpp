@@ -92,21 +92,19 @@ void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const sc
     std::vector<unsigned int> indices{};
     std::vector<glm::vec3> normals{};
 
-    PointsMass pointsMass{};
-    pointsMass.Positions.reserve(aiMesh->mNumVertices);
-    pointsMass.OldPositions.reserve(aiMesh->mNumVertices);
-    pointsMass.Velocities.reserve(aiMesh->mNumVertices);
-    pointsMass.Masses.reserve(aiMesh->mNumVertices);
-    pointsMass.InverseMasses.reserve(aiMesh->mNumVertices);
+    Particles particles{};
+    particles.Positions.reserve(aiMesh->mNumVertices);
+    particles.OldPositions.reserve(aiMesh->mNumVertices);
+    particles.Velocities.reserve(aiMesh->mNumVertices);
+    particles.InverseMasses.reserve(aiMesh->mNumVertices);
 
     // Process vertices
     for(uint32_t i{0}; i < aiMesh->mNumVertices; ++i) {
         // Emplace the vertices of the mesh used for physics calculations
-        pointsMass.Positions.emplace_back(aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z);
-        pointsMass.OldPositions.emplace_back(aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z);
-        pointsMass.Velocities.emplace_back();
-        pointsMass.Masses.emplace_back(1.f);
-        pointsMass.InverseMasses.emplace_back(1.f);
+        particles.Positions.emplace_back(aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z);
+        particles.OldPositions.emplace_back(aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z);
+        particles.Velocities.emplace_back();
+        particles.InverseMasses.emplace_back(1.f);
 
         if(aiMesh->HasNormals()) {
             normals.emplace_back(aiMesh->mNormals[i].x, aiMesh->mNormals[i].y, aiMesh->mNormals[i].z);
@@ -130,7 +128,7 @@ void LoadModelSystem::_processMesh(aiMesh* const aiMesh, const aiScene* const sc
 
     auto& meshObject{_registry.get<MeshObject>(meshEntity)};
 
-    auto mesh{std::make_shared<Mesh>(std::move(pointsMass), std::move(textureCoords), std::move(indices), std::move(normals))};
+    auto mesh{std::make_shared<Mesh>(std::move(particles), std::move(textureCoords), std::move(indices), std::move(normals))};
 
     auto* const material{scene->mMaterials[aiMesh->mMaterialIndex]};
 
