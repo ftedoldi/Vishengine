@@ -2,8 +2,9 @@
 
 #include "Components/CameraComponents/Camera.h"
 
-#include "Texture/Texture.h"
+#include "Physics/DistanceConstraint.h"
 #include "Shaders/Shader.h"
+#include "Texture/Texture.h"
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -11,21 +12,27 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
+
+struct Particles {
+    std::vector<glm::vec3> Positions{};
+    std::vector<glm::vec3> OldPositions{};
+    std::vector<glm::vec3> Velocities{};
+    std::vector<float> InverseMasses{};
+};
 
 class Mesh {
 public:
-    Mesh(std::vector<glm::vec3> vertices,
+    using VertexIndex = uint32_t;
+    using AdjacencyList = std::unordered_map<VertexIndex, std::unordered_set<VertexIndex>>;
+
+    Mesh(Particles&& particles,
          std::vector<glm::vec2> textureCoords,
          std::vector<unsigned int> indices,
          std::vector<glm::vec3> normals);
+
     ~Mesh();
-
-    std::vector<unsigned int> Indices{};
-    unsigned Vao{0};
-
-    std::vector<Texture> TexturesDiffuse{};
-    std::vector<Texture> TexturesSpecular{};
-    std::vector<Texture> TexturesNormal{};
 
     void SetColorDiffuse(glm::vec4 colorDiffuse);
     glm::vec4 GetColorDiffuse() const;
@@ -39,8 +46,27 @@ public:
     void SetHasTextureSpecular(bool hasTextureSpecular);
     bool GetHasTextureSpecular() const;
 
+    Particles ParticlesData{};
+    std::vector<DistanceConstraint> DistanceConstraints{};
+
+    AdjacencyList _adjacencyList{};
+
+    std::vector<uint32_t> Indices{};
+
+    GLuint Vao{0};
+    GLuint Vbo{0};
+
+    std::vector<Texture> TexturesDiffuse{};
+    std::vector<Texture> TexturesSpecular{};
+    std::vector<Texture> TexturesNormal{};
+
 private:
-    std::vector<glm::vec3> _vertices{};
+    void _initializeMesh();
+
+    void _initializeConstraints();
+
+    void _buildAdjacencyList();
+
     std::vector<glm::vec2> _textureCoords{};
     std::vector<glm::vec3> _normals{};
 
@@ -50,6 +76,5 @@ private:
     bool _hasTextureDiffuse{};
     bool _hasTextureSpecular{};
 
-	unsigned _vbo{0};
-    unsigned _ebo{0};
+    GLuint _ebo{0};
 };

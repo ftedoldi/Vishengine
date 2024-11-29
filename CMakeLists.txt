@@ -44,6 +44,7 @@ file(GLOB PROJECT_HEADERS
         Shaders/*.h
         Texture/*.h
         Platform/*.h
+        Physics/*.h
         Components/*.h Components/EventComponents/*.h Components/CameraComponents/*.h Components/Light/*.h
         Systems/*.h
         InputManager/*.h)
@@ -55,6 +56,7 @@ file(GLOB PROJECT_SOURCES
         Shaders/*.cpp
         Texture/*.cpp
         Platform/*.cpp
+        Physics/*.cpp
         Components/*.cpp Components/CameraComponents/*.cpp
         Systems/*.cpp
         InputManager/*.cpp

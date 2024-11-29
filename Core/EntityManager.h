@@ -9,6 +9,7 @@
 #include "Systems/ImGuiHandlerSystem.h"
 #include "Systems/RendererSystem.h"
 #include "Systems/WindowHandlerSystem.h"
+#include "Systems/PhysicsSystem.h"
 
 #include <entt/entt.hpp>
 
@@ -39,8 +40,14 @@ private:
     std::unique_ptr<Shader> _mainShader;
 
     std::unique_ptr<RendererSystem> _drawMeshesSystem;
+
     std::unique_ptr<WindowHandlerSystem> _windowHandlerSystem;
+
     std::unique_ptr<InputManager> _inputManager;
+
     std::unique_ptr<CameraMoveSystem> _cameraMoveSystem;
+
     std::unique_ptr<ImGuiHandlerSystem> _imGuiHandlerSystem;
+
+    std::unique_ptr<PhysicsSystem> _physicsSystem;
 };

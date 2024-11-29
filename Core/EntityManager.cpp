@@ -36,9 +36,15 @@ EntityManager::EntityManager() : _mainWindow{_registry.create()} {
 
     _imGuiHandlerSystem = std::make_unique<ImGuiHandlerSystem>(_registry, _mainWindow);
 
+    _physicsSystem = std::make_unique<PhysicsSystem>(_registry);
+
     LoadModelSystem loadModelSystem{_registry};
-    loadModelSystem.ImportModel("../../Assets/planeTest.obj");
-    //loadModelSystem.ImportModel("../../Assets/planeTest.obj");
+    auto entity = loadModelSystem.ImportModel("../../Assets/cubes.obj");
+
+    auto& position{_registry.get<Position>(entity.value())};
+
+    position.Vector = glm::vec3{0, 10, 0};
+    //loadModelSystem.ImportModel("../../Assets/Backpack/backpack.obj");
 
     _addLight();
 
@@ -56,6 +62,8 @@ void EntityManager::Update() {
         Time::UpdateDeltaTime();
 
         _drawMeshesSystem->Update(Time::GetDeltaTime());
+
+        _physicsSystem->Update();
 
         _cameraMoveSystem->Update(Time::GetDeltaTime());
 
@@ -124,22 +132,22 @@ void EntityManager::_setupEditorCamera() {
 }
 
 void EntityManager::_addLight() {
-    /*const auto pointLightEntity{_registry.create()};
+    const auto pointLightEntity{_registry.create()};
     auto& light{_registry.emplace<PointLight>(pointLightEntity)};
     light.Diffuse = {1.0, 1.0, 1.0};
     light.Ambient = {0.2, 0.2, 0.2};
     light.Specular = {1.f, 1.f, 1.f};
 
     auto& position{_registry.emplace<Position>(pointLightEntity)};
-    position.Vector = {0.f, 8.f, 0.f};*/
+    position.Vector = {0.f, 1.f, 0.f};
 
-    const auto dirLightEntity{_registry.create()};
+    /*const auto dirLightEntity{_registry.create()};
 
     auto& dirLight{_registry.emplace<DirectionalLight>(dirLightEntity)};
     dirLight.Direction = {0.f, -1.f, 0.f};
     dirLight.Ambient = {.1f, .1f, .1f};
     dirLight.Diffuse = {0.5, 0.5, 0.5};
-    dirLight.Specular = {1.f, 1.f, 1.f};
+    dirLight.Specular = {1.f, 1.f, 1.f};*/
 }
 
 void EntityManager::_addPointLight() {

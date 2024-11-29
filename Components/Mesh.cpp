@@ -2,58 +2,23 @@
 
 #include "glad/gl.h"
 
-Mesh::Mesh(std::vector<glm::vec3> vertices,
+Mesh::Mesh(Particles&& particles,
            std::vector<glm::vec2> textureCoords,
            std::vector<unsigned int> indices,
-           std::vector<glm::vec3> normals) : _vertices{std::move(vertices)},
-                                             _textureCoords{std::move(textureCoords)},
-                                             Indices{std::move(indices)},
-                                             _normals{std::move(normals)} {
-
-    // Modern openGL: see https://github.com/fendevel/Guide-to-Modern-OpenGL-Functions for reference
-    glCreateBuffers(1, &_vbo);
-
-    // Loads the vertices in the VBO
-    const auto verticesSize{_vertices.size() * sizeof(glm::vec3)};
-    const auto texCoordsSize{_textureCoords.size() * sizeof(glm::vec2)};
-    const auto normalsSize{_normals.size() * sizeof(glm::vec3)};
-
-    const auto totalSize{verticesSize + texCoordsSize + normalsSize};
-
-    glNamedBufferData(_vbo, totalSize, nullptr, GL_STATIC_DRAW);
-    glNamedBufferSubData(_vbo, 0, verticesSize, &_vertices[0]);
-    glNamedBufferSubData(_vbo, verticesSize, texCoordsSize, &_textureCoords[0]);
-    glNamedBufferSubData(_vbo, verticesSize + texCoordsSize, normalsSize, &_normals[0]);
-
-    glCreateBuffers(1, &_ebo);
-    // Loads the indices in the VBO
-    glNamedBufferData(_ebo, sizeof(unsigned int) * Indices.size(), &Indices[0], GL_STATIC_DRAW);
-
-    glCreateVertexArrays(1, &Vao);
-    // Lets vao know about the stride size for the vertices in the VBO
-    glVertexArrayVertexBuffer(Vao, 0, _vbo, 0, sizeof(glm::vec3));
-    glVertexArrayVertexBuffer(Vao, 1, _vbo, verticesSize, sizeof(glm::vec2));
-    glVertexArrayVertexBuffer(Vao, 2, _vbo, verticesSize + texCoordsSize, sizeof(glm::vec3));
-
-    // Bind the EBO to the VAO
-    glVertexArrayElementBuffer(Vao, _ebo);
-
-    glEnableVertexArrayAttrib(Vao, 0);
-    glEnableVertexArrayAttrib(Vao, 1);
-    glEnableVertexArrayAttrib(Vao, 2);
-
-    glVertexArrayAttribFormat(Vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexArrayAttribFormat(Vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
-    glVertexArrayAttribFormat(Vao, 2, 3, GL_FLOAT, GL_FALSE, 0);
-
-    glVertexArrayAttribBinding(Vao, 0, 0);
-    glVertexArrayAttribBinding(Vao, 1, 1);
-    glVertexArrayAttribBinding(Vao, 2, 2);
+           std::vector<glm::vec3> normals)
+    : ParticlesData{std::move(particles)},
+      _textureCoords{std::move(textureCoords)},
+      Indices{std::move(indices)},
+      _normals{std::move(normals)}
+{
+    _initializeMesh();
+    _buildAdjacencyList();
+    _initializeConstraints();
 }
 
 Mesh::~Mesh() {
     glDeleteVertexArrays(1, &Vao);
-    glDeleteBuffers(1, &_vbo);
+    glDeleteBuffers(1, &Vbo);
     glDeleteBuffers(1, &_ebo);
 }
 
@@ -87,4 +52,80 @@ void Mesh::SetHasTextureSpecular(const bool hasTextureSpecular) {
 
 bool Mesh::GetHasTextureSpecular() const {
     return _hasTextureSpecular;
+}
+
+void Mesh::_initializeMesh() {
+    // Modern openGL: see https://github.com/fendevel/Guide-to-Modern-OpenGL-Functions for reference
+    glCreateBuffers(1, &Vbo);
+
+    // Loads the vertices in the VBO
+    const auto verticesSize{ParticlesData.Positions.size() * sizeof(glm::vec3)};
+    const auto texCoordsSize{_textureCoords.size() * sizeof(glm::vec2)};
+    const auto normalsSize{_normals.size() * sizeof(glm::vec3)};
+
+    const auto totalSize{verticesSize + texCoordsSize + normalsSize};
+
+    glNamedBufferData(Vbo, totalSize, nullptr, GL_STATIC_DRAW);
+    glNamedBufferSubData(Vbo, 0, verticesSize, &ParticlesData.Positions[0]);
+    glNamedBufferSubData(Vbo, verticesSize, texCoordsSize, &_textureCoords[0]);
+    glNamedBufferSubData(Vbo, verticesSize + texCoordsSize, normalsSize, &_normals[0]);
+
+    glCreateBuffers(1, &_ebo);
+    // Loads the indices in the VBO
+    glNamedBufferData(_ebo, sizeof(unsigned int) * Indices.size(), &Indices[0], GL_STATIC_DRAW);
+
+    glCreateVertexArrays(1, &Vao);
+    // Lets vao know about the stride size for the vertices in the VBO
+    glVertexArrayVertexBuffer(Vao, 0, Vbo, 0, sizeof(glm::vec3));
+    glVertexArrayVertexBuffer(Vao, 1, Vbo, verticesSize, sizeof(glm::vec2));
+    glVertexArrayVertexBuffer(Vao, 2, Vbo, verticesSize + texCoordsSize, sizeof(glm::vec3));
+
+    // Bind the EBO to the VAO
+    glVertexArrayElementBuffer(Vao, _ebo);
+
+    glEnableVertexArrayAttrib(Vao, 0);
+    glEnableVertexArrayAttrib(Vao, 1);
+    glEnableVertexArrayAttrib(Vao, 2);
+
+    glVertexArrayAttribFormat(Vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribFormat(Vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribFormat(Vao, 2, 3, GL_FLOAT, GL_FALSE, 0);
+
+    glVertexArrayAttribBinding(Vao, 0, 0);
+    glVertexArrayAttribBinding(Vao, 1, 1);
+    glVertexArrayAttribBinding(Vao, 2, 2);
+}
+
+void Mesh::_initializeConstraints() {
+    DistanceConstraints.reserve(ParticlesData.Positions.size() * 2);
+
+    for (uint32_t i = 0; i < ParticlesData.Positions.size(); ++i) {
+        // Access the set of neighbors for vertex i
+        for (const auto neighborIndex : _adjacencyList[i]) {
+            // To prevent duplicate constraints, only add if i < neighborIndex
+            if (i < neighborIndex) {
+                DistanceConstraints.emplace_back(
+                        ParticlesData.Positions[i],
+                        ParticlesData.Positions[neighborIndex],
+                        ParticlesData.InverseMasses[i],
+                        ParticlesData.InverseMasses[neighborIndex]
+                );
+            }
+        }
+    }
+}
+
+void Mesh::_buildAdjacencyList() {
+    for (size_t i = 0; i < Indices.size(); i += 3) {
+        VertexIndex v1 = Indices[i];
+        VertexIndex v2 = Indices[i + 1];
+        VertexIndex v3 = Indices[i + 2];
+
+        _adjacencyList[v1].insert(v2);
+        _adjacencyList[v1].insert(v3);
+        _adjacencyList[v2].insert(v1);
+        _adjacencyList[v2].insert(v3);
+        _adjacencyList[v3].insert(v1);
+        _adjacencyList[v3].insert(v2);
+    }
 }

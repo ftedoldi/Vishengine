@@ -3,6 +3,17 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+namespace TextureUtils {
+
+struct TextureInfo {
+    int width{};
+    int height{};
+    int nrChannels{};
+    uint8_t* textureData{};
+};
+
+}
+
 void Texture::CreateTexture(const std::string& path) {
 	int width, height, nrChannels;
 
