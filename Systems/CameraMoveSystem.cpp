@@ -1,34 +1,33 @@
 #include "CameraMoveSystem.h"
 
-CameraMoveSystem::CameraMoveSystem(entt::registry& registry, const entt::entity camera, InputManager* inputManager)
-    : _registry{registry},  _inputManager{inputManager} {
-
-    _camera = &_registry.get<Camera>(camera);
-    _position = &_registry.get<Position>(camera);
-    _rotation = &_registry.get<Rotation>(camera);
+CameraMoveSystem::CameraMoveSystem(entt::registry& registry, const entt::entity camera, InputManager* const inputManager)
+    : _registry{registry},  _inputManager{inputManager}, _camera{camera} {
 }
 
 void CameraMoveSystem::Update(const float deltaTime) {
+    const auto& cameraComponent{_registry.get<Camera>(_camera)};
+    auto& cameraPosition{_registry.get<Position>(_camera)};
+    
     if(_inputManager->IsKeyPressed(GLFW_KEY_W)) {
-        _position->Vector.y = _cameraYPosition;
-        _position->Vector += _camera->Front * Camera::Speed * deltaTime;
+        cameraPosition.Vector.y = _cameraYPosition;
+        cameraPosition.Vector += cameraComponent.Front * cameraComponent.Speed * deltaTime;
     }
     if(_inputManager->IsKeyPressed(GLFW_KEY_S)) {
-        _position->Vector.y = _cameraYPosition;
-        _position->Vector -= _camera->Front * Camera::Speed * deltaTime;
+        cameraPosition.Vector.y = _cameraYPosition;
+        cameraPosition.Vector -= cameraComponent.Front * cameraComponent.Speed * deltaTime;
     }
     if(_inputManager->IsKeyPressed(GLFW_KEY_A)) {
-        _position->Vector -= glm::normalize(glm::cross(_camera->Front, _camera->Up)) * Camera::Speed * deltaTime;
+        cameraPosition.Vector -= glm::normalize(glm::cross(cameraComponent.Front, cameraComponent.Up)) * cameraComponent.Speed * deltaTime;
     }
     if(_inputManager->IsKeyPressed(GLFW_KEY_D)) {
-        _position->Vector += glm::normalize(glm::cross(_camera->Front, _camera->Up)) * Camera::Speed * deltaTime;
+        cameraPosition.Vector += glm::normalize(glm::cross(cameraComponent.Front, cameraComponent.Up)) * cameraComponent.Speed * deltaTime;
     }
     if(_inputManager->IsKeyPressed(GLFW_KEY_E)) {
-        _position->Vector += glm::vec3{0, 1, 0} * Camera::Speed * deltaTime;
-        _cameraYPosition = _position->Vector.y;
+        cameraPosition.Vector += glm::vec3{0, 1, 0} * cameraComponent.Speed * deltaTime;
+        _cameraYPosition = cameraPosition.Vector.y;
     }
     if(_inputManager->IsKeyPressed(GLFW_KEY_Q)) {
-        _position->Vector -= glm::vec3{0, 1, 0} * Camera::Speed * deltaTime;
-        _cameraYPosition = _position->Vector.y;
+        cameraPosition.Vector -= glm::vec3{0, 1, 0} * cameraComponent.Speed * deltaTime;
+        _cameraYPosition = cameraPosition.Vector.y;
     }
 }

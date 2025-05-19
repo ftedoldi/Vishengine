@@ -1,19 +1,15 @@
 #pragma once
 
+#include "GLFW/glfw3.h"
 #include <entt/entt.hpp>
 
 class ImGuiHandlerSystem {
 public:
-    ImGuiHandlerSystem(entt::registry& registry, entt::entity windowEntity);
+    explicit ImGuiHandlerSystem(GLFWwindow* window);
 
-    void StartFrame();
+    void StartFrame(entt::registry& registry);
 
     void Render();
 
     void Clear();
-
-private:
-    entt::registry& _registry;
-
-    entt::entity _window;
 };

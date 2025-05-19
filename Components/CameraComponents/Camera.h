@@ -4,21 +4,23 @@
 
 #include "GLFW/glfw3.h"
 
-enum class CameraType {
-    Perspective,
-    Orthogonal,
-};
-
 class Camera {
 public:
-    explicit Camera(glm::vec3 up = glm::vec3{0.f, 1.f, 0.f},
-                    glm::vec3 front = glm::vec3{0.f, 0.f, -1.f});
+    explicit Camera(glm::vec3 up = glm::vec3{0., 1., 0.},
+                    glm::vec3 front = glm::vec3{0., 0., -1.});
 
     glm::vec3 Front{};
     glm::vec3 Up{};
 
-    static inline const float Speed{2.5f};
+    float Speed{2.5f};
 
     float YawAngle{};
     float PitchAngle{};
+
+    float FOV{};
+    float AspectRatio{};
+    float NearPlaneZDistance{};
+    float FarPlaneZDistance{};
+
+    glm::mat4 ProjectionMatrix{};
 };

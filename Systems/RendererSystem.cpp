@@ -1,6 +1,5 @@
 #include "RendererSystem.h"
 
-#include "Components/CameraComponents/Perspective.h"
 #include "Components/MeshObject.h"
 #include "Components/Lights/PointLight.h"
 #include "Components/Lights/DirectionalLight.h"
@@ -23,10 +22,11 @@ void RendererSystem::Update(float) {
     assert(_shader);
     _shader->UseProgram();
 
-    const auto& cameraComponents{_registry.get<Camera, Position, Rotation, Scale, Perspective>(_currentCameraToRender)};
+    const auto& cameraComponents{_registry.get<Camera, Position, Rotation, Scale>(_currentCameraToRender)};
 
-    const auto& perspective{std::get<Perspective&>(cameraComponents)};
-    _shader->SetUniformMat4("Perspective", perspective.Matrix);
+    const auto& camera{std::get<Camera&>(cameraComponents)};
+    // TODO: this is hardcoded find a better way
+    _shader->SetUniformMat4("Perspective", camera.ProjectionMatrix);
 
     const auto& cameraPosition{std::get<Position&>(cameraComponents)};
     const auto& cameraRotation{std::get<Rotation&>(cameraComponents)};

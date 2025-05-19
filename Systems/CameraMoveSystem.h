@@ -16,11 +16,10 @@ public:
 
 private:
     entt::registry& _registry;
-    InputManager* _inputManager;
-    Camera* _camera;
 
-    Position* _position;
-    Rotation* _rotation;
+    InputManager* _inputManager{};
+
+    entt::entity _camera{};
 
     float _cameraYPosition{0.f};
 };

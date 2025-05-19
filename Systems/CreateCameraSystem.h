@@ -1,20 +1,39 @@
 #pragma once
 
 #include "Components/CameraComponents/Camera.h"
+#include "Components/Rotation.h"
 
 #include <entt/entt.hpp>
 
-class CreateCameraSystem {
-public:
-    explicit CreateCameraSystem(entt::registry& registry, entt::entity window);
+enum class CameraType {
+    Perspective,
+    Orthogonal,
+};
 
-    entt::entity CreateCamera(CameraType cameraType) const;
+class CameraFactory {
+public:
+    static entt::entity CreateEditorCamera(entt::registry& registry,
+                                    const glm::vec3& position,
+                                    double fov,
+                                    double aspectRatio,
+                                    double nearPlaneZDistance,
+                                    double farPlaneZDistance,
+                                    CameraType cameraType);
+
+    static entt::entity CreateGameCamera(entt::registry& registry,
+                                         const glm::vec3& position,
+                                         double fov,
+                                         double aspectRatio,
+                                         double nearPlaneZDistance,
+                                         double farPlaneZDistance,
+                                         CameraType cameraType);
 
 private:
-    void _setupPerspective(entt::entity cameraEntity) const;
-
-    //void _setupOrthogonal();
-
-    entt::registry& _registry;
-    entt::entity _window;
+    static entt::entity _createCamera(entt::registry& registry,
+                                      const glm::vec3& position,
+                                      double fov,
+                                      double aspectRatio,
+                                      double nearPlaneZDistance,
+                                      double farPlaneZDistance,
+                                      CameraType cameraType);
 };

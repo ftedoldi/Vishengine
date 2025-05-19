@@ -1,42 +1,60 @@
 #include "CreateCameraSystem.h"
 
-#include "Components/CameraComponents/Perspective.h"
-#include "Components/Window.h"
+#include "Components/CameraComponents/EditorCameraTag.h"
+#include "Components/CameraComponents/GameCameraTag.h"
 #include "Components/Position.h"
 #include "Components/Rotation.h"
 #include "Components/Scale.h"
+#include "Core/Window.h"
 
-CreateCameraSystem::CreateCameraSystem(entt::registry& registry, entt::entity window) : _registry{registry}, _window{window} {
-
+entt::entity CameraFactory::CreateEditorCamera(entt::registry& registry,
+                                               const glm::vec3& position,
+                                               const double fov,
+                                               const double aspectRatio,
+                                               const double nearPlaneZDistance,
+                                               const double farPlaneZDistance,
+                                               const CameraType cameraType) {
+        const auto editorCamera{_createCamera(registry, position, fov, aspectRatio, nearPlaneZDistance, farPlaneZDistance, cameraType)};
+        registry.emplace<EditorCameraTag>(editorCamera);
+        return editorCamera;
 }
 
-entt::entity CreateCameraSystem::CreateCamera(CameraType cameraType) const {
-    auto cameraEntity{_registry.create()};
+entt::entity CameraFactory::CreateGameCamera(entt::registry& registry,
+                                               const glm::vec3& position,
+                                               const double fov,
+                                               const double aspectRatio,
+                                               const double nearPlaneZDistance,
+                                               const double farPlaneZDistance,
+                                               const CameraType cameraType) {
+    const auto gameCamera{_createCamera(registry, position, fov, aspectRatio, nearPlaneZDistance, farPlaneZDistance, cameraType)};
+    registry.emplace<GameCameraTag>(gameCamera);
+    return gameCamera;
+}
 
-    auto& camera{_registry.emplace<Camera>(cameraEntity)};
-    //TODO: Currently the camera position is set to 0,0,0 (we can pass to this function even the position)
-    _registry.emplace<Position>(cameraEntity);
+entt::entity CameraFactory::_createCamera(entt::registry& registry,
+                                          const glm::vec3& position,
+                                          const double fov,
+                                          const double aspectRatio,
+                                          const double nearPlaneZDistance,
+                                          const double farPlaneZDistance,
+                                          const CameraType cameraType) {
+    auto cameraEntity{registry.create()};
 
-    auto& rotation{_registry.emplace<Rotation>(cameraEntity)};
-    _registry.emplace<Scale>(cameraEntity);
+    auto& camera{registry.emplace<Camera>(cameraEntity)};
+    camera.FOV = fov;
+    camera.AspectRatio = aspectRatio;
+    camera.NearPlaneZDistance = nearPlaneZDistance;
+    camera.FarPlaneZDistance = farPlaneZDistance;
+
+    registry.emplace<Position>(cameraEntity, position);
+    registry.emplace<Scale>(cameraEntity);
+
+    auto& rotation{registry.emplace<Rotation>(cameraEntity)};
+    rotation.Quaternion = glm::quatLookAtRH(camera.Front, camera.Up);
 
     if(cameraType == CameraType::Perspective) {
-        rotation.Quaternion = glm::quatLookAtRH(camera.Front, camera.Up);
-        _setupPerspective(cameraEntity);
+        camera.ProjectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlaneZDistance, farPlaneZDistance);
     }
-    else if(cameraType == CameraType::Orthogonal) {
-        // TODO: implement this whenever orthogonal camera is needed.
-    }
+
     return cameraEntity;
 }
-
-void CreateCameraSystem::_setupPerspective(const entt::entity cameraEntity) const {
-    auto& perspective{_registry.emplace<Perspective>(cameraEntity)};
-    
-    auto windowView{_registry.view<Window>()};
-    auto& window{windowView.get<Window>(_window)};
-
-    // TODO: maybe I can pass even the fov or the near and far plane idk.
-    perspective.Matrix = glm::perspective(glm::radians(45.f), static_cast<float>(window.Width) / static_cast<float>(window.Height), 0.1f, 100.f);
-}
-

@@ -68,7 +68,6 @@ void LoadModelSystem::_processNode(aiNode* const node, const aiScene* const scen
         }
 
         currentEntity = newEntity;
-        transform = aiMatrix4x4{};
 
         if(_rootEntity == entt::null){
             _rootEntity = newEntity;
@@ -82,7 +81,8 @@ void LoadModelSystem::_processNode(aiNode* const node, const aiScene* const scen
 
     // Recursively process each child node, passing the current entity as the parent
     for(uint32_t i{0}; i < node->mNumChildren; ++i) {
-        _processNode(node->mChildren[i], scene, currentEntity, transform);
+        auto* child{node->mChildren[i]};
+        _processNode(child, scene, currentEntity, transform);
     }
 }
 
