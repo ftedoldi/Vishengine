@@ -10,7 +10,6 @@
 #include "Systems/CameraProjectionUpdaterSystem.h"
 #include "Systems/CreateCameraSystem.h"
 #include "Systems/ImGuiHandlerSystem.h"
-#include "Systems/PhysicsSystem.h"
 #include "Systems/RendererSystem.h"
 
 #include <entt/entt.hpp>
@@ -48,6 +47,4 @@ private:
     std::unique_ptr<CameraMoveSystem> _cameraMoveSystem{};
 
     std::unique_ptr<ImGuiHandlerSystem> _imGuiHandlerSystem{};
-
-    std::unique_ptr<PhysicsSystem> _physicsSystem{};
 };

@@ -38,8 +38,6 @@ EntityManager::EntityManager() {
 
     _imGuiHandlerSystem = std::make_unique<ImGuiHandlerSystem>(_window->GetGLFWwindow());
 
-    _physicsSystem = std::make_unique<PhysicsSystem>(_registry);
-
     LoadModelSystem loadModelSystem{_registry};
     auto entity = loadModelSystem.ImportModel("../../Assets/ezio.fbx");
 
@@ -64,8 +62,6 @@ void EntityManager::Update() {
         Time::UpdateDeltaTime();
 
         _drawMeshesSystem->Update(Time::GetDeltaTime());
-
-        //_physicsSystem->Update();
 
         _cameraMoveSystem->Update(Time::GetDeltaTime());
 
