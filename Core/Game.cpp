@@ -37,7 +37,7 @@ Game::Game() {
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWwindow());
 
     ModelLoader modelLoader{_registry, _meshController, _materialController};
-    auto entity = modelLoader.ImportModel("../../Assets/EzioNewGlb/ezio.glb");
+    auto entity = modelLoader.ImportModel("../../Assets/hierarchy.glb");
 
     //auto& position{_registry.get<Position>(entity.value())};
 

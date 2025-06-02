@@ -16,7 +16,7 @@ namespace RS::Detail {
     Transform CalculateViewTransform(const Transform& transform, const Transform& cameraTransform) {
         const auto inverseCameraTransform{cameraTransform.Invert()};
 
-        return transform.Cumulate(inverseCameraTransform);
+        return inverseCameraTransform.Cumulate(transform);
     }
 
 }
@@ -143,7 +143,7 @@ void RendererSystem::_setUniformColors(const glm::vec4& colorDiffuse, const glm:
 Transform RendererSystem::_calculateWorldTransform(const entt::entity entity, entt::registry& registry, const Transform& transform) {
     auto& entityRelationship{registry.get<Relationship>(entity)};
 
-    if(entityRelationship.parent == entt::null) {
+    if (entityRelationship.parent == entt::null) {
         return transform;
     }
 
@@ -153,7 +153,8 @@ Transform RendererSystem::_calculateWorldTransform(const entt::entity entity, en
 
     Transform parentTransform{position.Vector, rotation.Quaternion, scale.Value};
 
-    const auto cumulatedTransform{transform.Cumulate(parentTransform)};
+    // Apply the current transform relative to the parent's world transform
+    const auto parentWorldTransform{_calculateWorldTransform(entityRelationship.parent, registry, parentTransform)};
 
-    return _calculateWorldTransform(entityRelationship.parent, registry, cumulatedTransform);
+    return parentWorldTransform.Cumulate(transform);
 }

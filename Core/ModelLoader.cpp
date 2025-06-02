@@ -33,20 +33,11 @@ std::optional<entt::entity> ModelLoader::ImportModel(const std::string& modelPat
     auto& relationship{_registry.emplace<Relationship>(rootEntity)};
     relationship.parent = entt::null;
 
-    aiVector3f aiTranslation{};
-    aiQuaternion aiRotation{};
-    auto transform = scene->mRootNode->mTransformation;
-
-    transform.DecomposeNoScaling(aiRotation, aiTranslation);
-
-    glm::vec3 translation{aiTranslation.x, aiTranslation.y, aiTranslation.z};
-    glm::quat rotation{aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w};
-
-    _registry.emplace<Position>(rootEntity, translation);
-    _registry.emplace<Rotation>(rootEntity, rotation);
+    _registry.emplace<Position>(rootEntity, glm::vec3{0., 0., 0.});
+    _registry.emplace<Rotation>(rootEntity, glm::quat{1., 0., 0., 0.});
     _registry.emplace<Scale>(rootEntity, 1.f);
 
-    _processNode(scene->mRootNode, scene, rootEntity, transform);
+    _processNode(scene->mRootNode, scene, rootEntity, aiMatrix4x4{});
 
     return rootEntity;
 }
@@ -65,7 +56,7 @@ void ModelLoader::_processNode(aiNode* const node, const aiScene* const scene, e
         aiVector3f aiTranslation{};
         aiQuaternion aiRotation{};
 
-        transform = node->mTransformation * accTransform;
+        transform = node->mTransformation;
 
         transform.DecomposeNoScaling(aiRotation, aiTranslation);
 
