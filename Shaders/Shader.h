@@ -12,6 +12,7 @@ public:
     Shader(const std::string&vertexShaderRelativePath, const std::string&fragmentShaderRelativePath);
 
 	void UseProgram() const;
+
 	void DeleteProgram() const;
 
 	void SetUniformVec3(const std::string& uniformName, float x, float y, float z) const;

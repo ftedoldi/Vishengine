@@ -1,11 +1,11 @@
-#include "Core/EntityManager.h"
+#include "Core/Game.h"
 
 int main() {
-    EntityManager entityManager;
+    Game game{};
 
-    entityManager.Update();
+    game.Update();
 
-    entityManager.Clear();
+    game.Clear();
 
     return 0;
 }

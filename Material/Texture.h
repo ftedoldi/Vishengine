@@ -7,15 +7,6 @@
 #include <string>
 #include <iostream>
 
-namespace TextureUtils {
-    struct TextureInfo {
-        int width{};
-        int height{};
-        int nrChannels{};
-        uint8_t* textureData{nullptr};
-    };
-}
-
 class Texture {
 public:
 	void CreateTexture(const std::string& path);
@@ -25,7 +16,7 @@ public:
 	void BindTexture(unsigned texNum) const;
 
 private:
-    void _createTexture(const TextureUtils::TextureInfo& textureInfo);
+    void _createTexture(int textureWidth, int textureHeight, int nrChannels, uint8_t* textureData);
 
     unsigned _id = 0;
 };

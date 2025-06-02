@@ -1,11 +1,11 @@
 #pragma once
 
 #include "GLFW/glfw3.h"
-#include <entt/entt.hpp>
+#include "Libs/entt/src/entt/entt.hpp"
 
-class ImGuiHandlerSystem {
+class GUIDrawer {
 public:
-    explicit ImGuiHandlerSystem(GLFWwindow* window);
+    explicit GUIDrawer(GLFWwindow* window);
 
     void StartFrame(entt::registry& registry);
 

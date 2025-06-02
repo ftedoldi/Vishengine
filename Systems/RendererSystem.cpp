@@ -1,107 +1,104 @@
 #include "RendererSystem.h"
 
-#include "Components/MeshObject.h"
-#include "Components/Lights/PointLight.h"
 #include "Components/Lights/DirectionalLight.h"
+#include "Components/Lights/PointLight.h"
+#include "Components/Mesh.h"
 #include "Components/Position.h"
+#include "Components/Relationship.h"
 #include "Components/Rotation.h"
 #include "Components/Scale.h"
-#include "Components/Relationship.h"
 
+#include "Components/Camera/EditorCameraTag.h"
 #include "Math/Math.h"
 
-RendererSystem::RendererSystem(entt::registry& registry, Shader* const shader, const entt::entity currentCamera)
-    : _currentCameraToRender{currentCamera}, _registry{registry}, _shader{shader}{
+namespace RS::Detail {
+
+    Transform CalculateViewTransform(const Transform& transform, const Transform& cameraTransform) {
+        const auto inverseCameraTransform{cameraTransform.Invert()};
+
+        return transform.Cumulate(inverseCameraTransform);
+    }
+
 }
 
-void RendererSystem::SetCurrentCamera(const entt::entity camera) {
-    _currentCameraToRender = camera;
+RendererSystem::RendererSystem(Shader* const shader)
+    : _shader{shader}{
 }
 
-void RendererSystem::Update(float) {
+void RendererSystem::Update(float, entt::registry& registry, const MaterialController& materialController, const MeshController& meshController) {
     assert(_shader);
     _shader->UseProgram();
 
-    const auto& cameraComponents{_registry.get<Camera, Position, Rotation, Scale>(_currentCameraToRender)};
+    auto cameraView{registry.view<Camera, Position, Rotation, Scale, EditorCameraTag>()};
+    for(const auto entity: cameraView) {
+        const auto& cameraComponent{cameraView.get<Camera>(entity)};
+        const auto& positionComponent{cameraView.get<Position>(entity)};
+        const auto& rotationComponent{cameraView.get<Rotation>(entity)};
+        const auto& scaleComponent{cameraView.get<Scale>(entity)};
+        _shader->SetUniformMat4("Perspective", cameraComponent.ProjectionMatrix);
 
-    const auto& camera{std::get<Camera&>(cameraComponents)};
-    // TODO: this is hardcoded find a better way
-    _shader->SetUniformMat4("Perspective", camera.ProjectionMatrix);
+        Transform worldSpaceCameraTransform{positionComponent.Vector, rotationComponent.Quaternion, scaleComponent.Value};
+        auto meshView{registry.view<Mesh, Material>()};
 
-    const auto& cameraPosition{std::get<Position&>(cameraComponents)};
-    const auto& cameraRotation{std::get<Rotation&>(cameraComponents)};
-    const auto& cameraScale{std::get<Scale&>(cameraComponents)};
+        for(const auto& [meshEntity, mesh, material]: meshView.each()) {
+            const auto& materialData{materialController.GetMaterialData(material.materialID)};
 
-    Transform cameraTransform{cameraPosition.Vector, cameraRotation.Quaternion, cameraScale.Value};
+            _setUniformColors(materialData.ColorDiffuse, materialData.ColorSpecular);
+            _bindTextures(materialData.TexturesDiffuse, materialData.TexturesSpecular, materialData.TexturesNormal);
 
-    _drawMeshes(cameraTransform);
-    _drawLights(cameraTransform);
+            const auto worldSpaceMeshTransform{_calculateWorldTransform(meshEntity, registry, Transform{{0,0,0}})};
+            const auto meshViewTransform{RS::Detail::CalculateViewTransform(worldSpaceMeshTransform, worldSpaceCameraTransform)};
+
+            const auto& meshData{meshController.GetMeshData(mesh.meshID)};
+            _drawMesh(meshViewTransform, meshData.MeshGpuData.Vao, meshData.RawMeshData.Indices);
+        }
+
+        _drawLights(worldSpaceCameraTransform, registry);
+    }
 }
 
-void RendererSystem::_bindTextures(const Mesh& mesh) {
+void RendererSystem::_bindTextures(const std::vector<Texture>& diffuseTextures, const std::vector<Texture>& specularTextures, const std::vector<Texture>&) {
     assert(_shader);
     int currentTextureIndex{0};
 
-    for (unsigned i{0}; i < mesh.TexturesDiffuse.size(); ++i) {
+    _shader->SetBool("HasTextureDiffuse", !diffuseTextures.empty());
+    _shader->SetBool("HasTextureSpecular", !specularTextures.empty());
+
+    for (unsigned i{0}; i < diffuseTextures.size(); ++i) {
         _shader->SetUniformInt("TextureDiffuse" + std::to_string(i), currentTextureIndex);
-        mesh.TexturesDiffuse.at(i).BindTexture(currentTextureIndex++);
+        diffuseTextures.at(i).BindTexture(currentTextureIndex++);
     }
 
-    for (unsigned i{0}; i < mesh.TexturesSpecular.size(); ++i) {
+    for (unsigned i{0}; i < specularTextures.size(); ++i) {
         _shader->SetUniformInt("TextureSpecular" + std::to_string(i), currentTextureIndex);
-        mesh.TexturesSpecular.at(i).BindTexture(currentTextureIndex++);
+        specularTextures.at(i).BindTexture(currentTextureIndex++);
     }
 
-    /*for (unsigned i{0}; i < mesh.TexturesNormal.size(); ++i) {
+    /*for (unsigned i{0}; i < normalTextures.size(); ++i) {
         _shader->SetUniformInt("TextureNormal" + std::to_string(i), i);
-        mesh.TexturesNormal.at(i).BindTexture(i);
+        normalTextures.at(i).BindTexture(i);
     }*/
 }
 
-void RendererSystem::_drawMeshes(const Transform& cameraTransform) {
-    auto view{_registry.view<MeshObject, Position, Rotation, Scale>()};
-
-    for(const auto& [meshEntity, meshObject, position, rotation, scale]: view.each()) {
-        for(const auto& mesh : meshObject.Meshes) {
-            _setUniformColors(*mesh);
-            _bindTextures(*mesh);
-
-            //glm::vec3 vecFbx{position.Vector.x / 100.f, position.Vector.y / 100.f, position.Vector.z / 100.f};
-            //Transform meshTransform{vecFbx, rotation.Quaternion, scale.Value / 100.f};
-
-            Transform meshTransform{position.Vector, rotation.Quaternion, scale.Value};
-            auto worldTransform{_calculateWorldTransform(meshEntity, meshTransform)};
-
-            _drawMesh(*mesh, worldTransform, cameraTransform);
-        }
-    }
-}
-
-void RendererSystem::_drawMesh(const Mesh& mesh, const Transform& meshTransform, const Transform& cameraTransform) {
-    // TODO: be able to also draw on a camera with an orthogonal matrix when needed.
-    const auto viewTransform{_calculateViewTransform(meshTransform, cameraTransform)};
-
+void RendererSystem::_drawMesh(const Transform& meshViewTransform, const uint32_t meshVao, const std::vector<uint32_t>& indices) {
     assert(_shader);
-    _shader->SetUniformVec3("ViewPosition", viewTransform.Position);
-    _shader->SetUniformQuat("ViewRotation", viewTransform.Rotation);
-    _shader->SetUniformFloat("Scale", viewTransform.Scale);
+    _shader->SetUniformVec3("ViewPosition", meshViewTransform.Position);
+    _shader->SetUniformQuat("ViewRotation", meshViewTransform.Rotation);
+    _shader->SetUniformFloat("Scale", meshViewTransform.Scale);
 
-    _shader->SetBool("HasTextureDiffuse", mesh.GetHasTextureDiffuse());
-    _shader->SetBool("HasTextureSpecular", mesh.GetHasTextureSpecular());
-
-    glBindVertexArray(mesh.Vao);
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.Indices.size()), GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray(meshVao);
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
 }
 
-void RendererSystem::_drawLights(const Transform& cameraTransform) {
-    _drawDirectionalLights(cameraTransform);
-    _drawPointLights(cameraTransform);
+void RendererSystem::_drawLights(const Transform& cameraTransform, entt::registry& registry) {
+    _drawDirectionalLights(cameraTransform, registry);
+    _drawPointLights(cameraTransform, registry);
 }
 
-void RendererSystem::_drawPointLights(const Transform& cameraTransform) {
+void RendererSystem::_drawPointLights(const Transform& cameraTransform, entt::registry& registry) {
     assert(_shader);
-    auto view{_registry.view<PointLight, Position>()};
+    auto view{registry.view<PointLight, Position>()};
 
     view.each([this, &cameraTransform = std::as_const(cameraTransform)](const PointLight pointLight, const Position lightPosition) {
         const auto invertedCameraTransform{cameraTransform.Invert()};
@@ -119,10 +116,10 @@ void RendererSystem::_drawPointLights(const Transform& cameraTransform) {
     });
 }
 
-void RendererSystem::_drawDirectionalLights(const Transform& cameraTransform) {
+void RendererSystem::_drawDirectionalLights(const Transform& cameraTransform, entt::registry& registry) {
     assert(_shader);
 
-    auto view{_registry.view<DirectionalLight>()};
+    auto view{registry.view<DirectionalLight>()};
 
     view.each([this, &cameraTransform = std::as_const(cameraTransform)](const DirectionalLight dirLight) {
         const auto invertedCameraTransform{cameraTransform.Invert()};
@@ -136,33 +133,27 @@ void RendererSystem::_drawDirectionalLights(const Transform& cameraTransform) {
     });
 }
 
-void RendererSystem::_setUniformColors(const Mesh& mesh) {
+void RendererSystem::_setUniformColors(const glm::vec4& colorDiffuse, const glm::vec3& colorSpecular) {
     assert(_shader);
 
-    _shader->SetUniformVec4("DiffuseColor", mesh.GetColorDiffuse());
-    _shader->SetUniformVec3("SpecularColor", mesh.GetColorSpecular());
+    _shader->SetUniformVec4("DiffuseColor", colorDiffuse);
+    _shader->SetUniformVec3("SpecularColor", colorSpecular);
 }
 
-Transform RendererSystem::_calculateWorldTransform(const entt::entity entity, const Transform& transform) {
-    auto& entityRelationship{_registry.get<Relationship>(entity)};
+Transform RendererSystem::_calculateWorldTransform(const entt::entity entity, entt::registry& registry, const Transform& transform) {
+    auto& entityRelationship{registry.get<Relationship>(entity)};
 
     if(entityRelationship.parent == entt::null) {
         return transform;
     }
 
-    auto& position{_registry.get<Position>(entityRelationship.parent)};
-    auto& rotation{_registry.get<Rotation>(entityRelationship.parent)};
-    auto& scale{_registry.get<Scale>(entityRelationship.parent)};
+    auto& position{registry.get<Position>(entityRelationship.parent)};
+    auto& rotation{registry.get<Rotation>(entityRelationship.parent)};
+    auto& scale{registry.get<Scale>(entityRelationship.parent)};
 
     Transform parentTransform{position.Vector, rotation.Quaternion, scale.Value};
 
     const auto cumulatedTransform{transform.Cumulate(parentTransform)};
 
-    return _calculateWorldTransform(entityRelationship.parent, cumulatedTransform);
-}
-
-Transform RendererSystem::_calculateViewTransform(const Transform& transform, const Transform& cameraTransform) {
-    const auto inverseCameraTransform{cameraTransform.Invert()};
-
-    return transform.Cumulate(inverseCameraTransform);
+    return _calculateWorldTransform(entityRelationship.parent, registry, cumulatedTransform);
 }

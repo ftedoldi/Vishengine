@@ -1,12 +1,15 @@
-#include "ImGuiHandlerSystem.h"
+#include "GUIDrawer.h"
 
-#include "Components/MeshObject.h"
+#include "Components/Mesh.h"
 #include "Components/Position.h"
+#include "Components/Relationship.h"
+#include "Components/Rotation.h"
+#include "Components/Scale.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include "imgui.h"
 
-ImGuiHandlerSystem::ImGuiHandlerSystem(GLFWwindow* const window) {
+GUIDrawer::GUIDrawer(GLFWwindow* const window) {
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -20,18 +23,18 @@ ImGuiHandlerSystem::ImGuiHandlerSystem(GLFWwindow* const window) {
 }
 
 
-void ImGuiHandlerSystem::StartFrame(entt::registry& registry) {
+void GUIDrawer::StartFrame(entt::registry& registry) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     //ImGui::ShowDemoWindow(); // Show demo window! :)
 
-    auto view{registry.view<MeshObject, Position>()};
+    auto view{registry.view<Position, Rotation, Scale, Relationship>()};
 
     if (ImGui::TreeNode("Mesh hierarchy")) {
         bool firstTimeInLoop{true};
         uint32_t id{};
-        view.each([&firstTimeInLoop, &id](const MeshObject& meshObject, const Position& position){
+        view.each([&firstTimeInLoop, &id](const Position& pos, const auto& rot, const auto& scale, const Relationship& rel) {
             // Use SetNextItemOpen() so set the default state of a node to be open. We could
             // also use TreeNodeEx() with the ImGuiTreeNodeFlags_DefaultOpen flag to achieve the same thing!
             if (firstTimeInLoop) {
@@ -40,7 +43,7 @@ void ImGuiHandlerSystem::StartFrame(entt::registry& registry) {
             }
 
             if (ImGui::TreeNode((void*)(intptr_t)id, "Mesh")) {
-                ImGui::Text("Position: %f, %f, %f", position.Vector.x, position.Vector.y, position.Vector.z);
+                ImGui::Text("Position: %f, %f, %f", pos.Vector.x, pos.Vector.y, pos.Vector.z);
                 ImGui::SameLine();
                 if (ImGui::SmallButton("button")) {}
                 ImGui::TreePop();
@@ -54,12 +57,12 @@ void ImGuiHandlerSystem::StartFrame(entt::registry& registry) {
     //ImGui::Checkbox("Demo Window", &show_demo_window);
 }
 
-void ImGuiHandlerSystem::Render() {
+void GUIDrawer::Render() {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void ImGuiHandlerSystem::Clear() {
+void GUIDrawer::Clear() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

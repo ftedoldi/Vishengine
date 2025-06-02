@@ -1,38 +1,38 @@
-#include "CreateCameraSystem.h"
+#include "CameraFactory.h"
 
-#include "Components/CameraComponents/EditorCameraTag.h"
-#include "Components/CameraComponents/GameCameraTag.h"
+#include "Components/Camera/EditorCameraTag.h"
+#include "Components/Camera/GameCameraTag.h"
 #include "Components/Position.h"
 #include "Components/Rotation.h"
 #include "Components/Scale.h"
 #include "Core/Window.h"
 
 entt::entity CameraFactory::CreateEditorCamera(entt::registry& registry,
-                                               const glm::vec3& position,
+                                               const glm::vec3& worldPosition,
                                                const double fov,
                                                const double aspectRatio,
                                                const double nearPlaneZDistance,
                                                const double farPlaneZDistance,
                                                const CameraType cameraType) {
-        const auto editorCamera{_createCamera(registry, position, fov, aspectRatio, nearPlaneZDistance, farPlaneZDistance, cameraType)};
-        registry.emplace<EditorCameraTag>(editorCamera);
-        return editorCamera;
+    const auto editorCamera{_createCamera(registry, worldPosition, fov, aspectRatio, nearPlaneZDistance, farPlaneZDistance, cameraType)};
+    registry.emplace<EditorCameraTag>(editorCamera);
+    return editorCamera;
 }
 
 entt::entity CameraFactory::CreateGameCamera(entt::registry& registry,
-                                               const glm::vec3& position,
+                                               const glm::vec3& worldPosition,
                                                const double fov,
                                                const double aspectRatio,
                                                const double nearPlaneZDistance,
                                                const double farPlaneZDistance,
                                                const CameraType cameraType) {
-    const auto gameCamera{_createCamera(registry, position, fov, aspectRatio, nearPlaneZDistance, farPlaneZDistance, cameraType)};
+    const auto gameCamera{_createCamera(registry, worldPosition, fov, aspectRatio, nearPlaneZDistance, farPlaneZDistance, cameraType)};
     registry.emplace<GameCameraTag>(gameCamera);
     return gameCamera;
 }
 
 entt::entity CameraFactory::_createCamera(entt::registry& registry,
-                                          const glm::vec3& position,
+                                          const glm::vec3& worldPosition,
                                           const double fov,
                                           const double aspectRatio,
                                           const double nearPlaneZDistance,
@@ -46,7 +46,7 @@ entt::entity CameraFactory::_createCamera(entt::registry& registry,
     camera.NearPlaneZDistance = nearPlaneZDistance;
     camera.FarPlaneZDistance = farPlaneZDistance;
 
-    registry.emplace<Position>(cameraEntity, position);
+    registry.emplace<Position>(cameraEntity, worldPosition);
     registry.emplace<Scale>(cameraEntity);
 
     auto& rotation{registry.emplace<Rotation>(cameraEntity)};

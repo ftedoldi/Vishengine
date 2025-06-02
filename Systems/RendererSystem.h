@@ -1,10 +1,11 @@
 #pragma once
 
-#include "Components/CameraComponents/Camera.h"
+#include "Components/Camera/Camera.h"
 #include "Components/Mesh.h"
-#include "Components/TextureList.h"
+#include "Material/MaterialController.h"
+#include "Math/Transform.h"
+#include "Mesh/MeshController.h"
 #include "Shaders/Shader.h"
-#include "Core/Transform.h"
 
 #include <entt/entt.hpp>
 
@@ -12,30 +13,26 @@
 
 class RendererSystem {
 public:
-    explicit RendererSystem(entt::registry& registry, Shader* shader, entt::entity currentCamera);
+    explicit RendererSystem(Shader* shader);
 
-    void SetCurrentCamera(entt::entity camera);
-
-    void Update(float deltaTime);
+    void Update(float deltaTime, entt::registry& registry, const MaterialController& materialController, const MeshController& meshController);
 
 private:
-    void _bindTextures(const Mesh& mesh);
-    void _drawMeshes(const Transform& cameraTransform);
-    void _drawMesh(const Mesh& mesh, const Transform& meshTransform, const Transform& cameraTransform);
+    void _bindTextures(const std::vector<Texture>& diffuseTextures, const std::vector<Texture>& specularTextures, const std::vector<Texture>& normalTextures);
 
-    void _drawLights(const Transform& cameraTransform);
+    void _drawMeshes(const Transform& cameraTransform, entt::registry& registry);
 
-    void _drawPointLights(const Transform& cameraTransform);
+    void _drawMesh(const Transform& meshViewTransform, uint32_t meshVao, const std::vector<uint32_t>& indices);
 
-    void _drawDirectionalLights(const Transform& cameraTransform);
+    void _drawLights(const Transform& cameraTransform, entt::registry& registry);
 
-    Transform _calculateWorldTransform(entt::entity parent, const Transform& transform);
+    void _drawPointLights(const Transform& cameraTransform, entt::registry& registry);
 
-    Transform _calculateViewTransform(const Transform& transform, const Transform& cameraTransform);
+    void _drawDirectionalLights(const Transform& cameraTransform, entt::registry& registry);
 
-    void _setUniformColors(const Mesh& mesh);
+    Transform _calculateWorldTransform(entt::entity parent, entt::registry& registry, const Transform& transform);
 
-    entt::entity _currentCameraToRender{};
-    entt::registry& _registry;
-    Shader* _shader;
+    void _setUniformColors(const glm::vec4& colorDiffuse, const glm::vec3& colorSpecular);
+
+    Shader* _shader{};
 };

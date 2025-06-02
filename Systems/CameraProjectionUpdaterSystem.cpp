@@ -1,11 +1,13 @@
 #include "CameraProjectionUpdaterSystem.h"
-#include "Platform/Mouse.h"
 
-#include "Components/CameraComponents/ActiveCameraTag.h"
-#include "Components/CameraComponents/Camera.h"
+#include "Platform/Mouse.h"
+#include "Components/Camera/ActiveCameraTag.h"
+#include "Components/Camera/Camera.h"
+#include "Components/Camera/EditorCameraTag.h"
 #include "Components/Rotation.h"
-#include "glm/glm.hpp"
+
 #include "glm/ext/quaternion_trigonometric.hpp"
+#include "glm/glm.hpp"
 
 CameraProjectionUpdaterSystem::CameraProjectionUpdaterSystem(entt::registry& registry, entt::dispatcher& windowDispatcher) : _registry{registry} {
     windowDispatcher.sink<FrameBufferSizeChangedEvent>().connect<&CameraProjectionUpdaterSystem::OnFramebufferSizeChanged>(this);
@@ -13,20 +15,22 @@ CameraProjectionUpdaterSystem::CameraProjectionUpdaterSystem(entt::registry& reg
 }
 
 void CameraProjectionUpdaterSystem::OnFramebufferSizeChanged(FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) {
-    auto view{_registry.view<Camera, ActiveCameraTag>()};
+    auto view{_registry.view<Camera>()};
     for(const auto entity: view) {
         auto& cameraComponent{view.get<Camera>(entity)};
         const auto newHeight{frameBufferSizeChangedEvent.Height};
         const auto newWidth{frameBufferSizeChangedEvent.Width};
-        cameraComponent.ProjectionMatrix = glm::perspective(glm::radians(cameraComponent.FOV),
-                                                            newHeight / newWidth,
-                                                            cameraComponent.NearPlaneZDistance,
-                                                            cameraComponent.FarPlaneZDistance);
+        if(newHeight > 0) {
+            cameraComponent.ProjectionMatrix = glm::perspective(glm::radians(cameraComponent.FOV),
+                                                                newWidth / newHeight,
+                                                                cameraComponent.NearPlaneZDistance,
+                                                                cameraComponent.FarPlaneZDistance);
+        }
     }
 }
 
 void CameraProjectionUpdaterSystem::OnMouseMoved(const MouseMovedEvent mouseMovedEvent) {
-    auto view{_registry.view<Camera, ActiveCameraTag, Rotation>()};
+    auto view{_registry.view<Camera, ActiveCameraTag, EditorCameraTag, Rotation>()};
 
     for(const auto entity: view) {
         auto& cameraComponent{view.get<Camera>(entity)};
@@ -65,5 +69,4 @@ void CameraProjectionUpdaterSystem::OnMouseMoved(const MouseMovedEvent mouseMove
 
         rotationComponent.Quaternion = glm::quatLookAtRH(cameraComponent.Front, cameraComponent.Up);
     }
-
 }

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Components/CameraComponents/Camera.h"
+#include "Components/Camera/Camera.h"
 #include "Components/Rotation.h"
 
-#include <entt/entt.hpp>
+#include "Libs/entt/src/entt/entt.hpp"
 
 enum class CameraType {
     Perspective,
@@ -21,7 +21,7 @@ public:
                                     CameraType cameraType);
 
     static entt::entity CreateGameCamera(entt::registry& registry,
-                                         const glm::vec3& position,
+                                         const glm::vec3& worldPosition,
                                          double fov,
                                          double aspectRatio,
                                          double nearPlaneZDistance,
@@ -30,7 +30,7 @@ public:
 
 private:
     static entt::entity _createCamera(entt::registry& registry,
-                                      const glm::vec3& position,
+                                      const glm::vec3& worldPosition,
                                       double fov,
                                       double aspectRatio,
                                       double nearPlaneZDistance,

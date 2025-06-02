@@ -38,25 +38,29 @@ include_directories(Libs/assimp/include/
 file(GLOB LIBS_SOURCES Libs/glad/src/gl.c)
 
 file(GLOB PROJECT_HEADERS
+        Camera/*.h
         Core/*.h
         Utils/*.h
         Math/*.h
         Shaders/*.h
-        Texture/*.h
+        Material/*.h
         Platform/*.h
-        Components/*.h Components/EventComponents/*.h Components/CameraComponents/*.h Components/Light/*.h
+        Components/*.h Components/Camera/*.h Components/Lights/*.h
         Systems/*.h
+        Mesh/*.h
         InputManager/*.h)
 
 file(GLOB PROJECT_SOURCES
+        Camera/*.cpp
         Core/*.cpp
         Utils/*.cpp
         Math/*.cpp
         Shaders/*.cpp
-        Texture/*.cpp
+        Material/*.cpp
         Platform/*.cpp
-        Components/*.cpp Components/CameraComponents/*.cpp
+        Components/*.cpp Components/Camera/*.cpp Components/Lights/*.cpp
         Systems/*.cpp
+        Mesh/*.cpp
         InputManager/*.cpp
         ./*.cpp)
 
