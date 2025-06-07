@@ -34,7 +34,7 @@ std::optional<entt::entity> ModelLoader::ImportModel(const std::string& modelPat
     relationship.parent = entt::null;
 
     _registry.emplace<Position>(rootEntity, glm::vec3{0., 0., 0.});
-    _registry.emplace<Rotation>(rootEntity, glm::quat{1., 0., 0., 0.});
+    _registry.emplace<Rotation>(rootEntity, glm::quat{0., 0., 0., 1.});
     _registry.emplace<Scale>(rootEntity, 1.f);
 
     _processNode(scene->mRootNode, scene, rootEntity, aiMatrix4x4{});
@@ -141,6 +141,7 @@ void ModelLoader::_processMesh(aiMesh* const aiMesh, const aiScene* const scene,
     } else [[unlikely]] {
         aiColor4D diffuseColor4D{};;
         if(aiMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor) == AI_SUCCESS) {
+            // This part of code is never reached thanks to a bug in Assimp: https://github.com/assimp/assimp/issues/6179?issue=assimp%7Cassimp%7C5543
             diffuseColor = {diffuseColor4D.r, diffuseColor4D.g, diffuseColor4D.b, diffuseColor4D.a};
         } else {
             // No color? You get a full black model :)

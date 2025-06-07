@@ -37,7 +37,7 @@ Game::Game() {
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWwindow());
 
     ModelLoader modelLoader{_registry, _meshController, _materialController};
-    auto entity = modelLoader.ImportModel("../../Assets/hierarchy.glb");
+    auto entity = modelLoader.ImportModel("../../Assets/EzioNewGlb/ezio1.glb");
 
     //auto& position{_registry.get<Position>(entity.value())};
 
@@ -47,7 +47,7 @@ Game::Game() {
 
     _addLight();
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 }
 
 void Game::Update() {
