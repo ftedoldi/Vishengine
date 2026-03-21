@@ -4,7 +4,7 @@
 #include "Mesh/MeshController.h"
 #include "Material/MaterialController.h"
 
-#include "Libs/entt/src/entt/entt.hpp"
+#include <entt/entt.hpp>
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
 #include "assimp/scene.h"
@@ -20,7 +20,7 @@ public:
     std::optional<entt::entity> ImportModel(const std::string& modelPath);
 
 private:
-    void _processNode(aiNode* node, const aiScene* scene, entt::entity parentEntity, const aiMatrix4x4& accTransform);
+    void _processNode(aiNode* node, const aiScene* scene, entt::entity parentEntity);
 
     void _processMesh(aiMesh* aiMesh, const aiScene* scene, entt::entity parentEntity);
 

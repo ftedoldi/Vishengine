@@ -7,19 +7,10 @@
 #include "Components/Relationship.h"
 #include "Components/Rotation.h"
 #include "Components/Scale.h"
+#include "Components/WorldTransform.h"
 
 #include "Components/Camera/EditorCameraTag.h"
 #include "Math/Math.h"
-
-namespace RS::Detail {
-
-    Transform CalculateViewTransform(const Transform& transform, const Transform& cameraTransform) {
-        const auto inverseCameraTransform{cameraTransform.Invert()};
-
-        return inverseCameraTransform.Cumulate(transform);
-    }
-
-}
 
 RendererSystem::RendererSystem(Shader* const shader)
     : _shader{shader}{
@@ -32,23 +23,21 @@ void RendererSystem::Update(float, entt::registry& registry, const MaterialContr
     auto cameraView{registry.view<Camera, Position, Rotation, Scale, EditorCameraTag>()};
     for(const auto entity: cameraView) {
         const auto& cameraComponent{cameraView.get<Camera>(entity)};
-        const auto& positionComponent{cameraView.get<Position>(entity)};
-        const auto& rotationComponent{cameraView.get<Rotation>(entity)};
-        const auto& scaleComponent{cameraView.get<Scale>(entity)};
+        const auto positionComponent{cameraView.get<Position>(entity)};
+        const auto rotationComponent{cameraView.get<Rotation>(entity)};
+        const auto scaleComponent{cameraView.get<Scale>(entity)};
         _shader->SetUniformMat4("Perspective", cameraComponent.ProjectionMatrix);
 
         Transform worldSpaceCameraTransform{positionComponent.Vector, rotationComponent.Quaternion, scaleComponent.Value};
-        auto meshView{registry.view<Mesh, Material>()};
+        auto meshView{registry.view<Mesh, Material, WorldTransform>()};
 
-        for(const auto& [meshEntity, mesh, material]: meshView.each()) {
+        for(const auto& [meshEntity, mesh, material, worldTransform]: meshView.each()) {
             const auto& materialData{materialController.GetMaterialData(material.materialID)};
 
             _setUniformColors(materialData.ColorDiffuse, materialData.ColorSpecular);
             _bindTextures(materialData.TexturesDiffuse, materialData.TexturesSpecular, materialData.TexturesNormal);
 
-            const auto worldSpaceMeshTransform{_calculateWorldTransform(meshEntity, registry, Transform{{0,0,0}})};
-            const auto meshViewTransform{RS::Detail::CalculateViewTransform(worldSpaceMeshTransform, worldSpaceCameraTransform)};
-
+            const auto meshViewTransform{cameraComponent.ViewTransform.Cumulate(worldTransform.Value)};
             const auto& meshData{meshController.GetMeshData(mesh.meshID)};
             _drawMesh(meshViewTransform, meshData.MeshGpuData.Vao, meshData.RawMeshData.Indices);
         }
@@ -100,7 +89,7 @@ void RendererSystem::_drawPointLights(const Transform& cameraTransform, entt::re
     assert(_shader);
     auto view{registry.view<PointLight, Position>()};
 
-    view.each([this, &cameraTransform = std::as_const(cameraTransform)](const PointLight pointLight, const Position lightPosition) {
+    view.each([this, &cameraTransform = std::as_const(cameraTransform)](const PointLight& pointLight, const Position& lightPosition) {
         const auto invertedCameraTransform{cameraTransform.Invert()};
 
         const auto lightViewPosition{Math::RotateVectorByQuaternion(invertedCameraTransform.Rotation, lightPosition.Vector)};
@@ -121,7 +110,7 @@ void RendererSystem::_drawDirectionalLights(const Transform& cameraTransform, en
 
     auto view{registry.view<DirectionalLight>()};
 
-    view.each([this, &cameraTransform = std::as_const(cameraTransform)](const DirectionalLight dirLight) {
+    view.each([this, &cameraTransform = std::as_const(cameraTransform)](const DirectionalLight& dirLight) {
         const auto invertedCameraTransform{cameraTransform.Invert()};
         const auto viewDirection{Math::RotateVectorByQuaternion(invertedCameraTransform.Rotation, dirLight.Direction)};
 
@@ -138,23 +127,4 @@ void RendererSystem::_setUniformColors(const glm::vec4& colorDiffuse, const glm:
 
     _shader->SetUniformVec4("DiffuseColor", colorDiffuse);
     _shader->SetUniformVec3("SpecularColor", colorSpecular);
-}
-
-Transform RendererSystem::_calculateWorldTransform(const entt::entity entity, entt::registry& registry, const Transform& transform) {
-    auto& entityRelationship{registry.get<Relationship>(entity)};
-
-    if (entityRelationship.parent == entt::null) {
-        return transform;
-    }
-
-    auto& position{registry.get<Position>(entityRelationship.parent)};
-    auto& rotation{registry.get<Rotation>(entityRelationship.parent)};
-    auto& scale{registry.get<Scale>(entityRelationship.parent)};
-
-    Transform parentTransform{position.Vector, rotation.Quaternion, scale.Value};
-
-    // Apply the current transform relative to the parent's world transform
-    const auto parentWorldTransform{_calculateWorldTransform(entityRelationship.parent, registry, parentTransform)};
-
-    return parentWorldTransform.Cumulate(transform);
 }

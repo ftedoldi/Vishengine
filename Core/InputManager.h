@@ -1,8 +1,6 @@
 #pragma once
 
-#include "Core/Window.h"
-
-#include "Libs/entt/src/entt/entt.hpp"
+#include <GLFW/glfw3.h>
 
 class InputManager {
 public:
@@ -12,6 +10,4 @@ public:
 
 private:
     GLFWwindow* _mainWindow;
-
-    entt::registry _registry;
 };

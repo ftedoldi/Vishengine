@@ -10,8 +10,10 @@
 #include "GUIDrawer.h"
 #include "ModelLoader.h"
 #include "Systems/CameraProjectionUpdaterSystem.h"
+#include "Systems/CameraSystem.h"
 #include "Systems/EditorCameraMoveSystem.h"
 #include "Systems/RendererSystem.h"
+#include "Systems/TransformSystem.h"
 
 #include <entt/entt.hpp>
 
@@ -44,6 +46,10 @@ private:
     std::unique_ptr<EditorCameraMoveSystem> _editorCameraMoveSystem{};
 
     std::unique_ptr<GUIDrawer> _guiDrawer{};
+
+    TransformSystem _transformSystem{};
+
+    CameraSystem _cameraSystem{};
 
     MaterialController _materialController{};
 

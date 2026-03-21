@@ -1,7 +1,7 @@
 #pragma once
 
 #include "GLFW/glfw3.h"
-#include "Libs/entt/src/entt/entt.hpp"
+#include <entt/entt.hpp>
 
 class GUIDrawer {
 public:

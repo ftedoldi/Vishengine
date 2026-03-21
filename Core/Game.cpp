@@ -7,6 +7,8 @@
 #include "Components/Lights/DirectionalLight.h"
 #include "Platform/Time.h"
 
+#include <array>
+
 Game::Game() {
     // Setup window
     _window = std::make_unique<Window>();
@@ -26,7 +28,8 @@ Game::Game() {
     _cameraProjectionUpdaterSystem = std::make_unique<CameraProjectionUpdaterSystem>(_registry, _window->GetEventDispatcher());
 
     // Create shader.
-    _mainShader = std::make_unique<Shader>("../../Shaders/GlslShaders/vertex.glsl", "../../Shaders/GlslShaders/fragment.glsl");
+    const std::string shadersBasePath{std::string(PROJECT_SOURCE_DIR) + "/Shaders/GlslShaders/"};
+    _mainShader = std::make_unique<Shader>(shadersBasePath + "vertex.glsl", shadersBasePath + "fragment.glsl");
 
     _rendererSystem = std::make_unique<RendererSystem>(_mainShader.get());
 
@@ -37,13 +40,24 @@ Game::Game() {
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWwindow());
 
     ModelLoader modelLoader{_registry, _meshController, _materialController};
-    auto entity = modelLoader.ImportModel("../../Assets/EzioNewGlb/ezio1.glb");
+    std::optional<entt::entity> entity{};
+    const std::array<std::string, 2> candidateModelPaths{
+        std::string(PROJECT_SOURCE_DIR) + "/Assets/pimmyTex.glb",
+        std::string(PROJECT_SOURCE_DIR) + "/cubi.glb"
+    };
+
+    for (const auto& modelPath : candidateModelPaths) {
+        entity = modelLoader.ImportModel(modelPath);
+        if (entity.has_value()) {
+            break;
+        }
+    }
 
     //auto& position{_registry.get<Position>(entity.value())};
 
     //position.Vector = glm::vec3{0, 10, 0};
     //auto entity{modelLoader.ImportModel("../../Assets/Backpack/backpack.obj")};
-    assert(entity);
+    assert(entity && "No default model found. Add cubi.glb to Assets/ or repository root.");
 
     _addLight();
 
@@ -59,6 +73,12 @@ void Game::Update() {
         Window::Clear();
 
         Time::UpdateDeltaTime();
+
+        // Update the entity transforms
+        _transformSystem.Update(_registry);
+
+        // Update the view transform
+        _cameraSystem.Update(_registry);
 
         _rendererSystem->Update(Time::GetDeltaTime(), _registry, _materialController, _meshController);
 

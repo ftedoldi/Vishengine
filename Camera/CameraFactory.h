@@ -3,7 +3,7 @@
 #include "Components/Camera/Camera.h"
 #include "Components/Rotation.h"
 
-#include "Libs/entt/src/entt/entt.hpp"
+#include <entt/entt.hpp>
 
 enum class CameraType {
     Perspective,

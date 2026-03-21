@@ -5,6 +5,7 @@
 #include "Components/Position.h"
 #include "Components/Rotation.h"
 #include "Components/Scale.h"
+#include "Components/WorldTransform.h"
 #include "Core/Window.h"
 
 entt::entity CameraFactory::CreateEditorCamera(entt::registry& registry,
@@ -48,6 +49,7 @@ entt::entity CameraFactory::_createCamera(entt::registry& registry,
 
     registry.emplace<Position>(cameraEntity, worldPosition);
     registry.emplace<Scale>(cameraEntity);
+    registry.emplace<WorldTransform>(cameraEntity);
 
     auto& rotation{registry.emplace<Rotation>(cameraEntity)};
     rotation.Quaternion = glm::quatLookAtRH(camera.Front, camera.Up);

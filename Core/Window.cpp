@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <stdexcept>
 
 namespace WindowSystemHelpers {
     void message_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei, const GLchar* message, const void*){
@@ -49,13 +50,16 @@ namespace WindowSystemHelpers {
 }
 
 Window::~Window() {
-    glfwDestroyWindow(_window);
+    if(_window) {
+        glfwDestroyWindow(_window);
+    }
     glfwTerminate();
 }
 
 void Window::Initialize(const int width, const int height, const std::string& windowName) {
-    if (!glfwInit())
-        std::exit(EXIT_FAILURE);
+    if (!glfwInit()) {
+        throw std::runtime_error("Failed to initialize GLFW");
+    }
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
@@ -66,15 +70,17 @@ void Window::Initialize(const int width, const int height, const std::string& wi
 
     _window = glfwCreateWindow(width, height, windowName.c_str(), nullptr, nullptr);
     if (!_window){
-        std::cout << "Failed to create the windowComponent" << std::endl;
         glfwTerminate();
+        throw std::runtime_error("Failed to create GLFW window");
     }
 
     glfwMakeContextCurrent(_window);
 
     if (const int version{gladLoadGL(glfwGetProcAddress)}; version == 0){
-        std::cout << "Failed to initialize GLAD" << std::endl;
+        glfwDestroyWindow(_window);
+        _window = nullptr;
         glfwTerminate();
+        throw std::runtime_error("Failed to initialize GLAD");
     }
 
     glEnable(GL_DEBUG_OUTPUT);

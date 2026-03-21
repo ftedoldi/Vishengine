@@ -7,6 +7,7 @@
 
 #include "Material/Texture.h"
 
+#include "Components/WorldTransform.h"
 #include "stb_image.h"
 
 #include <iostream>
@@ -21,7 +22,7 @@ std::optional<entt::entity> ModelLoader::ImportModel(const std::string& modelPat
     const aiScene* const scene{_importer.ReadFile(modelPath,aiProcess_Triangulate |
                                                                         aiProcess_JoinIdenticalVertices |
                                                                         aiProcess_OptimizeMeshes |
-                                                                        aiProcess_OptimizeGraph | aiProcess_FlipUVs)};
+                                                                        aiProcess_FlipUVs)};
     if(!scene) {
         std::cout << "Error while loading a model" << std::endl;
         return std::nullopt;
@@ -33,55 +34,59 @@ std::optional<entt::entity> ModelLoader::ImportModel(const std::string& modelPat
     auto& relationship{_registry.emplace<Relationship>(rootEntity)};
     relationship.parent = entt::null;
 
-    _registry.emplace<Position>(rootEntity, glm::vec3{0., 0., 0.});
-    _registry.emplace<Rotation>(rootEntity, glm::quat{0., 0., 0., 1.});
-    _registry.emplace<Scale>(rootEntity, 1.f);
+    aiVector3D aiScaling{};
+    aiVector3D aiTranslation{};
+    aiQuaternion aiRotation{};
+    scene->mRootNode->mTransformation.Decompose(aiScaling, aiRotation, aiTranslation);
 
-    _processNode(scene->mRootNode, scene, rootEntity, aiMatrix4x4{});
+    const glm::vec3 translation{aiTranslation.x, aiTranslation.y, aiTranslation.z};
+    const glm::quat rotation{aiRotation.w, aiRotation.x, aiRotation.y, aiRotation.z};
+    const float uniformScale{(aiScaling.x + aiScaling.y + aiScaling.z) / 3.0F};
+
+    _registry.emplace<Position>(rootEntity, translation);
+    _registry.emplace<Rotation>(rootEntity, rotation);
+    _registry.emplace<Scale>(rootEntity, uniformScale);
+
+    _processNode(scene->mRootNode, scene, rootEntity);
 
     return rootEntity;
 }
 
-void ModelLoader::_processNode(aiNode* const node, const aiScene* const scene, entt::entity parentEntity, const aiMatrix4x4& accTransform) {
-    entt::entity currentEntity{};
+void ModelLoader::_processNode(aiNode* const node,
+                               const aiScene* const scene,
+                               const entt::entity parentEntity) {
+    // 1. Always create an entity for the current Node (even if it's empty)
+    const auto nodeEntity{_registry.create()};
 
-    aiMatrix4x4 transform{};
+    auto& relationship{_registry.emplace<Relationship>(nodeEntity)};
+    relationship.parent = parentEntity;
 
-    // Only create an entity if the node has meshes
-    if(node->mNumMeshes > 0) {
-        currentEntity = _registry.create();
-        auto& relationship{_registry.emplace<Relationship>(currentEntity)};
-        relationship.parent = parentEntity;  // Set the parent entity
+    // 2. Extract ONLY the local transform of this specific node
+    aiVector3D aiScaling{};
+    aiVector3D aiTranslation{};
+    aiQuaternion aiRotation{};
+    node->mTransformation.Decompose(aiScaling, aiRotation, aiTranslation);
 
-        aiVector3f aiTranslation{};
-        aiQuaternion aiRotation{};
+    const glm::vec3 translation{aiTranslation.x, aiTranslation.y, aiTranslation.z};
+    const glm::quat rotation{aiRotation.w, aiRotation.x, aiRotation.y, aiRotation.z};
+    const float uniformScale{(aiScaling.x + aiScaling.y + aiScaling.z) / 3.0F};
 
-        transform = node->mTransformation;
+    // 3. Set local Transform components
+    _registry.emplace<Position>(nodeEntity, translation);
+    _registry.emplace<Rotation>(nodeEntity, rotation);
+    _registry.emplace<Scale>(nodeEntity, uniformScale);
 
-        transform.DecomposeNoScaling(aiRotation, aiTranslation);
-
-        glm::vec3 translation{aiTranslation.x, aiTranslation.y, aiTranslation.z};
-        glm::quat rotation{aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w};
-
-        _registry.emplace<Position>(currentEntity, translation);
-        _registry.emplace<Rotation>(currentEntity, rotation);
-        _registry.emplace<Scale>(currentEntity, 1.f);
-
-        // Process all meshes in this node
-        for(uint32_t i{0}; i < node->mNumMeshes; ++i) {
-            auto* const mesh{scene->mMeshes[node->mMeshes[i]]};
-            _processMesh(mesh, scene, currentEntity);
-        }
-    } else {
-        currentEntity = parentEntity;
-
-        transform = node->mTransformation * accTransform;
+    // 4. Process meshes as children attached to this nodeEntity
+    for(uint32_t i{0}; i < node->mNumMeshes; ++i) {
+        auto* const mesh{scene->mMeshes[node->mMeshes[i]]};
+        _processMesh(mesh, scene, nodeEntity);
     }
 
-    // Recursively process each child node, passing the current entity as the parent
+    // 5. Recursively process child nodes
     for(uint32_t i{0}; i < node->mNumChildren; ++i) {
         auto* child{node->mChildren[i]};
-        _processNode(child, scene, currentEntity, transform);
+        // Pass nodeEntity as the new parent for the next depth level
+        _processNode(child, scene, nodeEntity);
     }
 }
 
@@ -122,6 +127,11 @@ void ModelLoader::_processMesh(aiMesh* const aiMesh, const aiScene* const scene,
     auto& relationship{_registry.emplace<Relationship>(meshEntity)};
     relationship.parent = parentEntity;  // Set the parent entity
 
+    _registry.emplace<Position>(meshEntity, glm::vec3{0.f, 0.f, 0.f});
+    _registry.emplace<Rotation>(meshEntity, glm::quat{0.f, 0.f, 0.f, 1.f});
+    _registry.emplace<Scale>(meshEntity, 1.f);
+    _registry.emplace<WorldTransform>(meshEntity);
+
     const auto mesh{_meshController.CreateMesh({
             std::move(vertices),
             std::move(indices),
@@ -139,8 +149,8 @@ void ModelLoader::_processMesh(aiMesh* const aiMesh, const aiScene* const scene,
     if(aiMaterial->GetTextureCount(aiTextureType_DIFFUSE) > 0) [[likely]]{
         texturesDiffuse = _loadTextures(scene, aiMaterial, aiTextureType_DIFFUSE);
     } else [[unlikely]] {
-        aiColor4D diffuseColor4D{};;
-        if(aiMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor) == AI_SUCCESS) {
+        aiColor4D diffuseColor4D{};
+        if(aiMaterial->Get(AI_MATKEY_COLOR_DIFFUSE, diffuseColor4D) == AI_SUCCESS) {
             // This part of code is never reached thanks to a bug in Assimp: https://github.com/assimp/assimp/issues/6179?issue=assimp%7Cassimp%7C5543
             diffuseColor = {diffuseColor4D.r, diffuseColor4D.g, diffuseColor4D.b, diffuseColor4D.a};
         } else {

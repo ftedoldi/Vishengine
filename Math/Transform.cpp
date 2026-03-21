@@ -18,3 +18,18 @@ Transform Transform::Invert() const {
 
     return Transform{position, rotation, scale};
 }
+
+glm::vec3 Transform::TransformPosition(const glm::vec3 position) const {
+    // 1. Scale (Multiply components)
+    glm::vec3 scaledPoint{Position.x * Scale,
+        Position.y * Scale,
+        Position.z * Scale};
+
+    // 2. Rotate (Multiply the Quaternion by the Vector3)
+    const glm::vec3 rotatedPoint{Rotation * scaledPoint};
+
+    // 3. Translate (Add the position)
+    const glm::vec3 finalPoint{rotatedPoint + position};
+
+    return finalPoint;
+}

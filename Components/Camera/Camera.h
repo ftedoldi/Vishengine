@@ -3,6 +3,7 @@
 #include "glm/mat4x4.hpp"
 
 #include "GLFW/glfw3.h"
+#include "Math/Transform.h"
 
 class Camera {
 public:
@@ -23,4 +24,6 @@ public:
     float FarPlaneZDistance{};
 
     glm::mat4 ProjectionMatrix{};
+
+    Transform ViewTransform{};
 };

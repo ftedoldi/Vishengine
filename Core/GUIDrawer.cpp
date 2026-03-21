@@ -5,9 +5,12 @@
 #include "Components/Relationship.h"
 #include "Components/Rotation.h"
 #include "Components/Scale.h"
+#include "Components/WorldTransform.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include "imgui.h"
+
+#include <cstdint>
 
 GUIDrawer::GUIDrawer(GLFWwindow* const window) {
     // Setup Dear ImGui context
@@ -29,12 +32,15 @@ void GUIDrawer::StartFrame(entt::registry& registry) {
     ImGui::NewFrame();
     //ImGui::ShowDemoWindow(); // Show demo window! :)
 
-    auto view{registry.view<Position, Rotation, Scale, Relationship>()};
+    auto view{registry.view<Mesh, Position, WorldTransform>()};
 
     if (ImGui::TreeNode("Mesh hierarchy")) {
         bool firstTimeInLoop{true};
-        uint32_t id{};
-        view.each([&firstTimeInLoop, &id](const Position& pos, const auto& rot, const auto& scale, const Relationship& rel) {
+        // TODO: check if also the rotation needs to be transformed
+        view.each([&firstTimeInLoop](const entt::entity entity,
+                                     const Mesh& mesh,
+                                     const Position& pos,
+                                     const WorldTransform& worldTransform) {
             // Use SetNextItemOpen() so set the default state of a node to be open. We could
             // also use TreeNodeEx() with the ImGuiTreeNodeFlags_DefaultOpen flag to achieve the same thing!
             if (firstTimeInLoop) {
@@ -42,12 +48,16 @@ void GUIDrawer::StartFrame(entt::registry& registry) {
                 firstTimeInLoop = false;
             }
 
-            if (ImGui::TreeNode((void*)(intptr_t)id, "Mesh")) {
-                ImGui::Text("Position: %f, %f, %f", pos.Vector.x, pos.Vector.y, pos.Vector.z);
+            if (ImGui::TreeNode(reinterpret_cast<void*>(static_cast<intptr_t>(entt::to_integral(entity))),
+                               "Mesh %d (Entity %u)",
+                               mesh.meshID,
+                               static_cast<unsigned>(entt::to_integral(entity)))) {
+
+                const auto worldPosition{worldTransform.Value.TransformPosition(pos.Vector)};
+                ImGui::Text("Position: %f, %f, %f", worldPosition.x, worldPosition.y, worldPosition.z);
                 ImGui::SameLine();
                 if (ImGui::SmallButton("button")) {}
                 ImGui::TreePop();
-                id++;
             }
 
         });
