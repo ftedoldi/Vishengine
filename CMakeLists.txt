@@ -109,6 +109,11 @@ add_executable(${PROJECT_NAME}
         ${PROJECT_HEADERS}
         ${PROJECT_SHADERS}
         ${PROJECT_CONFIGS}
+        Components/WorldTransform.h
+        Systems/TransformSystem.cpp
+        Systems/TransformSystem.h
+        Systems/CameraSystem.cpp
+        Systems/CameraSystem.h
 )
 
 # -----------------------------
