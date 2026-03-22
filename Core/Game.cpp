@@ -43,7 +43,7 @@ Game::Game() {
     ModelLoader modelLoader{_registry, _meshController, _materialController};
     std::optional<entt::entity> entity{};
     const std::array<std::string, 2> candidateModelPaths{
-        std::string(PROJECT_SOURCE_DIR) + "/Assets/venezia.glb",
+        std::string(PROJECT_SOURCE_DIR) + "/Assets/ezio.glb",
         std::string(PROJECT_SOURCE_DIR) + "/cubi.glb"
     };
 

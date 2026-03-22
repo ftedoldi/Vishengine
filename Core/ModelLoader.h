@@ -6,12 +6,11 @@
 
 #include <entt/entt.hpp>
 #include "assimp/Importer.hpp"
-#include "assimp/postprocess.h"
 #include "assimp/scene.h"
-#include "glm/ext/quaternion_float.hpp"
 
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 class ModelLoader {
 public:
@@ -20,11 +19,11 @@ public:
     std::optional<entt::entity> ImportModel(const std::string& modelPath);
 
 private:
-    void _processNode(aiNode* node, const aiScene* scene, entt::entity parentEntity);
+    void _processNode(const aiNode* node, const aiScene* scene, entt::entity parentEntity);
 
-    void _processMesh(aiMesh* aiMesh, const aiScene* scene, entt::entity parentEntity);
+    void _processMesh(aiMesh* aiMesh, const aiScene* scene, entt::entity parentEntity, uint32_t assimpMeshIndex);
 
-    std::vector<Texture> _loadMaterialTextures(aiMaterial* mat, aiTextureType type);
+    std::vector<Texture> _loadMaterialTextures(const aiMaterial* mat, aiTextureType type);
 
     std::vector<Texture> _loadTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type);
 
@@ -39,4 +38,6 @@ private:
     std::string _modelDirectory{};
 
     std::vector<std::string> _loadedTextures{};
+
+    std::unordered_map<uint32_t, Mesh> _processedMeshes{};
 };

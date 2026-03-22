@@ -1,6 +1,9 @@
 #include "EditorCameraMoveSystem.h"
+
 #include "Components/Camera/ActiveCameraTag.h"
+#include "Components/Camera/Camera.h"
 #include "Components/Camera/EditorCameraTag.h"
+#include "Components/Position.h"
 
 EditorCameraMoveSystem::EditorCameraMoveSystem(const std::shared_ptr<InputManager>& inputManager)
     : _inputManager{inputManager} {

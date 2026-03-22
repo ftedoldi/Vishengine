@@ -4,14 +4,16 @@
 
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
+#include "glm/vec4.hpp"
 
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 struct MeshGpuData {
     uint32_t Vbo{0};
     uint32_t Vao{0};
     uint32_t Ebo{0};
+    uint32_t InstanceVbo{0};
 };
 
 struct RawMeshData {
@@ -24,6 +26,12 @@ struct RawMeshData {
 struct MeshData {
     MeshGpuData MeshGpuData{};
     RawMeshData RawMeshData{};
+};
+
+struct InstanceData {
+    glm::vec3 position{};
+    float scale{};
+    glm::vec4 rotation{};
 };
 
 class MeshController {

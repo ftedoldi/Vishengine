@@ -16,37 +16,50 @@ RendererSystem::RendererSystem(Shader* const shader)
     : _shader{shader}{
 }
 
-void RendererSystem::Update(float, entt::registry& registry, const MaterialController& materialController, const MeshController& meshController) {
+void RendererSystem::Update(float, entt::registry& registry, const MaterialController& materialController, const MeshController& meshController) const {
     assert(_shader);
     _shader->UseProgram();
 
+    std::unordered_map<uint32_t, std::vector<Transform>> meshesTransforms{};
+
+    // If the mesh has no material it means it is an instance that needs to be drawn using its world location.
+    auto meshView{registry.view<Mesh, WorldTransform>()};
+    for (const auto& [entity, mesh, worldTransform] : meshView.each()) {
+        meshesTransforms[mesh.meshID].push_back(worldTransform.Value);
+    }
+
+    // If a mesh has a materiali it represents the actual geometry.
+    auto meshMaterialView{registry.view<Mesh, Material>()};
+
     auto cameraView{registry.view<Camera, Position, Rotation, Scale, EditorCameraTag>()};
-    for(const auto entity: cameraView) {
-        const auto& cameraComponent{cameraView.get<Camera>(entity)};
-        const auto positionComponent{cameraView.get<Position>(entity)};
-        const auto rotationComponent{cameraView.get<Rotation>(entity)};
-        const auto scaleComponent{cameraView.get<Scale>(entity)};
-        _shader->SetUniformMat4("Perspective", cameraComponent.ProjectionMatrix);
+    for(const auto& [cameraEntity, camera, cameraPosition, cameraRotation, cameraScale]: cameraView.each()) {
+        _shader->SetUniformMat4("Perspective", camera.ProjectionMatrix);
 
-        Transform worldSpaceCameraTransform{positionComponent.Vector, rotationComponent.Quaternion, scaleComponent.Value};
-        auto meshView{registry.view<Mesh, Material, WorldTransform>()};
+        Transform worldSpaceCameraTransform{cameraPosition.Vector, cameraRotation.Quaternion, cameraScale.Value};
 
-        for(const auto& [meshEntity, mesh, material, worldTransform]: meshView.each()) {
+        for (const auto& [meshEntity, mesh, material] : meshMaterialView.each()) {
             const auto& materialData{materialController.GetMaterialData(material.materialID)};
-
             _setUniformColors(materialData.ColorDiffuse, materialData.ColorSpecular);
             _bindTextures(materialData.TexturesDiffuse, materialData.TexturesSpecular, materialData.TexturesNormal);
 
-            const auto meshViewTransform{cameraComponent.ViewTransform.Cumulate(worldTransform.Value)};
+            // Transform all instances of this mesh from world to view space.
+            const auto& instanceWorldTransforms{meshesTransforms.at(mesh.meshID)};
+            std::vector<Transform> viewTransforms{};
+            viewTransforms.reserve(instanceWorldTransforms.size());
+            for (const auto& worldTransform : instanceWorldTransforms) {
+                viewTransforms.push_back(camera.ViewTransform.Cumulate(worldTransform));
+            }
+
             const auto& meshData{meshController.GetMeshData(mesh.meshID)};
-            _drawMesh(meshViewTransform, meshData.MeshGpuData.Vao, meshData.RawMeshData.Indices);
+            _drawMesh(viewTransforms, meshData.MeshGpuData, meshData.RawMeshData.Indices);
         }
 
+        // TODO: pass here the view transform directly.
         _drawLights(worldSpaceCameraTransform, registry);
     }
 }
 
-void RendererSystem::_bindTextures(const std::vector<Texture>& diffuseTextures, const std::vector<Texture>& specularTextures, const std::vector<Texture>&) {
+void RendererSystem::_bindTextures(const std::vector<Texture>& diffuseTextures, const std::vector<Texture>& specularTextures, const std::vector<Texture>&) const {
     assert(_shader);
     int currentTextureIndex{0};
 
@@ -69,23 +82,38 @@ void RendererSystem::_bindTextures(const std::vector<Texture>& diffuseTextures, 
     }*/
 }
 
-void RendererSystem::_drawMesh(const Transform& meshViewTransform, const uint32_t meshVao, const std::vector<uint32_t>& indices) {
+void RendererSystem::_drawMesh(const std::vector<Transform>& instanceTransforms, const MeshGpuData& gpuData, const std::vector<uint32_t>& indices) const {
     assert(_shader);
-    _shader->SetUniformVec3("ViewPosition", meshViewTransform.Position);
-    _shader->SetUniformQuat("ViewRotation", meshViewTransform.Rotation);
-    _shader->SetUniformFloat("Scale", meshViewTransform.Scale);
 
-    glBindVertexArray(meshVao);
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
+    std::vector<InstanceData> instanceData{};
+    instanceData.reserve(instanceTransforms.size());
+    for (const auto& t : instanceTransforms) {
+        instanceData.push_back({
+            t.Position,
+            t.Scale,
+            glm::vec4{t.Rotation.x, t.Rotation.y, t.Rotation.z, t.Rotation.w},
+        });
+    }
+
+    // Upload instance data to the instance VBO (orphan + re-upload each frame)
+    const auto dataSize{static_cast<GLsizeiptr>(instanceData.size() * sizeof(InstanceData))};
+    glNamedBufferData(gpuData.InstanceVbo, dataSize, instanceData.data(), GL_DYNAMIC_DRAW);
+
+    glBindVertexArray(gpuData.Vao);
+    glDrawElementsInstanced(GL_TRIANGLES,
+                            static_cast<GLsizei>(indices.size()),
+                            GL_UNSIGNED_INT,
+                            nullptr,
+                            static_cast<GLsizei>(instanceTransforms.size()));
     glBindVertexArray(0);
 }
 
-void RendererSystem::_drawLights(const Transform& cameraTransform, entt::registry& registry) {
+void RendererSystem::_drawLights(const Transform& cameraTransform, entt::registry& registry) const {
     _drawDirectionalLights(cameraTransform, registry);
     _drawPointLights(cameraTransform, registry);
 }
 
-void RendererSystem::_drawPointLights(const Transform& cameraTransform, entt::registry& registry) {
+void RendererSystem::_drawPointLights(const Transform& cameraTransform, entt::registry& registry) const {
     assert(_shader);
     auto view{registry.view<PointLight, Position>()};
 
@@ -105,7 +133,7 @@ void RendererSystem::_drawPointLights(const Transform& cameraTransform, entt::re
     });
 }
 
-void RendererSystem::_drawDirectionalLights(const Transform& cameraTransform, entt::registry& registry) {
+void RendererSystem::_drawDirectionalLights(const Transform& cameraTransform, entt::registry& registry) const {
     assert(_shader);
 
     auto view{registry.view<DirectionalLight>()};
@@ -122,7 +150,7 @@ void RendererSystem::_drawDirectionalLights(const Transform& cameraTransform, en
     });
 }
 
-void RendererSystem::_setUniformColors(const glm::vec4& colorDiffuse, const glm::vec3& colorSpecular) {
+void RendererSystem::_setUniformColors(const glm::vec4& colorDiffuse, const glm::vec3& colorSpecular) const {
     assert(_shader);
 
     _shader->SetUniformVec4("DiffuseColor", colorDiffuse);

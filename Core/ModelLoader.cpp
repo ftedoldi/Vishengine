@@ -8,7 +8,8 @@
 #include "Material/Texture.h"
 
 #include "Components/WorldTransform.h"
-#include "stb_image.h"
+
+#include "assimp/postprocess.h"
 
 #include <iostream>
 
@@ -22,13 +23,14 @@ std::optional<entt::entity> ModelLoader::ImportModel(const std::string& modelPat
     const aiScene* const scene{_importer.ReadFile(modelPath,aiProcess_Triangulate |
                                                                         aiProcess_JoinIdenticalVertices |
                                                                         aiProcess_OptimizeMeshes |
-                                                                        aiProcess_FlipUVs)};
+                                                                        aiProcess_FlipUVs | aiProcess_OptimizeGraph )};
     if(!scene) {
         std::cout << "Error while loading a model" << std::endl;
         return std::nullopt;
     }
 
     _modelDirectory = modelPath.substr(0, modelPath.find_last_of('/'));
+    _processedMeshes.clear();
 
     entt::entity rootEntity{_registry.create()};
     auto& relationship{_registry.emplace<Relationship>(rootEntity)};
@@ -40,7 +42,7 @@ std::optional<entt::entity> ModelLoader::ImportModel(const std::string& modelPat
     scene->mRootNode->mTransformation.Decompose(aiScaling, aiRotation, aiTranslation);
 
     const glm::vec3 translation{aiTranslation.x, aiTranslation.y, aiTranslation.z};
-    const glm::quat rotation{aiRotation.w, aiRotation.x, aiRotation.y, aiRotation.z};
+    const glm::quat rotation{aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w};
     const float uniformScale{(aiScaling.x + aiScaling.y + aiScaling.z) / 3.0F};
 
     _registry.emplace<Position>(rootEntity, translation);
@@ -52,7 +54,7 @@ std::optional<entt::entity> ModelLoader::ImportModel(const std::string& modelPat
     return rootEntity;
 }
 
-void ModelLoader::_processNode(aiNode* const node,
+void ModelLoader::_processNode(const aiNode* const node,
                                const aiScene* const scene,
                                const entt::entity parentEntity) {
     // 1. Always create an entity for the current Node (even if it's empty)
@@ -68,8 +70,8 @@ void ModelLoader::_processNode(aiNode* const node,
     node->mTransformation.Decompose(aiScaling, aiRotation, aiTranslation);
 
     const glm::vec3 translation{aiTranslation.x, aiTranslation.y, aiTranslation.z};
-    const glm::quat rotation{aiRotation.w, aiRotation.x, aiRotation.y, aiRotation.z};
-    const float uniformScale{(aiScaling.x + aiScaling.y + aiScaling.z) / 3.0F};
+    const glm::quat rotation{aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w};
+    const float uniformScale{(aiScaling.x + aiScaling.y + aiScaling.z) / 3.f};
 
     // 3. Set local Transform components
     _registry.emplace<Position>(nodeEntity, translation);
@@ -78,8 +80,9 @@ void ModelLoader::_processNode(aiNode* const node,
 
     // 4. Process meshes as children attached to this nodeEntity
     for(uint32_t i{0}; i < node->mNumMeshes; ++i) {
-        auto* const mesh{scene->mMeshes[node->mMeshes[i]]};
-        _processMesh(mesh, scene, nodeEntity);
+        const auto meshIndex{node->mMeshes[i]};
+        auto* const mesh{scene->mMeshes[meshIndex]};
+        _processMesh(mesh, scene, nodeEntity, meshIndex);
     }
 
     // 5. Recursively process child nodes
@@ -90,7 +93,22 @@ void ModelLoader::_processNode(aiNode* const node,
     }
 }
 
-void ModelLoader::_processMesh(aiMesh* const aiMesh, const aiScene* const scene, entt::entity parentEntity) {
+void ModelLoader::_processMesh(aiMesh* const aiMesh, const aiScene* const scene, entt::entity parentEntity, const uint32_t assimpMeshIndex) {
+    entt::entity meshEntity{_registry.create()};
+
+    auto& relationship{_registry.emplace<Relationship>(meshEntity)};
+    relationship.parent = parentEntity;
+
+    _registry.emplace<Position>(meshEntity, glm::vec3{0.f, 0.f, 0.f});
+    _registry.emplace<Rotation>(meshEntity, glm::quat{0.f, 0.f, 0.f, 1.f});
+    _registry.emplace<Scale>(meshEntity, 1.f);
+    _registry.emplace<WorldTransform>(meshEntity);
+
+    if (const auto it{_processedMeshes.find(assimpMeshIndex)}; it != _processedMeshes.end()) {
+        _registry.emplace<Mesh>(meshEntity, it->second);
+        return;
+    }
+
     std::vector<glm::vec3> vertices{};
     std::vector<glm::vec2> textureCoords{};
     std::vector<uint32_t> indices{};
@@ -122,22 +140,13 @@ void ModelLoader::_processMesh(aiMesh* const aiMesh, const aiScene* const scene,
         }
     }
 
-    entt::entity meshEntity{_registry.create()};
-
-    auto& relationship{_registry.emplace<Relationship>(meshEntity)};
-    relationship.parent = parentEntity;  // Set the parent entity
-
-    _registry.emplace<Position>(meshEntity, glm::vec3{0.f, 0.f, 0.f});
-    _registry.emplace<Rotation>(meshEntity, glm::quat{0.f, 0.f, 0.f, 1.f});
-    _registry.emplace<Scale>(meshEntity, 1.f);
-    _registry.emplace<WorldTransform>(meshEntity);
-
     const auto mesh{_meshController.CreateMesh({
             std::move(vertices),
             std::move(indices),
             std::move(textureCoords),
             std::move(normals)})};
 
+    _processedMeshes.emplace(assimpMeshIndex, mesh);
     _registry.emplace<Mesh>(meshEntity, mesh);
 
     std::vector<Texture> texturesDiffuse{};
@@ -182,7 +191,7 @@ void ModelLoader::_processMesh(aiMesh* const aiMesh, const aiScene* const scene,
     _registry.emplace<Material>(meshEntity, material);
 }
 
-std::vector<Texture> ModelLoader::_loadMaterialTextures(aiMaterial* const mat, const aiTextureType type) {
+std::vector<Texture> ModelLoader::_loadMaterialTextures(const aiMaterial* const mat, const aiTextureType type) {
     std::vector<Texture> textures;
 
     for(unsigned i{0}; i < mat->GetTextureCount(type); ++i) {

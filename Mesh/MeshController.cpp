@@ -1,6 +1,7 @@
 #include "MeshController.h"
 
 #include "glad/gl.h"
+#include "glm/vec4.hpp"
 
 Mesh MeshController::CreateMesh(RawMeshData&& rawMeshData) {
     MeshData meshData{};
@@ -55,6 +56,26 @@ Mesh MeshController::CreateMesh(RawMeshData&& rawMeshData) {
     glVertexArrayAttribBinding(vao, 1, 1);
     glVertexArrayAttribBinding(vao, 2, 2);
 
+    // Create an initially-empty instance VBO (filled every frame by RendererSystem)
+    auto& instanceVbo{meshData.MeshGpuData.InstanceVbo};
+    glCreateBuffers(1, &instanceVbo);
+
+    glVertexArrayVertexBuffer(vao, 3, instanceVbo, 0, sizeof(InstanceData));
+
+    glEnableVertexArrayAttrib(vao, 3);
+    glVertexArrayAttribFormat(vao, 3, 3, GL_FLOAT, GL_FALSE, offsetof(InstanceData, position));
+    glVertexArrayAttribBinding(vao, 3, 3);
+
+    glEnableVertexArrayAttrib(vao, 4);
+    glVertexArrayAttribFormat(vao, 4, 1, GL_FLOAT, GL_FALSE, offsetof(InstanceData, scale));
+    glVertexArrayAttribBinding(vao, 4, 3);
+
+    glEnableVertexArrayAttrib(vao, 5);
+    glVertexArrayAttribFormat(vao, 5, 4, GL_FLOAT, GL_FALSE, offsetof(InstanceData, rotation));
+    glVertexArrayAttribBinding(vao, 5, 3);
+
+    glVertexArrayBindingDivisor(vao, 3, 1);
+
     // TODO: change with a guid
     static MeshID meshID{0};
     _meshIDToMeshData.emplace(meshID, std::move(meshData));
@@ -87,6 +108,7 @@ void MeshController::DeleteMesh(const MeshID& meshID) {
     glDeleteVertexArrays(1, &meshData.MeshGpuData.Vao);
     glDeleteBuffers(1, &meshData.MeshGpuData.Vbo);
     glDeleteBuffers(1, &meshData.MeshGpuData.Ebo);
+    glDeleteBuffers(1, &meshData.MeshGpuData.InstanceVbo);
 
     _meshIDToMeshData.erase(meshID);
 }
