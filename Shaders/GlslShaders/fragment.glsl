@@ -53,22 +53,26 @@ uniform vec3 LightColor;
 
 uniform vec3 LightPosition;
 
-vec3 CalculateDirectionalLight(vec3 diffuse, vec3 specular, float shininess, vec3 normal, DirectionalLight dirLight, vec3 viewDirection);
+vec4 CalculateDirectionalLight(vec4 diffuse, vec3 specular, float shininess, vec3 normal, DirectionalLight dirLight, vec3 viewDirection);
 vec3 CalculatePointLight(vec3 diffuse, vec3 specular, float shininess, vec3 normal, PointLight pointLight, vec3 viewDirection);
 
 void main() {
-    vec3 diffuseStrength = HasTextureDiffuse ? texture(TextureDiffuse0, TexCoord).rgb : DiffuseColor.rgb;
+    vec4 diffuseStrength = HasTextureDiffuse ? texture(TextureDiffuse0, TexCoord).rgba : DiffuseColor;
+    if (diffuseStrength.a < 0.1) {
+        discard;
+    }
+
     vec3 specularStrength = HasTextureSpecular ? texture(TextureSpecular0, TexCoord).rgb : SpecularColor;
 
     vec3 viewDirection = normalize(-FragViewPosition);
 
-    vec3 dirLightContribution = CalculateDirectionalLight(diffuseStrength, specularStrength, 256.f, normalize(NormalViewPosition), dirLight, viewDirection);
-    vec3 pointLightContribution = CalculatePointLight(diffuseStrength, specularStrength, 256.f, normalize(NormalViewPosition), pointLight, viewDirection);
+    vec4 dirLightContribution = CalculateDirectionalLight(diffuseStrength, specularStrength, 256.f, normalize(NormalViewPosition), dirLight, viewDirection);
+    vec3 pointLightContribution = CalculatePointLight(diffuseStrength.rgb, specularStrength, 256.f, normalize(NormalViewPosition), pointLight, viewDirection);
 
-    FragColor = vec4(dirLightContribution, 1.f);
+    FragColor = dirLightContribution;
 }
 
-vec3 CalculateDirectionalLight(vec3 diffuse, vec3 specular, float shininess, vec3 normal, DirectionalLight dirLight, vec3 viewDirection) {
+vec4 CalculateDirectionalLight(vec4 diffuse, vec3 specular, float shininess, vec3 normal, DirectionalLight dirLight, vec3 viewDirection) {
     // Since the input light direction is the vector from the light source to the objects
     // we need to get it's inverse.
     vec3 lightDir = normalize(-dirLight.Direction);
@@ -83,11 +87,11 @@ vec3 CalculateDirectionalLight(vec3 diffuse, vec3 specular, float shininess, vec
         spec = 0.f;
     }
 
-    vec3 totalDiffuse = dirLight.Diffuse * diff * diffuse;
+    vec3 totalDiffuse = dirLight.Diffuse * diff * diffuse.rgb;
     vec3 totalSpecular = dirLight.Specular * spec * specular;
-    vec3 totalAmbient = dirLight.Ambient * diffuse;
+    vec3 totalAmbient = dirLight.Ambient * diffuse.rgb;
 
-    return totalAmbient + totalDiffuse + totalSpecular;
+    return vec4(totalAmbient + totalDiffuse + totalSpecular, diffuse.a);
 }
 
 vec3 CalculatePointLight(vec3 diffuse, vec3 specular, float shininess, vec3 normal, PointLight pointLight, vec3 viewDirection) {

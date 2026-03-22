@@ -12,7 +12,7 @@ public:
     glm::vec3 Up{};
     glm::vec3 Front{};
 
-    float Speed{2.5f};
+    float Speed{10.f};
 
     float YawAngle{};
     float PitchAngle{};

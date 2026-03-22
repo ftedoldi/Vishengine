@@ -43,7 +43,7 @@ Game::Game() {
     ModelLoader modelLoader{_registry, _meshController, _materialController};
     std::optional<entt::entity> entity{};
     const std::array<std::string, 2> candidateModelPaths{
-        std::string(PROJECT_SOURCE_DIR) + "/Assets/ezio.glb",
+        std::string(PROJECT_SOURCE_DIR) + "/Assets/VeneziaTex.glb",
         std::string(PROJECT_SOURCE_DIR) + "/cubi.glb"
     };
 
@@ -110,7 +110,7 @@ void Game::_addLight() {
 
     auto& dirLight{_registry.emplace<DirectionalLight>(dirLightEntity)};
     dirLight.Direction = {0.f, -1.f, 0.f};
-    dirLight.Ambient = {.1f, .1f, .1f};
+    dirLight.Ambient = {.6f, .6f, .6f};
     dirLight.Diffuse = {0.5, 0.5, 0.5};
     dirLight.Specular = {1.f, 1.f, 1.f};
 }
