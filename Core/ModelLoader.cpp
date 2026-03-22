@@ -1,9 +1,10 @@
 #include "ModelLoader.h"
 
+#include "Components/InstancedMesh.h"
 #include "Components/Position.h"
+#include "Components/Relationship.h"
 #include "Components/Rotation.h"
 #include "Components/Scale.h"
-#include "Components/Relationship.h"
 
 #include "Material/Texture.h"
 
@@ -95,7 +96,7 @@ void ModelLoader::_processMesh(aiMesh* const aiMesh, const aiScene* const scene,
     _registry.emplace<WorldTransform>(meshEntity);
 
     if (const auto it{_processedMeshes.find(assimpMeshIndex)}; it != _processedMeshes.end()) {
-        _registry.emplace<Mesh>(meshEntity, it->second);
+        _registry.emplace<InstancedMesh>(meshEntity, it->second.meshID);
         return;
     }
 

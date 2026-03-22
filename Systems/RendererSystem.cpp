@@ -1,5 +1,6 @@
 #include "RendererSystem.h"
 
+#include "Components/InstancedMesh.h"
 #include "Components/Lights/DirectionalLight.h"
 #include "Components/Lights/PointLight.h"
 #include "Components/Mesh.h"
@@ -20,12 +21,17 @@ void RendererSystem::Update(float, entt::registry& registry, const MaterialContr
     assert(_shader);
     _shader->UseProgram();
 
-    std::unordered_map<uint32_t, std::vector<Transform>> meshesTransforms{};
+    std::unordered_map<uint32_t, std::vector<Transform>> instancedMeshesTransforms{};
 
-    // If the mesh has no material it means it is an instance that needs to be drawn using its world location.
+    // Add to the instanced meshes transforms all the meshes plus the instanced meshes.
     auto meshView{registry.view<Mesh, WorldTransform>()};
     for (const auto& [entity, mesh, worldTransform] : meshView.each()) {
-        meshesTransforms[mesh.meshID].push_back(worldTransform.Value);
+        instancedMeshesTransforms[mesh.meshID].push_back(worldTransform.Value);
+    }
+
+    auto instancedMeshView{registry.view<InstancedMesh, WorldTransform>()};
+    for (const auto& [entity, mesh, worldTransform] : instancedMeshView.each()) {
+        instancedMeshesTransforms[mesh.meshID].push_back(worldTransform.Value);
     }
 
     // If a mesh has a materiali it represents the actual geometry.
@@ -43,7 +49,7 @@ void RendererSystem::Update(float, entt::registry& registry, const MaterialContr
             _bindTextures(materialData.TexturesDiffuse, materialData.TexturesSpecular, materialData.TexturesNormal);
 
             // Transform all instances of this mesh from world to view space.
-            const auto& instanceWorldTransforms{meshesTransforms.at(mesh.meshID)};
+            const auto& instanceWorldTransforms{instancedMeshesTransforms.at(mesh.meshID)};
             std::vector<Transform> viewTransforms{};
             viewTransforms.reserve(instanceWorldTransforms.size());
             for (const auto& worldTransform : instanceWorldTransforms) {

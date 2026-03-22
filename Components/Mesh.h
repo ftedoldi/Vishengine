@@ -1,6 +1,8 @@
 #pragma once
 
-using MeshID = int;
+#include <cstdint>
+
+using MeshID = uint32_t;
 
 struct Mesh {
     explicit Mesh(const MeshID meshID) : meshID{meshID} {}
