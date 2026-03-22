@@ -114,6 +114,7 @@ add_executable(${PROJECT_NAME}
         Systems/TransformSystem.h
         Systems/CameraSystem.cpp
         Systems/CameraSystem.h
+        Components/InstancedMesh.h
 )
 
 # -----------------------------
