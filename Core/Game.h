@@ -41,7 +41,7 @@ private:
 
     std::unique_ptr<RendererSystem> _rendererSystem{};
 
-    std::unique_ptr<InputManager> _inputManager{};
+    std::shared_ptr<InputManager> _inputManager{};
 
     std::unique_ptr<EditorCameraMoveSystem> _editorCameraMoveSystem{};
 

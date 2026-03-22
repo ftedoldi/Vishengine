@@ -7,23 +7,13 @@
 #include "Components/WorldTransform.h"
 
 void TransformSystem::Update(entt::registry& registry) {
-    // Clear all the world transforms calculated the previous frame.
-    registry.clear<WorldTransform>();
-
-    auto view{registry.view<Position, Rotation, Scale>()};
+    auto view{registry.view<Position, Rotation, Scale, WorldTransform>()};
     for (const auto entity: view) {
         _getOrComputeWorldTransform(entity, registry);
     }
 }
 
 Transform TransformSystem::_getOrComputeWorldTransform(const entt::entity entity, entt::registry& registry) {
-    // --- THE CACHE CHECK ---
-    // If we already calculated this entity's WorldTransform this frame,
-    // return it immediately! This prevents doing the math twice.
-    if (const auto* const cachedWorldTransform = registry.try_get<WorldTransform>(entity)) {
-        return cachedWorldTransform->Value;
-    }
-
     Transform localTransform{{0.f, 0.f, 0.f}};
     if (registry.all_of<Position, Rotation, Scale>(entity)) {
         const auto position = registry.get<Position>(entity);
@@ -48,10 +38,9 @@ Transform TransformSystem::_getOrComputeWorldTransform(const entt::entity entity
         }
     }
 
-    // --- STORE THE CACHE ---
-    // Save it to the registry so any siblings asking for this parent
-    // will get it for free, and the Renderer can grab it instantly.
-    registry.emplace<WorldTransform>(entity, finalTransform);
+    if (auto* const worldTransform{registry.try_get<WorldTransform>(entity)}) {
+        worldTransform->Value = finalTransform;
+    }
 
     return finalTransform;
 }

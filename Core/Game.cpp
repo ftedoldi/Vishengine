@@ -2,6 +2,7 @@
 
 #include "Components/Light.h"
 #include "Components/Lights/PointLight.h"
+#include "Components/Position.h"
 
 #include "Components/Camera/ActiveCameraTag.h"
 #include "Components/Lights/DirectionalLight.h"
@@ -33,16 +34,16 @@ Game::Game() {
 
     _rendererSystem = std::make_unique<RendererSystem>(_mainShader.get());
 
-    _inputManager = std::make_unique<InputManager>(_window->GetGLFWwindow());
+    _inputManager = std::make_shared<InputManager>(_window->GetGLFWwindow());
 
-    _editorCameraMoveSystem = std::make_unique<EditorCameraMoveSystem>(_inputManager.get());
+    _editorCameraMoveSystem = std::make_unique<EditorCameraMoveSystem>(_inputManager);
 
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWwindow());
 
     ModelLoader modelLoader{_registry, _meshController, _materialController};
     std::optional<entt::entity> entity{};
     const std::array<std::string, 2> candidateModelPaths{
-        std::string(PROJECT_SOURCE_DIR) + "/Assets/pimmyTex.glb",
+        std::string(PROJECT_SOURCE_DIR) + "/Assets/venezia.glb",
         std::string(PROJECT_SOURCE_DIR) + "/cubi.glb"
     };
 

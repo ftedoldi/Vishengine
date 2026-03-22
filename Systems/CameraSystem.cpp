@@ -10,7 +10,7 @@ Transform CalculateViewTransform(const Transform& transform, const Transform& ca
 }
 
 
-void CameraSystem::Update(entt::registry &registry) {
+void CameraSystem::Update(entt::registry& registry) {
     auto view{registry.view<Camera, WorldTransform>()};
 
     for (auto entity: view) {
