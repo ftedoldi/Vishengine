@@ -22,8 +22,7 @@ ModelLoader::ModelLoader(entt::registry& registry,
 std::optional<entt::entity> ModelLoader::ImportModel(const std::string& modelPath) {
     const aiScene* const scene{_importer.ReadFile(modelPath,aiProcess_Triangulate |
                                                                         aiProcess_JoinIdenticalVertices |
-                                                                        aiProcess_OptimizeMeshes |
-                                                                        aiProcess_FlipUVs | aiProcess_OptimizeGraph )};
+                                                                        aiProcess_FlipUVs)};
     if(!scene) {
         std::cout << "Error while loading a model" << std::endl;
         return std::nullopt;
@@ -36,18 +35,9 @@ std::optional<entt::entity> ModelLoader::ImportModel(const std::string& modelPat
     auto& relationship{_registry.emplace<Relationship>(rootEntity)};
     relationship.parent = entt::null;
 
-    aiVector3D aiScaling{};
-    aiVector3D aiTranslation{};
-    aiQuaternion aiRotation{};
-    scene->mRootNode->mTransformation.Decompose(aiScaling, aiRotation, aiTranslation);
-
-    const glm::vec3 translation{aiTranslation.x, aiTranslation.y, aiTranslation.z};
-    const glm::quat rotation{aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w};
-    const float uniformScale{(aiScaling.x + aiScaling.y + aiScaling.z) / 3.0F};
-
-    _registry.emplace<Position>(rootEntity, translation);
-    _registry.emplace<Rotation>(rootEntity, rotation);
-    _registry.emplace<Scale>(rootEntity, uniformScale);
+    _registry.emplace<Position>(rootEntity, glm::vec3(0.0f));
+    _registry.emplace<Rotation>(rootEntity, glm::quat(0.f, 0.f, 0.f, 1.f));
+    _registry.emplace<Scale>(rootEntity, 1.);
 
     _processNode(scene->mRootNode, scene, rootEntity);
 
@@ -122,6 +112,8 @@ void ModelLoader::_processMesh(aiMesh* const aiMesh, const aiScene* const scene,
 
         if(aiMesh->HasNormals()) {
             normals.emplace_back(aiMesh->mNormals[i].x, aiMesh->mNormals[i].y, aiMesh->mNormals[i].z);
+        } else {
+            normals.emplace_back(0.f, 1.f, 0.f);
         }
 
         if(aiMesh->mTextureCoords[0]) {
