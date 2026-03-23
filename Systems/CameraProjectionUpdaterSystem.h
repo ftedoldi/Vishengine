@@ -8,10 +8,10 @@ class CameraProjectionUpdaterSystem {
 public:
     CameraProjectionUpdaterSystem(entt::registry& registry, entt::dispatcher& windowDispatcher);
 
-    void OnFramebufferSizeChanged(FrameBufferSizeChangedEvent frameBufferSizeChangedEvent);
-
-    void OnMouseMoved(MouseMovedEvent mouseMovedEvent);
-
 private:
+    void _onFramebufferSizeChanged(FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const;
+
+    void _onMouseMoved(MouseMovedEvent mouseMovedEvent) const;
+
     entt::registry& _registry;
 };

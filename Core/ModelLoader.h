@@ -14,7 +14,7 @@
 
 class ModelLoader {
 public:
-    ModelLoader(entt::registry& registry, MeshController& meshController, MaterialController& materialController);
+    ModelLoader(entt::registry& registry, const std::shared_ptr<MeshController>& meshController, const std::shared_ptr<MaterialController>& materialController);
 
     std::optional<entt::entity> ImportModel(const std::string& modelPath);
 
@@ -29,9 +29,9 @@ private:
 
     entt::registry& _registry;
 
-    MeshController& _meshController;
+    std::shared_ptr<MeshController> _meshController{};
 
-    MaterialController& _materialController;
+    std::shared_ptr<MaterialController> _materialController{};
 
     Assimp::Importer _importer{};
 

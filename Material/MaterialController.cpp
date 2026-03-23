@@ -2,19 +2,16 @@
 
 #include <cassert>
 
-Material MaterialController::AddMaterial(MaterialData&& materialData) {
-    // TODO: Create the new material ID (with boost).
-    static MaterialID materialID{0};
-    _materialIDToTexturesList.emplace(materialID, std::move(materialData));
-    return Material{materialID++};
+void MaterialController::AddMaterial(const uint32_t meshID, MaterialData&& materialData) {
+    _materialIDToTexturesList.emplace(meshID, std::move(materialData));
 }
 
-const MaterialData& MaterialController::GetMaterialData(const MaterialID &materialID) const {
-    assert(_materialIDToTexturesList.contains(materialID));
+const MaterialData& MaterialController::GetMaterialData(const uint32_t meshID) const {
+    assert(_materialIDToTexturesList.contains(meshID));
 
-    return _materialIDToTexturesList.at(materialID);
+    return _materialIDToTexturesList.at(meshID);
 }
 
-void MaterialController::UpdateMaterialData(const MaterialID& materialID, MaterialData&& materialData) {
-    _materialIDToTexturesList.insert_or_assign(materialID, std::move(materialData));
+void MaterialController::UpdateMaterialData(const uint32_t meshID, MaterialData&& materialData) {
+    _materialIDToTexturesList.insert_or_assign(meshID, std::move(materialData));
 }

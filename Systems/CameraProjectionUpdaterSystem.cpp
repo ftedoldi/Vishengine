@@ -10,11 +10,11 @@
 #include "glm/glm.hpp"
 
 CameraProjectionUpdaterSystem::CameraProjectionUpdaterSystem(entt::registry& registry, entt::dispatcher& windowDispatcher) : _registry{registry} {
-    windowDispatcher.sink<FrameBufferSizeChangedEvent>().connect<&CameraProjectionUpdaterSystem::OnFramebufferSizeChanged>(this);
-    windowDispatcher.sink<MouseMovedEvent>().connect<&CameraProjectionUpdaterSystem::OnMouseMoved>(this);
+    windowDispatcher.sink<FrameBufferSizeChangedEvent>().connect<&CameraProjectionUpdaterSystem::_onFramebufferSizeChanged>(this);
+    windowDispatcher.sink<MouseMovedEvent>().connect<&CameraProjectionUpdaterSystem::_onMouseMoved>(this);
 }
 
-void CameraProjectionUpdaterSystem::OnFramebufferSizeChanged(FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) {
+void CameraProjectionUpdaterSystem::_onFramebufferSizeChanged(const FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const {
     auto view{_registry.view<Camera>()};
     for(const auto entity: view) {
         auto& cameraComponent{view.get<Camera>(entity)};
@@ -29,7 +29,7 @@ void CameraProjectionUpdaterSystem::OnFramebufferSizeChanged(FrameBufferSizeChan
     }
 }
 
-void CameraProjectionUpdaterSystem::OnMouseMoved(const MouseMovedEvent mouseMovedEvent) {
+void CameraProjectionUpdaterSystem::_onMouseMoved(const MouseMovedEvent mouseMovedEvent) const {
     auto view{_registry.view<Camera, ActiveCameraTag, EditorCameraTag, Rotation>()};
 
     for(const auto entity: view) {

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Components/Material.h"
 #include "Texture.h"
 
 #include "glm/vec3.hpp"
@@ -18,12 +17,12 @@ struct MaterialData {
 
 class MaterialController {
 public:
-    Material AddMaterial(MaterialData&& materialData);
+    void AddMaterial(uint32_t meshID, MaterialData&& materialData);
 
-    const MaterialData& GetMaterialData(const MaterialID& materialID) const;
+    const MaterialData& GetMaterialData(uint32_t meshID) const;
 
-    void UpdateMaterialData(const MaterialID& materialID, MaterialData&& materialData);
+    void UpdateMaterialData(uint32_t meshID, MaterialData&& materialData);
 
 private:
-    std::unordered_map<MaterialID, MaterialData> _materialIDToTexturesList{};
+    std::unordered_map<uint32_t, MaterialData> _materialIDToTexturesList{};
 };

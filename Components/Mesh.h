@@ -2,10 +2,8 @@
 
 #include <cstdint>
 
-using MeshID = uint32_t;
-
 struct Mesh {
-    explicit Mesh(const MeshID meshID) : meshID{meshID} {}
+    explicit Mesh(const uint32_t meshID) : meshID{meshID} {}
 
-    MeshID meshID{};
+    uint32_t meshID{};
 };

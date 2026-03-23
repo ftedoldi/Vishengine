@@ -1,14 +1,9 @@
 #pragma once
 
 #include "Window.h"
-
-#include "Components/Camera/Camera.h"
 #include "InputManager.h"
-#include "Shaders/Shader.h"
-
-#include "Camera/CameraFactory.h"
 #include "GUIDrawer.h"
-#include "ModelLoader.h"
+#include "Platform/Framebuffer.h"
 #include "Systems/CameraProjectionUpdaterSystem.h"
 #include "Systems/CameraSystem.h"
 #include "Systems/EditorCameraMoveSystem.h"
@@ -25,19 +20,16 @@ public:
 
     void Update();
 
-    void Clear();
+    void Clear() const;
 
 private:
     void _addLight();
 
-    // TODO: check if maybe it's needed more than a generic registry for all the entities
     entt::registry _registry{};
 
     std::unique_ptr<CameraProjectionUpdaterSystem> _cameraProjectionUpdaterSystem{};
 
     std::unique_ptr<Window> _window{};
-
-    std::unique_ptr<Shader> _mainShader{};
 
     std::unique_ptr<RendererSystem> _rendererSystem{};
 
@@ -47,11 +39,9 @@ private:
 
     std::unique_ptr<GUIDrawer> _guiDrawer{};
 
+    std::shared_ptr<Framebuffer> _sceneFrameBuffer{};
+
     TransformSystem _transformSystem{};
 
     CameraSystem _cameraSystem{};
-
-    MaterialController _materialController{};
-
-    MeshController _meshController{};
 };

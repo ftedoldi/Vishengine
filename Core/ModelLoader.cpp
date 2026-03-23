@@ -15,10 +15,8 @@
 #include <iostream>
 
 ModelLoader::ModelLoader(entt::registry& registry,
-                         MeshController& meshController,
-                         MaterialController& materialController) : _registry{registry},
-                                                                   _meshController(meshController),
-                                                                   _materialController(materialController) {}
+                         const std::shared_ptr<MeshController>& meshController,
+                         const std::shared_ptr<MaterialController>& materialController) : _registry{registry}, _meshController(meshController), _materialController(materialController) {}
 
 std::optional<entt::entity> ModelLoader::ImportModel(const std::string& modelPath) {
     const aiScene* const scene{_importer.ReadFile(modelPath,aiProcess_Triangulate |
@@ -133,7 +131,7 @@ void ModelLoader::_processMesh(aiMesh* const aiMesh, const aiScene* const scene,
         }
     }
 
-    const auto mesh{_meshController.CreateMesh({
+    const auto mesh{_meshController->CreateMesh({
             std::move(vertices),
             std::move(indices),
             std::move(textureCoords),
@@ -174,14 +172,13 @@ void ModelLoader::_processMesh(aiMesh* const aiMesh, const aiScene* const scene,
 
     auto texturesNormal{_loadTextures(scene, aiMaterial, aiTextureType_NORMALS)};
 
-    const auto material{_materialController.AddMaterial({
+    _materialController->AddMaterial(mesh.meshID, {
             std::move(texturesDiffuse),
             std::move(texturesSpecular),
             std::move(texturesNormal),
             diffuseColor,
             specularColor,
-    })};
-    _registry.emplace<Material>(meshEntity, material);
+    });
 }
 
 std::vector<Texture> ModelLoader::_loadMaterialTextures(const aiMaterial* const mat, const aiTextureType type) {

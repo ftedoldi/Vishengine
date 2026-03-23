@@ -35,11 +35,9 @@ public:
 
     entt::dispatcher& GetEventDispatcher();
 
-    static void Clear();
+    int32_t GetHeight() const;
 
-    double GetHeight() const;
-
-    double GetWidth() const;
+    int32_t GetWidth() const;
 
     GLFWwindow* GetGLFWwindow();
 
@@ -56,7 +54,7 @@ private:
 
     entt::dispatcher _eventDispatcher{};
 
-    double _width{};
+    int32_t _width{};
 
-    double _height{};
+    int32_t _height{};
 };

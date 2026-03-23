@@ -77,31 +77,31 @@ Mesh MeshController::CreateMesh(RawMeshData&& rawMeshData) {
     glVertexArrayBindingDivisor(vao, 3, 1);
 
     // TODO: change with a guid
-    static MeshID meshID{0};
+    static uint32_t meshID{0};
     _meshIDToMeshData.emplace(meshID, std::move(meshData));
 
     return Mesh{meshID++};
 }
 
-const MeshGpuData& MeshController::GetMeshGpuData(const MeshID meshID) const {
+const MeshGpuData& MeshController::GetMeshGpuData(const uint32_t meshID) const {
     assert(_meshIDToMeshData.contains(meshID));
 
     return _meshIDToMeshData.at(meshID).MeshGpuData;
 }
 
-const RawMeshData& MeshController::GetRawMeshData(const MeshID meshID) const {
+const RawMeshData& MeshController::GetRawMeshData(const uint32_t meshID) const {
     assert(_meshIDToMeshData.contains(meshID));
 
     return _meshIDToMeshData.at(meshID).RawMeshData;
 }
 
-const MeshData& MeshController::GetMeshData(const MeshID meshID) const {
+const MeshData& MeshController::GetMeshData(const uint32_t meshID) const {
     assert(_meshIDToMeshData.contains(meshID));
 
     return _meshIDToMeshData.at(meshID);
 }
 
-void MeshController::DeleteMesh(const MeshID& meshID) {
+void MeshController::DeleteMesh(const uint32_t meshID) {
     assert(_meshIDToMeshData.contains(meshID));
 
     const auto& meshData{_meshIDToMeshData.at(meshID)};
