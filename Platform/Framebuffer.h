@@ -10,7 +10,7 @@ public:
 
     void BindFrameBuffer() const;
 
-    int32_t GetColorAttachmentID() const;
+    [[nodiscard]] uint32_t GetColorAttachmentID() const;
 
     void Resize(int32_t width, int32_t height);
 

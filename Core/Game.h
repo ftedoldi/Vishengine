@@ -3,7 +3,6 @@
 #include "Window.h"
 #include "InputManager.h"
 #include "GUIDrawer.h"
-#include "Platform/Framebuffer.h"
 #include "Systems/CameraProjectionUpdaterSystem.h"
 #include "Systems/CameraSystem.h"
 #include "Systems/EditorCameraMoveSystem.h"
@@ -38,8 +37,6 @@ private:
     std::unique_ptr<EditorCameraMoveSystem> _editorCameraMoveSystem{};
 
     std::unique_ptr<GUIDrawer> _guiDrawer{};
-
-    std::shared_ptr<Framebuffer> _sceneFrameBuffer{};
 
     TransformSystem _transformSystem{};
 

@@ -12,9 +12,9 @@
 #include "Platform/Time.h"
 
 #include "Systems/SceneRenderPass.h"
-#include "Systems/ScreenBlitPass.h"
 
 #include <array>
+#include <filesystem>
 #include <optional>
 
 Game::Game() {
@@ -41,17 +41,19 @@ Game::Game() {
     const auto meshController{std::make_shared<MeshController>()};
     const auto materialController{std::make_shared<MaterialController>()};
 
+    // The scene is rendered into this offscreen framebuffer.
+    // ScenePanel reads its colour attachment and displays it as an ImGui::Image.
     const auto sceneFrameBuffer{std::make_shared<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight())};
     auto mainShader{std::make_unique<Shader>(shadersBasePath + "vertex.glsl", shadersBasePath + "fragment.glsl")};
-    _rendererSystem->AddPass(std::make_unique<SceneRenderPass>(std::move(mainShader), sceneFrameBuffer, _registry, materialController, meshController, _window->GetEventDispatcher()));
-
-    auto screenShader{std::make_unique<Shader>(shadersBasePath + "ScreenVertexShader.glsl", shadersBasePath + "ScreenFragmentShader.glsl")};
-    _rendererSystem->AddPass(std::make_unique<ScreenBlitPass>(std::move(screenShader), sceneFrameBuffer));
+    _rendererSystem->AddPass(std::make_unique<SceneRenderPass>(
+        std::move(mainShader), sceneFrameBuffer, _registry,
+        materialController, meshController, _window->GetEventDispatcher()));
 
     _inputManager = std::make_shared<InputManager>(_window->GetGLFWwindow());
     _editorCameraMoveSystem = std::make_unique<EditorCameraMoveSystem>(_inputManager);
 
-    _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWwindow());
+    const std::filesystem::path assetsRoot{std::string(PROJECT_SOURCE_DIR) + "/Assets"};
+    _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWwindow(), sceneFrameBuffer, assetsRoot);
 
     ModelLoader modelLoader{_registry, meshController, materialController};
     std::optional<entt::entity> entity{};
@@ -77,18 +79,25 @@ void Game::Update() {
     while (!_window->ShouldWindowClose()) {
         glfwPollEvents();
 
-        _guiDrawer->StartFrame(_registry);
-
         Time::UpdateDeltaTime();
 
         // Update entity transforms and camera view matrix.
         _transformSystem.Update(_registry);
         _cameraSystem.Update(_registry);
-
-        _rendererSystem->Update();
-
         _editorCameraMoveSystem->Update(Time::GetDeltaTime(), _registry);
 
+        // ── Render frame ──────────────────────────────────────────────────
+        // 1. Clear the default framebuffer and start the ImGui frame.
+        _guiDrawer->BeginFrame();
+
+        // 2. Render the scene into the offscreen framebuffer.
+        _rendererSystem->Update();
+
+        // 3. Build ImGui panel draw-lists (ScenePanel reads the now-populated
+        //    offscreen framebuffer texture).
+        _guiDrawer->DrawUI(_registry);
+
+        // 4. Submit ImGui draw-lists to the default framebuffer.
         _guiDrawer->Render();
 
         _window->Update();

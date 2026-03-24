@@ -56,6 +56,7 @@ target_link_libraries(imgui PUBLIC glfw OpenGL::GL)
 file(GLOB PROJECT_HEADERS
         Camera/*.h
         Core/*.h
+        Editor/*.h
         Utils/*.h
         Math/*.h
         Shaders/*.h
@@ -72,6 +73,7 @@ file(GLOB PROJECT_HEADERS
 file(GLOB PROJECT_SOURCES
         Camera/*.cpp
         Core/*.cpp
+        Editor/*.cpp
         Utils/*.cpp
         Math/*.cpp
         Shaders/*.cpp
