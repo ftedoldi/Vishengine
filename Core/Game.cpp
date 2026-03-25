@@ -56,21 +56,7 @@ Game::Game() {
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWwindow(), sceneFrameBuffer, assetsRoot);
 
     ModelLoader modelLoader{_registry, meshController, materialController};
-    std::optional<entt::entity> entity{};
-
-    const std::array<std::string, 2> candidateModelPaths{
-        std::string(PROJECT_SOURCE_DIR) + "/Assets/cubi.glb",
-        std::string(PROJECT_SOURCE_DIR) + "/cubi.glb"
-    };
-
-    for (const auto& modelPath : candidateModelPaths) {
-        entity = modelLoader.ImportModel(modelPath);
-        if (entity.has_value()) {
-            break;
-        }
-    }
-
-    assert(entity && "No default model found. Add cubi.glb to Assets/ or repository root.");
+    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/hierarchy.glb");
 
     _addLight();
 }
