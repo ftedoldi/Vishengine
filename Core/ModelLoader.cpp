@@ -56,16 +56,13 @@ void ModelLoader::_processMesh(const aiMesh* const aiMesh, const aiScene* const 
     relationship.parent = parentEntity;
     parentEntity = meshEntity;
 
-    // Decompose the fully-accumulated world transform so the mesh entity's
-    // Position/Rotation/Scale directly represent its position relative to the
-    // scene root (matching what Blender shows as the object's world transform).
     aiVector3D aiScaling{};
     aiVector3D aiTranslation{};
     aiQuaternion aiRotation{};
     accumulatedTransform.Decompose(aiScaling, aiRotation, aiTranslation);
 
     _registry.emplace<Position>(meshEntity, glm::vec3{aiTranslation.x, aiTranslation.y, aiTranslation.z});
-    _registry.emplace<Rotation>(meshEntity, glm::quat{aiRotation.w, aiRotation.x, aiRotation.y, aiRotation.z});
+    _registry.emplace<Rotation>(meshEntity, glm::quat{aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w});
     _registry.emplace<Scale>(meshEntity, (aiScaling.x + aiScaling.y + aiScaling.z) / 3.f);
     // This will be set by the TransformSystem.
     _registry.emplace<WorldTransform>(meshEntity);
