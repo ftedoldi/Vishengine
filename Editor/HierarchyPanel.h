@@ -23,5 +23,13 @@ public:
     void SetSelectedEntity(entt::entity entity) { _selectedEntity = entity; }
 
 private:
+    void _drawEntity(entt::registry& registry, entt::entity entity, const char* displayName);
+
+    void _drawMeshes(entt::registry& registry);
+
+    void _drawLights(entt::registry& registry);
+
+    void _drawEntityNode(entt::entity entity, entt::registry& registry);
+
     entt::entity _selectedEntity{entt::null};
 };

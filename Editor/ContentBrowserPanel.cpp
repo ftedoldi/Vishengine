@@ -120,7 +120,7 @@ void ContentBrowserPanel::_renderContents() {
     for (const auto& entry : std::filesystem::directory_iterator(_currentDir)) {
         entries.push_back(entry);
     }
-    std::sort(entries.begin(), entries.end(),
+    std::ranges::sort(entries,
               [](const auto& a, const auto& b) {
                   if (a.is_directory() != b.is_directory()) {
                       return a.is_directory() > b.is_directory();

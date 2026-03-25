@@ -16,6 +16,8 @@ void ScenePanel::OnRender(entt::registry& /*registry*/) {
     ImGui::Begin("Scene", nullptr, flags);
 
     const ImVec2 viewportSize{ImGui::GetContentRegionAvail()};
+    _viewportWidth = viewportSize.x;
+    _viewportHeight = viewportSize.y;
 
     // Blit framebuffer color attachment as an ImGui image.
     const auto textureID{_framebuffer->GetColorAttachmentID()};

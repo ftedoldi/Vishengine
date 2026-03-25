@@ -20,8 +20,12 @@ public:
 
 private:
     void _drawTransformComponent(entt::registry& registry) const;
+
     void _drawMeshComponent(entt::registry& registry) const;
-    void _drawLightComponents(entt::registry& registry) const;
+
+    void _drawPointLightComponent(entt::registry& registry) const;
+
+    void _drawDirectionalLightComponent(entt::registry& registry) const;
 
     entt::entity _selectedEntity{entt::null};
 };

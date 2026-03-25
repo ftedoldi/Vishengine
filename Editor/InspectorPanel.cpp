@@ -7,6 +7,7 @@
 #include "Components/Lights/PointLight.h"
 #include "Components/Lights/DirectionalLight.h"
 
+#include "Components/WorldTransform.h"
 #include "imgui.h"
 
 #include <glm/gtc/quaternion.hpp>
@@ -40,7 +41,7 @@ namespace {
     ImGui::SetNextItemWidth(inputWidth);
     ImGuiTextFilter xTextFilter{};
     char xPosition[5];
-    std::snprintf(xPosition, sizeof(xPosition), "%.4f", values.x); // 2 decimal places
+    std::snprintf(xPosition, sizeof(xPosition), "%.10f", values.x); // 2 decimal places
     if (ImGui::InputTextWithHint("##XTextFilter", xPosition, xTextFilter.InputBuf, IM_ARRAYSIZE(xTextFilter.InputBuf), ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
         xTextFilter.Build();
         values.x = std::stof(xTextFilter.InputBuf);
@@ -59,7 +60,7 @@ namespace {
     ImGui::SetNextItemWidth(inputWidth);
     ImGuiTextFilter yTextFilter{};
     char yPosition[5];
-    std::snprintf(yPosition, sizeof(yPosition), "%.4f", values.y); // 2 decimal places
+    std::snprintf(yPosition, sizeof(yPosition), "%.10f", values.y); // 2 decimal places
     if (ImGui::InputTextWithHint("##YTextFilter", yPosition, yTextFilter.InputBuf, IM_ARRAYSIZE(yTextFilter.InputBuf), ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
         yTextFilter.Build();
         values.y = std::stof(yTextFilter.InputBuf);
@@ -78,7 +79,7 @@ namespace {
     ImGui::SetNextItemWidth(inputWidth);
     ImGuiTextFilter zTextFilter{};
     char zPosition[5];
-    std::snprintf(zPosition, sizeof(zPosition), "%.4f", values.z); // 2 decimal places
+    std::snprintf(zPosition, sizeof(zPosition), "%.10f", values.z); // 2 decimal places
     if (ImGui::InputTextWithHint("##ZTextFilter", zPosition, zTextFilter.InputBuf, IM_ARRAYSIZE(zTextFilter.InputBuf), ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
         zTextFilter.Build();
         values.z = std::stof(zTextFilter.InputBuf);
@@ -96,8 +97,6 @@ void InspectorPanel::OnRender(entt::registry& registry) {
 
     ImGui::Begin("Inspector", nullptr, flags);
 
-    _drawLightComponents(registry);
-
     if (_selectedEntity == entt::null || !registry.valid(_selectedEntity)) {
         ImGui::TextDisabled("No entity selected.");
         ImGui::End();
@@ -109,7 +108,8 @@ void InspectorPanel::OnRender(entt::registry& registry) {
     ImGui::Separator();
 
     _drawMeshComponent(registry);
-    _drawTransformComponent(registry);
+    _drawPointLightComponent(registry);
+    _drawDirectionalLightComponent(registry);
 
     ImGui::Spacing();
     ImGui::Separator();
@@ -181,7 +181,9 @@ void InspectorPanel::_drawTransformComponent(entt::registry& registry) const {
 }
 
 void InspectorPanel::_drawMeshComponent(entt::registry& registry) const {
-    if (!registry.all_of<Mesh>(_selectedEntity)) { return; }
+    if (!registry.all_of<Mesh>(_selectedEntity)) {
+        return;
+    }
 
     const ImGuiTreeNodeFlags flags{
         ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
@@ -192,37 +194,44 @@ void InspectorPanel::_drawMeshComponent(entt::registry& registry) const {
         ImGui::Text("Mesh ID : %u", mesh.meshID);
         ImGui::TreePop();
     }
+
+    _drawTransformComponent(registry);
 }
 
-void InspectorPanel::_drawLightComponents(entt::registry& registry) const {
-    // Point Light
-    auto pointLightView{registry.view<PointLight>()};
-    for (const auto [_, pointLight] : pointLightView.each()) {
-        const ImGuiTreeNodeFlags flags{
-            ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
-            ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding};
+void InspectorPanel::_drawPointLightComponent(entt::registry& registry) const {
+    if (!registry.all_of<PointLight>(_selectedEntity)) {
+        return;
+    }
+    const ImGuiTreeNodeFlags flags{
+        ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
+        ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding};
 
-        if (ImGui::TreeNodeEx("##PointLight", flags, "Point Light")) {
-            ImGui::ColorEdit3("Ambient",  &pointLight.Ambient.x);
-            ImGui::ColorEdit3("Diffuse",  &pointLight.Diffuse.x);
-            ImGui::ColorEdit3("Specular", &pointLight.Specular.x);
-            ImGui::TreePop();
-        }
+    if (ImGui::TreeNodeEx("##PointLight", flags, "Point Light")) {
+        auto& pointLight{registry.get<PointLight>(_selectedEntity)};
+        ImGui::ColorEdit3("Ambient",  &pointLight.Ambient.x);
+        ImGui::ColorEdit3("Diffuse",  &pointLight.Diffuse.x);
+        ImGui::ColorEdit3("Specular", &pointLight.Specular.x);
+        ImGui::TreePop();
     }
 
-    // Directional Light
-    auto directionalLightView{registry.view<DirectionalLight>()};
-    for (const auto [_, directionalLight]  : directionalLightView.each()) {
-        const ImGuiTreeNodeFlags flags{
-            ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
-            ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding};
+    _drawTransformComponent(registry);
+}
 
-        if (ImGui::TreeNodeEx("##DirLight", flags, "Directional Light")) {
-            DrawVec3Control("Direction", directionalLight.Direction);
-            ImGui::ColorEdit3("Ambient",  &directionalLight.Ambient.x);
-            ImGui::ColorEdit3("Diffuse",  &directionalLight.Diffuse.x);
-            ImGui::ColorEdit3("Specular", &directionalLight.Specular.x);
-            ImGui::TreePop();
-        }
+void InspectorPanel::_drawDirectionalLightComponent(entt::registry& registry) const {
+    if (!registry.all_of<DirectionalLight>(_selectedEntity)) {
+        return;
+    }
+    const ImGuiTreeNodeFlags flags{
+        ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
+        ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding};
+
+    if (ImGui::TreeNodeEx("##DirectionalLight", flags, "Directional Light")) {
+        auto& directionalLight{registry.get<DirectionalLight>(_selectedEntity)};
+        DrawVec3Control("Direction", directionalLight.Direction);
+        ImGui::ColorEdit3("Ambient",  &directionalLight.Ambient.x);
+        ImGui::ColorEdit3("Diffuse",  &directionalLight.Diffuse.x);
+        ImGui::ColorEdit3("Specular", &directionalLight.Specular.x);
+        ImGui::TreePop();
     }
 }
+
