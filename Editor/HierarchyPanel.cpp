@@ -126,7 +126,7 @@ void HierarchyPanel::_drawEntityNode(entt::entity entity, entt::registry& regist
 
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
 
-    if (ImGui::TreeNodeEx((void*)(uint64_t)entity, flags, "%s", name)) {
+    if (ImGui::TreeNodeEx(reinterpret_cast<void*>(entity), flags, "%s", name)) {
         // Draw children
 
         if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {

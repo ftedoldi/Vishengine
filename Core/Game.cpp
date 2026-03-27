@@ -3,19 +3,17 @@
 #include "Camera/CameraFactory.h"
 #include "Components/Light.h"
 #include "Components/Lights/PointLight.h"
-#include "Components/Position.h"
 #include "ModelLoader.h"
 
 #include "Components/Camera/ActiveCameraTag.h"
 #include "Components/Lights/DirectionalLight.h"
+#include "Components/Transforms/RelativeTransform.h"
 #include "Platform/Framebuffer.h"
 #include "Platform/Time.h"
 
 #include "Systems/SceneRenderPass.h"
 
-#include <array>
 #include <filesystem>
-#include <optional>
 
 Game::Game() {
     _window = std::make_unique<Window>();
@@ -56,7 +54,7 @@ Game::Game() {
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWwindow(), sceneFrameBuffer, assetsRoot);
 
     ModelLoader modelLoader{_registry, meshController, materialController};
-    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/hierarchy.glb");
+    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/VeneziaTex.glb");
 
     _addLight();
 }
@@ -101,8 +99,8 @@ void Game::_addLight() {
     light.Ambient  = {0.2, 0.2, 0.2};
     light.Specular = {1.f, 1.f, 1.f};
 
-    auto& position{_registry.emplace<Position>(pointLightEntity)};
-    position.Vector = {0.f, 6.f, 0.f};
+    auto& relativeTransform{_registry.emplace<RelativeTransform>(pointLightEntity)};
+    relativeTransform.Value.Position = {0.f, 6.f, 0.f};
 
     const auto dirLightEntity{_registry.create()};
     auto& dirLight{_registry.emplace<DirectionalLight>(dirLightEntity)};

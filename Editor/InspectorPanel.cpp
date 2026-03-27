@@ -1,13 +1,12 @@
 #include "InspectorPanel.h"
 
 #include "Components/Mesh.h"
-#include "Components/Position.h"
-#include "Components/Rotation.h"
-#include "Components/Scale.h"
 #include "Components/Lights/PointLight.h"
 #include "Components/Lights/DirectionalLight.h"
 
-#include "Components/WorldTransform.h"
+#include "Components/Camera/Camera.h"
+#include "Components/InstancedMeshTag.h"
+#include "Components/Transforms/RelativeTransform.h"
 #include "imgui.h"
 
 #include <glm/gtc/quaternion.hpp>
@@ -110,12 +109,13 @@ void InspectorPanel::OnRender(entt::registry& registry) {
     _drawMeshComponent(registry);
     _drawPointLightComponent(registry);
     _drawDirectionalLightComponent(registry);
+    _drawCameraComponent(registry);
 
     ImGui::Spacing();
     ImGui::Separator();
 
     // Add Component button
-    const float buttonWidth{ImGui::GetContentRegionAvail().x};
+    /*const float buttonWidth{ImGui::GetContentRegionAvail().x};
     if (ImGui::Button("Add Component", ImVec2{buttonWidth, 0.f})) {
         ImGui::OpenPopup("AddComponentPopup");
     }
@@ -131,15 +131,13 @@ void InspectorPanel::OnRender(entt::registry& registry) {
             registry.emplace<Scale>(_selectedEntity);
         }
         ImGui::EndPopup();
-    }
+    }*/
 
     ImGui::End();
 }
 
 void InspectorPanel::_drawTransformComponent(entt::registry& registry) const {
-    if (!registry.all_of<Position>(_selectedEntity) &&
-        !registry.all_of<Rotation>(_selectedEntity) &&
-        !registry.all_of<Scale>(_selectedEntity)) {
+    if (!registry.all_of<RelativeTransform>(_selectedEntity)) {
         return;
     }
 
@@ -150,29 +148,21 @@ void InspectorPanel::_drawTransformComponent(entt::registry& registry) const {
 
     if (ImGui::TreeNodeEx("##Transform", flags, "Transform")) {
         // Position
-        if (registry.all_of<Position>(_selectedEntity)) {
-            auto& pos{registry.get<Position>(_selectedEntity)};
-            DrawVec3Control("Position", pos.Vector);
-        }
+        if (auto* const relativeTransformPtr{registry.try_get<RelativeTransform>(_selectedEntity)}) {
+            auto& relativeTransform{relativeTransformPtr->Value};
+            DrawVec3Control("Position", relativeTransform.Position);
 
-        // Rotation (stored as quaternion, edited as Euler degrees)
-        if (registry.all_of<Rotation>(_selectedEntity)) {
-            auto& rot{registry.get<Rotation>(_selectedEntity)};
-            glm::vec3 euler{glm::degrees(glm::eulerAngles(rot.Quaternion))};
+            glm::vec3 euler{glm::degrees(glm::eulerAngles(relativeTransform.Rotation))};
             if (DrawVec3Control("Rotation", euler), true) {
-                rot.Quaternion = glm::quat{glm::radians(euler)};
+                relativeTransform.Rotation = glm::quat{glm::radians(euler)};
             }
-        }
 
-        // Scale (uniform float)
-        if (registry.all_of<Scale>(_selectedEntity)) {
-            auto& scale{registry.get<Scale>(_selectedEntity)};
             ImGui::Columns(2);
             ImGui::SetColumnWidth(0, 100.f);
             ImGui::Text("Scale");
             ImGui::NextColumn();
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            ImGui::DragFloat("##Scale", &scale.Value, 0.01f, 0.001f, 100.f, "%.3f");
+            ImGui::DragFloat("##Scale", &relativeTransform.Scale, 0.01f, 0.001f, 100.f, "%.3f");
             ImGui::Columns(1);
         }
 
@@ -181,7 +171,7 @@ void InspectorPanel::_drawTransformComponent(entt::registry& registry) const {
 }
 
 void InspectorPanel::_drawMeshComponent(entt::registry& registry) const {
-    if (!registry.all_of<Mesh>(_selectedEntity)) {
+    if (!registry.any_of<Mesh, InstancedMesh>(_selectedEntity)) {
         return;
     }
 
@@ -190,8 +180,14 @@ void InspectorPanel::_drawMeshComponent(entt::registry& registry) const {
         ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding};
 
     if (ImGui::TreeNodeEx("##Mesh", flags, "Mesh")) {
-        const auto& mesh{registry.get<Mesh>(_selectedEntity)};
-        ImGui::Text("Mesh ID : %u", mesh.meshID);
+        if (auto* const mesh{registry.try_get<Mesh>(_selectedEntity)}) {
+            ImGui::Text("Mesh ID : %u", mesh->meshID);
+        }
+
+        if (auto* const instancedMesh{registry.try_get<InstancedMesh>(_selectedEntity)}) {
+            ImGui::Text("Mesh ID : %u", instancedMesh->meshID);
+        }
+
         ImGui::TreePop();
     }
 
@@ -233,5 +229,22 @@ void InspectorPanel::_drawDirectionalLightComponent(entt::registry& registry) co
         ImGui::ColorEdit3("Specular", &directionalLight.Specular.x);
         ImGui::TreePop();
     }
+}
+
+void InspectorPanel::_drawCameraComponent(entt::registry& registry) const {
+    if (!registry.all_of<Camera>(_selectedEntity)) {
+        return;
+    }
+
+    const ImGuiTreeNodeFlags flags{
+        ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
+        ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding};
+
+    if (ImGui::TreeNodeEx("##Camera", flags, "Camera")) {
+        ImGui::Text("Camera");
+        ImGui::TreePop();
+    }
+
+    _drawTransformComponent(registry);
 }
 

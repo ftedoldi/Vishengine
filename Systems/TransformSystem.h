@@ -5,6 +5,10 @@
 
 class TransformSystem {
 public:
+    /**
+     * \brief Updates the transform of all the entities in the scene if needed.
+     * \param registry The registry.
+     */
     void Update(entt::registry& registry);
 
 private:

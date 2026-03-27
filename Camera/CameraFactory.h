@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Components/Camera/Camera.h"
-#include "Components/Rotation.h"
 
 #include <entt/entt.hpp>
 
@@ -12,28 +11,28 @@ enum class CameraType {
 
 class CameraFactory {
 public:
-    static entt::entity CreateEditorCamera(entt::registry& registry,
-                                    const glm::vec3& position,
-                                    double fov,
-                                    double aspectRatio,
-                                    double nearPlaneZDistance,
-                                    double farPlaneZDistance,
-                                    CameraType cameraType);
+    static auto CreateEditorCamera(entt::registry& registry,
+                                   const glm::vec3& worldPosition,
+                                   float fov,
+                                   float aspectRatio,
+                                   float nearPlaneZDistance,
+                                   float farPlaneZDistance,
+                                   CameraType cameraType) -> entt::entity;
 
     static entt::entity CreateGameCamera(entt::registry& registry,
                                          const glm::vec3& worldPosition,
-                                         double fov,
-                                         double aspectRatio,
-                                         double nearPlaneZDistance,
-                                         double farPlaneZDistance,
+                                         float fov,
+                                         float aspectRatio,
+                                         float nearPlaneZDistance,
+                                         float farPlaneZDistance,
                                          CameraType cameraType);
 
 private:
     static entt::entity _createCamera(entt::registry& registry,
                                       const glm::vec3& worldPosition,
-                                      double fov,
-                                      double aspectRatio,
-                                      double nearPlaneZDistance,
-                                      double farPlaneZDistance,
+                                      float fov,
+                                      float aspectRatio,
+                                      float nearPlaneZDistance,
+                                      float farPlaneZDistance,
                                       CameraType cameraType);
 };

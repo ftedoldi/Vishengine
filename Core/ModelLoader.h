@@ -21,7 +21,9 @@ public:
 private:
     void _processNode(const aiNode* node, const aiScene* scene, entt::entity parentEntity, const aiMatrix4x4& accumulatedTransform);
 
-    void _processMesh(const aiMesh* aiMesh, const aiScene* scene, entt::entity& parentEntity, uint32_t assimpMeshIndex, const aiMatrix4x4& accumulatedTransform);
+    entt::entity _createNodeEntity(entt::entity parentEntity, const aiMatrix4x4& matrixTransform) const;
+
+    entt::entity _processMesh(const aiMesh* aiMesh, const aiScene* scene, entt::entity parentEntity, uint32_t assimpMeshIndex);
 
     std::vector<Texture> _loadMaterialTextures(const aiMaterial* mat, aiTextureType type);
 

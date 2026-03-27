@@ -1,13 +1,15 @@
 #include "CameraProjectionUpdaterSystem.h"
 
-#include "Platform/Mouse.h"
 #include "Components/Camera/ActiveCameraTag.h"
 #include "Components/Camera/Camera.h"
 #include "Components/Camera/EditorCameraTag.h"
-#include "Components/Rotation.h"
+#include "Components/Transforms/RelativeTransform.h"
+#include "Components/Transforms/TransformDirtyFlag.h"
+#include "Platform/Mouse.h"
 
 #include "glm/ext/quaternion_trigonometric.hpp"
 #include "glm/glm.hpp"
+#include "glm/gtc/quaternion.hpp"
 
 CameraProjectionUpdaterSystem::CameraProjectionUpdaterSystem(entt::registry& registry, entt::dispatcher& windowDispatcher) : _registry{registry} {
     windowDispatcher.sink<FrameBufferSizeChangedEvent>().connect<&CameraProjectionUpdaterSystem::_onFramebufferSizeChanged>(this);
@@ -30,11 +32,13 @@ void CameraProjectionUpdaterSystem::_onFramebufferSizeChanged(const FrameBufferS
 }
 
 void CameraProjectionUpdaterSystem::_onMouseMoved(const MouseMovedEvent mouseMovedEvent) const {
-    auto view{_registry.view<Camera, ActiveCameraTag, EditorCameraTag, Rotation>()};
+    auto view{_registry.view<Camera, ActiveCameraTag, EditorCameraTag, RelativeTransform, TransformDirtyFlag>()};
 
     for(const auto entity: view) {
         auto& cameraComponent{view.get<Camera>(entity)};
-        auto& rotationComponent{view.get<Rotation>(entity)};
+        auto& relativeTransform{view.get<RelativeTransform>(entity)};
+        auto& transformFlag{view.get<TransformDirtyFlag>(entity)};
+        transformFlag.ShouldUpdateTransform = true;
         // Setup editor camera mouse rotation.
         if (Mouse::FirstTimeMovingMouse){
             Mouse::LastXPos = mouseMovedEvent.XMousePosition;
@@ -48,7 +52,7 @@ void CameraProjectionUpdaterSystem::_onMouseMoved(const MouseMovedEvent mouseMov
         Mouse::LastXPos = mouseMovedEvent.XMousePosition;
         Mouse::LastYPos = mouseMovedEvent.YMousePosition;
 
-        const float sensitivity{0.1f};
+        constexpr float sensitivity{0.1f};
         xOffset *= sensitivity;
         yOffset *= sensitivity;
 
@@ -67,6 +71,6 @@ void CameraProjectionUpdaterSystem::_onMouseMoved(const MouseMovedEvent mouseMov
         cameraComponent.Front = glm::normalize(q * glm::vec3{0.0, 0.0, -1.0});
         cameraComponent.Up = glm::normalize(q * glm::vec3{0.0, 1.0, 0.0});
 
-        rotationComponent.Quaternion = glm::quatLookAtRH(cameraComponent.Front, cameraComponent.Up);
+        relativeTransform.Value.Rotation = glm::quatLookAtRH(cameraComponent.Front, cameraComponent.Up);
     }
 }

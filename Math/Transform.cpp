@@ -29,7 +29,7 @@ glm::vec3 Transform::TransformPosition(const glm::vec3 position) const {
     const glm::vec3 rotatedPoint{Rotation * scaledPoint};
 
     // 3. Translate (Add the position)
-    const glm::vec3 finalPoint{rotatedPoint + position};
+    const glm::vec3 finalPoint{rotatedPoint + Position};
 
     return finalPoint;
 }

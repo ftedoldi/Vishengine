@@ -2,14 +2,12 @@
 
 #include "Components/Camera/Camera.h"
 #include "Components/Camera/EditorCameraTag.h"
-#include "Components/InstancedMesh.h"
+#include "Components/InstancedMeshTag.h"
 #include "Components/Lights/DirectionalLight.h"
 #include "Components/Lights/PointLight.h"
 #include "Components/Mesh.h"
-#include "Components/Position.h"
-#include "Components/Rotation.h"
-#include "Components/Scale.h"
-#include "Components/WorldTransform.h"
+#include "Components/Transforms/RelativeTransform.h"
+#include "Components/Transforms/WorldTransform.h"
 #include "Math/Math.h"
 
 namespace {
@@ -82,11 +80,9 @@ void SceneRenderPass::_render() const {
     // Meshes that also carry a Material component represent actual geometry.
     auto meshMaterialView{_registry.view<Mesh>()};
 
-    auto cameraView{_registry.view<Camera, Position, Rotation, Scale, EditorCameraTag>()};
-    for (const auto& [cameraEntity, camera, cameraPosition, cameraRotation, cameraScale] : cameraView.each()) {
+    auto cameraView{_registry.view<Camera, WorldTransform, EditorCameraTag>()};
+    for (const auto& [cameraEntity, camera, worldTransform] : cameraView.each()) {
         _shader->SetUniformMat4("Perspective", camera.ProjectionMatrix);
-
-        Transform worldSpaceCameraTransform{cameraPosition.Vector, cameraRotation.Quaternion, cameraScale.Value};
 
         for (const auto& [meshEntity, mesh] : meshMaterialView.each()) {
             const auto& materialData{_materialController->GetMaterialData(mesh.meshID)};
@@ -97,15 +93,15 @@ void SceneRenderPass::_render() const {
             const auto& instanceWorldTransforms{instancedMeshesTransforms.at(mesh.meshID)};
             std::vector<Transform> viewTransforms{};
             viewTransforms.reserve(instanceWorldTransforms.size());
-            for (const auto& worldTransform : instanceWorldTransforms) {
-                viewTransforms.push_back(camera.ViewTransform.Cumulate(worldTransform));
+            for (const auto& instanceWorldTransform : instanceWorldTransforms) {
+                viewTransforms.push_back(camera.ViewTransform.Cumulate(instanceWorldTransform));
             }
 
             const auto& meshData{_meshController->GetMeshData(mesh.meshID)};
             DrawMesh(viewTransforms, meshData.MeshGpuData, meshData.RawMeshData.Indices);
         }
 
-        _drawLights(worldSpaceCameraTransform, _registry);
+        _drawLights(worldTransform.Value, _registry);
     }
 }
 
@@ -128,8 +124,6 @@ void SceneRenderPass::_bindTextures(const std::vector<Texture>& diffuseTextures,
     }
 }
 
-
-
 void SceneRenderPass::_drawLights(const Transform& cameraTransform, entt::registry& registry) const {
     _drawDirectionalLights(cameraTransform, registry);
     _drawPointLights(cameraTransform, registry);
@@ -137,11 +131,11 @@ void SceneRenderPass::_drawLights(const Transform& cameraTransform, entt::regist
 
 void SceneRenderPass::_drawPointLights(const Transform& cameraTransform, entt::registry& registry) const {
     assert(_shader);
-    auto view{registry.view<PointLight, Position>()};
+    auto view{registry.view<PointLight, RelativeTransform>()};
 
-    view.each([this, &cameraTransform = std::as_const(cameraTransform)](const PointLight& pointLight, const Position& lightPosition) {
+    view.each([this, &cameraTransform = std::as_const(cameraTransform)](const PointLight& pointLight, const RelativeTransform& relativeTransform) {
         const auto invertedCameraTransform{cameraTransform.Invert()};
-        const auto lightViewPosition{Math::RotateVectorByQuaternion(invertedCameraTransform.Rotation, lightPosition.Vector)};
+        const auto lightViewPosition{Math::RotateVectorByQuaternion(invertedCameraTransform.Rotation, relativeTransform.Value.Position)};
 
         _shader->SetUniformVec3("pointLight.Position", lightViewPosition + invertedCameraTransform.Position);
         _shader->SetUniformVec3("pointLight.Diffuse",  pointLight.Diffuse);
@@ -176,5 +170,5 @@ void SceneRenderPass::_setUniformColors(const glm::vec4& colorDiffuse, const glm
 }
 
 void SceneRenderPass::_onFramebufferSizeChanged(const FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const {
-    _targetFramebuffer->Resize(frameBufferSizeChangedEvent.Width, frameBufferSizeChangedEvent.Height);
+    _targetFramebuffer->Resize(static_cast<int32_t>(frameBufferSizeChangedEvent.Width), static_cast<int32_t>(frameBufferSizeChangedEvent.Height));
 }

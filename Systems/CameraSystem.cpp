@@ -1,7 +1,7 @@
 #include "CameraSystem.h"
 
+#include "../Components/Transforms/WorldTransform.h"
 #include "Components/Camera/Camera.h"
-#include "Components/WorldTransform.h"
 
 void CameraSystem::Update(entt::registry& registry) {
     auto view{registry.view<Camera, WorldTransform>()};

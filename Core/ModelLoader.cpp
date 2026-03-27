@@ -1,18 +1,30 @@
 #include "ModelLoader.h"
 
 #include "Components/InstancedMeshTag.h"
-#include "Components/Position.h"
 #include "Components/Relationship.h"
-#include "Components/Rotation.h"
-#include "Components/Scale.h"
-
 #include "Material/Texture.h"
-
-#include "Components/WorldTransform.h"
+#include "Components/Transforms/WorldTransform.h"
+#include "Components/Transforms/RelativeTransform.h"
+#include "Components/Transforms/TransformDirtyFlag.h"
 
 #include "assimp/postprocess.h"
 
 #include <iostream>
+
+namespace {
+
+    Transform DecomposeMatrixIntoTransform(const aiMatrix4x4& transformMatrix) {
+        aiVector3D aiScaling{};
+        aiVector3D aiTranslation{};
+        aiQuaternion aiRotation{};
+        transformMatrix.Decompose(aiScaling, aiRotation, aiTranslation);
+
+        return Transform{{aiTranslation.x, aiTranslation.y, aiTranslation.z},
+            {aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w},
+            (aiScaling.x + aiScaling.y + aiScaling.z) / 3.f};
+    }
+
+}
 
 ModelLoader::ModelLoader(entt::registry& registry,
                          const std::shared_ptr<MeshController>& meshController,
@@ -35,13 +47,33 @@ void ModelLoader::_processNode(const aiNode* const node,
     // Accumulate this node's local transform on top of all ancestor transforms.
     aiMatrix4x4 worldTransform{accumulatedTransform * node->mTransformation};
 
-    if (node->mNumMeshes > 0) {
+    if (node->mNumMeshes == 1) {
+        const auto meshIndex{node->mMeshes[0]};
+        auto* const mesh{scene->mMeshes[meshIndex]};
+        parentEntity = _processMesh(mesh, scene, parentEntity, meshIndex);
+        auto& relativeTransform{_registry.emplace<RelativeTransform>(parentEntity).Value};
+        const auto transform{DecomposeMatrixIntoTransform(worldTransform)};
+        relativeTransform.Position = transform.Position;
+        relativeTransform.Rotation = transform.Rotation;
+        relativeTransform.Scale = transform.Scale;
+        worldTransform = aiMatrix4x4{};
+    }
+
+    if (node->mNumMeshes > 1) {
+        // Create a node entity that holds the accumulated transform.
+        // All mesh entities for this node become children of this node entity
+        // with identity transforms, keeping the hierarchy correct even when
+        // a single node contains multiple meshes.
+        const auto nodeEntity{_createNodeEntity(parentEntity, worldTransform)};
+
         for(uint32_t i{0}; i < node->mNumMeshes; ++i) {
             const auto meshIndex{node->mMeshes[i]};
-            auto* const mesh{scene->mMeshes[meshIndex]};
-            _processMesh(mesh, scene, parentEntity, meshIndex, worldTransform);
+            const auto* const mesh{scene->mMeshes[meshIndex]};
+            const auto entity{_processMesh(mesh, scene, nodeEntity, meshIndex)};
+            _registry.emplace<RelativeTransform>(entity);
         }
-        worldTransform = {};
+        worldTransform = aiMatrix4x4{};
+        parentEntity = nodeEntity;
     }
 
     for(uint32_t i{0}; i < node->mNumChildren; ++i) {
@@ -49,27 +81,34 @@ void ModelLoader::_processNode(const aiNode* const node,
     }
 }
 
-void ModelLoader::_processMesh(const aiMesh* const aiMesh, const aiScene* const scene, entt::entity& parentEntity, const uint32_t assimpMeshIndex, const aiMatrix4x4& accumulatedTransform) {
-    entt::entity meshEntity{_registry.create()};
+
+entt::entity ModelLoader::_createNodeEntity(const entt::entity parentEntity, const aiMatrix4x4& matrixTransform) const {
+    const auto nodeEntity{_registry.create()};
+
+    auto& relationship{_registry.emplace<Relationship>(nodeEntity)};
+    relationship.parent = parentEntity;
+
+    auto& relativeTransform{_registry.emplace<RelativeTransform>(nodeEntity).Value};
+    const auto transform{DecomposeMatrixIntoTransform(matrixTransform)};
+    relativeTransform.Position = transform.Position;
+    relativeTransform.Rotation = transform.Rotation;
+    relativeTransform.Scale = transform.Scale;
+
+    return nodeEntity;
+}
+
+entt::entity ModelLoader::_processMesh(const aiMesh* const aiMesh, const aiScene* const scene, const entt::entity parentEntity, const uint32_t assimpMeshIndex) {
+    const auto meshEntity{_registry.create()};
 
     auto& relationship{_registry.emplace<Relationship>(meshEntity)};
     relationship.parent = parentEntity;
-    parentEntity = meshEntity;
 
-    aiVector3D aiScaling{};
-    aiVector3D aiTranslation{};
-    aiQuaternion aiRotation{};
-    accumulatedTransform.Decompose(aiScaling, aiRotation, aiTranslation);
-
-    _registry.emplace<Position>(meshEntity, glm::vec3{aiTranslation.x, aiTranslation.y, aiTranslation.z});
-    _registry.emplace<Rotation>(meshEntity, glm::quat{aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w});
-    _registry.emplace<Scale>(meshEntity, (aiScaling.x + aiScaling.y + aiScaling.z) / 3.f);
-    // This will be set by the TransformSystem.
     _registry.emplace<WorldTransform>(meshEntity);
+    _registry.emplace<TransformDirtyFlag>(meshEntity);
 
     if (const auto it{_processedMeshes.find(assimpMeshIndex)}; it != _processedMeshes.end()) {
         _registry.emplace<InstancedMesh>(meshEntity, it->second.meshID);
-        return;
+        return meshEntity;
     }
 
     std::vector<glm::vec3> vertices{};
@@ -115,6 +154,8 @@ void ModelLoader::_processMesh(const aiMesh* const aiMesh, const aiScene* const 
     _registry.emplace<Mesh>(meshEntity, mesh);
 
     _processMaterials(scene, aiMesh, mesh.meshID);
+
+    return meshEntity;
 }
 
 std::vector<Texture> ModelLoader::_loadMaterialTextures(const aiMaterial* const mat, const aiTextureType type) {
