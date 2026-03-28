@@ -5,16 +5,20 @@
 #include "Components/Lights/DirectionalLight.h"
 
 #include "Components/Camera/Camera.h"
-#include "Components/InstancedMeshTag.h"
+#include "Components/MeshNodeTag.h"
+#include "Components/Name.h"
 #include "Components/Transforms/RelativeTransform.h"
+#include "Components/Transforms/TransformDirtyFlag.h"
 #include "imgui.h"
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <optional>
 
 namespace {
-
-    void DrawVec3Control(const char* label, glm::vec3& values) {
+// Return whether a position was modified.
+bool DrawAndUpdateVec3Widget(const char* label, glm::vec3& values) {
+    bool isValueModified{};
     ImGui::PushID(label);
 
     ImGui::Columns(2);
@@ -40,10 +44,11 @@ namespace {
     ImGui::SetNextItemWidth(inputWidth);
     ImGuiTextFilter xTextFilter{};
     char xPosition[5];
-    std::snprintf(xPosition, sizeof(xPosition), "%.10f", values.x); // 2 decimal places
+    std::snprintf(xPosition, sizeof(xPosition), "%.10f", values.x);
     if (ImGui::InputTextWithHint("##XTextFilter", xPosition, xTextFilter.InputBuf, IM_ARRAYSIZE(xTextFilter.InputBuf), ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
         xTextFilter.Build();
         values.x = std::stof(xTextFilter.InputBuf);
+        isValueModified = true;
     }
     ImGui::SameLine();
 
@@ -59,10 +64,11 @@ namespace {
     ImGui::SetNextItemWidth(inputWidth);
     ImGuiTextFilter yTextFilter{};
     char yPosition[5];
-    std::snprintf(yPosition, sizeof(yPosition), "%.10f", values.y); // 2 decimal places
+    std::snprintf(yPosition, sizeof(yPosition), "%.10f", values.y);
     if (ImGui::InputTextWithHint("##YTextFilter", yPosition, yTextFilter.InputBuf, IM_ARRAYSIZE(yTextFilter.InputBuf), ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
         yTextFilter.Build();
         values.y = std::stof(yTextFilter.InputBuf);
+        isValueModified = true;
     }
     ImGui::SameLine();
 
@@ -78,15 +84,18 @@ namespace {
     ImGui::SetNextItemWidth(inputWidth);
     ImGuiTextFilter zTextFilter{};
     char zPosition[5];
-    std::snprintf(zPosition, sizeof(zPosition), "%.10f", values.z); // 2 decimal places
+    std::snprintf(zPosition, sizeof(zPosition), "%.10f", values.z);
     if (ImGui::InputTextWithHint("##ZTextFilter", zPosition, zTextFilter.InputBuf, IM_ARRAYSIZE(zTextFilter.InputBuf), ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
         zTextFilter.Build();
         values.z = std::stof(zTextFilter.InputBuf);
+        isValueModified = true;
     }
 
     ImGui::PopStyleVar();
     ImGui::Columns(1);
     ImGui::PopID();
+
+    return isValueModified;
 }
 
 }
@@ -141,6 +150,7 @@ void InspectorPanel::_drawTransformComponent(entt::registry& registry) const {
         return;
     }
 
+    // TODO: this (along with DrawAndUpdateVec3Widget) is bad and need to be refactored.
     const ImGuiTreeNodeFlags flags{
         ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
         ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowOverlap |
@@ -148,30 +158,34 @@ void InspectorPanel::_drawTransformComponent(entt::registry& registry) const {
 
     if (ImGui::TreeNodeEx("##Transform", flags, "Transform")) {
         // Position
-        if (auto* const relativeTransformPtr{registry.try_get<RelativeTransform>(_selectedEntity)}) {
-            auto& relativeTransform{relativeTransformPtr->Value};
-            DrawVec3Control("Position", relativeTransform.Position);
-
-            glm::vec3 euler{glm::degrees(glm::eulerAngles(relativeTransform.Rotation))};
-            if (DrawVec3Control("Rotation", euler), true) {
-                relativeTransform.Rotation = glm::quat{glm::radians(euler)};
-            }
-
-            ImGui::Columns(2);
-            ImGui::SetColumnWidth(0, 100.f);
-            ImGui::Text("Scale");
-            ImGui::NextColumn();
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            ImGui::DragFloat("##Scale", &relativeTransform.Scale, 0.01f, 0.001f, 100.f, "%.3f");
-            ImGui::Columns(1);
+        auto& relativeTransform{registry.get<RelativeTransform>(_selectedEntity).Value};
+        auto& transformFlag{registry.get<TransformDirtyFlag>(_selectedEntity)};
+        if (DrawAndUpdateVec3Widget("Position", relativeTransform.Position)) {
+            transformFlag.ShouldUpdateTransform = true;
         }
+
+        glm::vec3 euler{glm::degrees(glm::eulerAngles(relativeTransform.Rotation))};
+        if (DrawAndUpdateVec3Widget("Rotation", euler)) {
+            relativeTransform.Rotation = glm::quat{glm::radians(euler)};
+            transformFlag.ShouldUpdateTransform = true;
+        }
+
+        ImGui::Columns(2);
+        ImGui::SetColumnWidth(0, 100.f);
+        ImGui::Text("Scale");
+        ImGui::NextColumn();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::DragFloat("##Scale", &relativeTransform.Scale, 0.01f, 0.001f, 100.f, "%.3f")) {
+            transformFlag.ShouldUpdateTransform = true;
+        }
+        ImGui::Columns(1);
 
         ImGui::TreePop();
     }
 }
 
 void InspectorPanel::_drawMeshComponent(entt::registry& registry) const {
-    if (!registry.any_of<Mesh, InstancedMesh>(_selectedEntity)) {
+    if (!registry.any_of<MeshNodeTag>(_selectedEntity)) {
         return;
     }
 
@@ -180,12 +194,8 @@ void InspectorPanel::_drawMeshComponent(entt::registry& registry) const {
         ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding};
 
     if (ImGui::TreeNodeEx("##Mesh", flags, "Mesh")) {
-        if (auto* const mesh{registry.try_get<Mesh>(_selectedEntity)}) {
-            ImGui::Text("Mesh ID : %u", mesh->meshID);
-        }
-
-        if (auto* const instancedMesh{registry.try_get<InstancedMesh>(_selectedEntity)}) {
-            ImGui::Text("Mesh ID : %u", instancedMesh->meshID);
+        if (auto* const meshName{registry.try_get<Name>(_selectedEntity)}) {
+            ImGui::Text("Mesh ID : %s", meshName->Value.c_str());
         }
 
         ImGui::TreePop();
@@ -223,7 +233,7 @@ void InspectorPanel::_drawDirectionalLightComponent(entt::registry& registry) co
 
     if (ImGui::TreeNodeEx("##DirectionalLight", flags, "Directional Light")) {
         auto& directionalLight{registry.get<DirectionalLight>(_selectedEntity)};
-        DrawVec3Control("Direction", directionalLight.Direction);
+        DrawAndUpdateVec3Widget("Direction", directionalLight.Direction);
         ImGui::ColorEdit3("Ambient",  &directionalLight.Ambient.x);
         ImGui::ColorEdit3("Diffuse",  &directionalLight.Diffuse.x);
         ImGui::ColorEdit3("Specular", &directionalLight.Specular.x);

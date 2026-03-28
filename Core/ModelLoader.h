@@ -21,13 +21,13 @@ public:
 private:
     void _processNode(const aiNode* node, const aiScene* scene, entt::entity parentEntity, const aiMatrix4x4& accumulatedTransform);
 
-    entt::entity _createNodeEntity(entt::entity parentEntity, const aiMatrix4x4& matrixTransform) const;
+    entt::entity _createNodeEntity(entt::entity parentEntity, const aiMatrix4x4& matrixTransform, const std::string& nodeName) const;
 
-    entt::entity _processMesh(const aiMesh* aiMesh, const aiScene* scene, entt::entity parentEntity, uint32_t assimpMeshIndex);
+    void _processMesh(const aiMesh* aiMesh, const aiScene* scene, entt::entity parentEntity, uint32_t assimpMeshIndex);
 
     std::vector<Texture> _loadMaterialTextures(const aiMaterial* mat, aiTextureType type);
 
-    std::vector<Texture> _loadTextures(const aiScene* scene, aiMaterial* mat, aiTextureType type);
+    std::vector<Texture> _loadTextures(const aiScene* scene, const aiMaterial* material, aiTextureType type);
 
     void _processMaterials(const aiScene* scene, const aiMesh* mesh, uint32_t meshID);
 

@@ -3,5 +3,5 @@
 #include <entt/entt.hpp>
 
 struct Relationship {
-    entt::entity parent{entt::null};
+    entt::entity Parent{entt::null};
 };

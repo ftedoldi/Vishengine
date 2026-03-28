@@ -27,17 +27,17 @@ void TransformSystem::Update(entt::registry& registry) {
 }
 
 Transform TransformSystem::_getOrComputeWorldTransform(const entt::entity entity, entt::registry& registry) {
-    const auto relativeTransform{registry.get<RelativeTransform>(entity)};
+    const auto relativeTransform{registry.get<RelativeTransform>(entity).Value};
 
-    Transform finalTransform = relativeTransform.Value;
+    auto finalTransform{relativeTransform};
 
     if (registry.all_of<Relationship>(entity)) {
-        const auto& rel = registry.get<Relationship>(entity);
+        const auto& relationship{registry.get<Relationship>(entity)};
 
-        if (rel.parent != entt::null) {
-            Transform parentWorld = _getOrComputeWorldTransform(rel.parent, registry);
+        if (relationship.Parent != entt::null) {
+            const auto parentWorld{_getOrComputeWorldTransform(relationship.Parent, registry)};
 
-            finalTransform = parentWorld.Cumulate(relativeTransform.Value);
+            finalTransform = parentWorld.Cumulate(relativeTransform);
         }
     }
 

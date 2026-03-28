@@ -6,15 +6,16 @@
 #include "Components/Lights/DirectionalLight.h"
 #include "Components/Lights/PointLight.h"
 #include "Components/Mesh.h"
+#include "Components/Relationship.h"
 #include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/WorldTransform.h"
 #include "Math/Math.h"
 
+#include <unordered_map>
+
 namespace {
 
-    void DrawMesh(const std::vector<Transform>& instanceTransforms,
-                                const MeshGpuData& gpuData,
-                                const std::vector<uint32_t>& indices) {
+    void DrawMesh(const std::vector<Transform>& instanceTransforms, const MeshGpuData& gpuData, const std::vector<uint32_t>& indices) {
         // This should somehow optimized by using AOS instead of SOA
         std::vector<InstanceData> instanceData{};
         instanceData.reserve(instanceTransforms.size());
@@ -58,33 +59,26 @@ void SceneRenderPass::Execute() {
 void SceneRenderPass::_render() const {
     _shader->UseProgram();
 
-    std::unordered_map<uint32_t, std::vector<Transform>> instancedMeshesTransforms{};
-
-    // Collect world transforms for every mesh and instanced mesh.
-    auto meshView{_registry.view<Mesh, WorldTransform>()};
-    for (const auto& [entity, mesh, worldTransform] : meshView.each()) {
-        instancedMeshesTransforms[mesh.meshID].push_back(worldTransform.Value);
+    const auto allMeshView{_registry.view<Mesh, Relationship>()};
+    std::unordered_map<uint32_t, std::vector<Transform>> transformsByMeshID{};
+    for (const auto& [meshEntity, mesh, relationship] : allMeshView.each()) {
+        const auto& worldTransform{_registry.get<WorldTransform>(relationship.Parent).Value};
+        transformsByMeshID[mesh.meshID].push_back(worldTransform);
     }
 
-    auto instancedMeshView{_registry.view<InstancedMesh, WorldTransform>()};
-    for (const auto& [entity, mesh, worldTransform] : instancedMeshView.each()) {
-        instancedMeshesTransforms[mesh.meshID].push_back(worldTransform.Value);
-    }
-
-    // Meshes that also carry a Material component represent actual geometry.
-    auto meshMaterialView{_registry.view<Mesh>()};
-
+    // Loop only on the actual meshes (not the instances).
+    const auto actualMeshView{_registry.view<Mesh, Relationship>(entt::exclude<InstancedMeshTag>)};
     auto cameraView{_registry.view<Camera, WorldTransform, EditorCameraTag>()};
     for (const auto& [cameraEntity, camera, worldTransform] : cameraView.each()) {
         _shader->SetUniformMat4("Perspective", camera.ProjectionMatrix);
 
-        for (const auto& [meshEntity, mesh] : meshMaterialView.each()) {
+        for (const auto& [meshEntity, mesh, relationship] : actualMeshView.each()) {
             const auto& materialData{_materialController->GetMaterialData(mesh.meshID)};
             _setUniformColors(materialData.ColorDiffuse, materialData.ColorSpecular);
             _bindTextures(materialData.TexturesDiffuse, materialData.TexturesSpecular, materialData.TexturesNormal);
 
-            // Transform all instances of this mesh from world space to view space.
-            const auto& instanceWorldTransforms{instancedMeshesTransforms.at(mesh.meshID)};
+            // Transform only the instances of THIS mesh from world space to view space.
+            const auto& instanceWorldTransforms{transformsByMeshID[mesh.meshID]};
             std::vector<Transform> viewTransforms{};
             viewTransforms.reserve(instanceWorldTransforms.size());
             for (const auto& instanceWorldTransform : instanceWorldTransforms) {

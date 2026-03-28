@@ -1,15 +1,14 @@
 #include "HierarchyPanel.h"
 
-#include "Components/Mesh.h"
-
 #include "Components/Lights/DirectionalLight.h"
 #include "Components/Lights/PointLight.h"
+#include "Components/MeshNodeTag.h"
+#include "Components/Name.h"
 #include "Components/Relationship.h"
 #include "imgui.h"
 
 void HierarchyPanel::OnRender(entt::registry& registry) {
-    constexpr ImGuiWindowFlags hierarchyFlags{
-        ImGuiWindowFlags_NoCollapse};
+    constexpr ImGuiWindowFlags hierarchyFlags{ImGuiWindowFlags_NoCollapse};
 
     ImGui::Begin("Hierarchy", nullptr, hierarchyFlags);
 
@@ -43,11 +42,7 @@ void HierarchyPanel::_drawEntity(entt::registry& registry, const entt::entity en
         flags |= ImGuiTreeNodeFlags_Selected;
     }
 
-    const bool opened{ImGui::TreeNodeEx(
-        reinterpret_cast<void*>(static_cast<intptr_t>(entt::to_integral(entity))),
-        flags,
-        "%s", displayName)};
-
+    const bool opened{ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<intptr_t>(entt::to_integral(entity))), flags, "%s", displayName)};
     if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
         _selectedEntity = entity;
     }
@@ -68,31 +63,17 @@ void HierarchyPanel::_drawEntity(entt::registry& registry, const entt::entity en
 }
 
 void HierarchyPanel::_drawMeshes(entt::registry& registry) {
-    const auto meshView{registry.view<Mesh>()};
-    ImGui::TextDisabled("%zu object(s)", meshView.size());
+    const auto meshView{registry.view<MeshNodeTag, Relationship, Name>()};
+    //ImGui::TextDisabled("%zu object(s)", meshView.size());
     ImGui::Separator();
 
-    auto view = registry.view<Relationship>();
+    for (const auto entity : meshView) {
+        const auto& rel{meshView.get<Relationship>(entity)};
 
-    for (auto entity : view) {
-        const auto& rel = view.get<Relationship>(entity);
-
-        if (rel.parent == entt::null) {
+        if (rel.Parent == entt::null) {
             _drawEntityNode(entity, registry);
         }
     }
-
-    // Entity list
-    /*meshView.each([&registry, this](const entt::entity entity, const Mesh mesh) {
-        // Build a display name: "Mesh <id>  [Entity <n>]"
-        char label[64];
-        std::snprintf(label, sizeof(label),
-                      "Mesh %u  [Entity %u]",
-                      mesh.meshID,
-                      static_cast<unsigned>(entt::to_integral(entity)));
-
-        _drawEntity(registry, entity, label);
-    });*/
 }
 
 void HierarchyPanel::_drawLights(entt::registry& registry) {
@@ -121,24 +102,22 @@ void HierarchyPanel::_drawLights(entt::registry& registry) {
     });
 }
 
-void HierarchyPanel::_drawEntityNode(entt::entity entity, entt::registry& registry) {
-    const char* name = "Entity"; // or your Name component
+void HierarchyPanel::_drawEntityNode(const entt::entity entity, entt::registry& registry) {
+    const auto& name{registry.get<Name>(entity).Value};
 
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
 
-    if (ImGui::TreeNodeEx(reinterpret_cast<void*>(entity), flags, "%s", name)) {
-        // Draw children
-
+    if (ImGui::TreeNodeEx(reinterpret_cast<void*>(entity), flags, "%s", name.c_str())) {
         if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
             _selectedEntity = entity;
         }
 
-        auto view = registry.view<Relationship>();
+        auto view{registry.view<Relationship, MeshNodeTag>()};
 
         for (auto child : view) {
             const auto& rel = view.get<Relationship>(child);
 
-            if (rel.parent == entity) {
+            if (rel.Parent == entity) {
                 _drawEntityNode(child, registry);
             }
         }

@@ -2,6 +2,8 @@
 
 #include "Components/BoundingSphere.h"
 #include "Components/InstancedMeshTag.h"
+#include "Components/MeshNodeTag.h"
+#include "Components/Name.h"
 #include "Components/Relationship.h"
 #include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/TransformDirtyFlag.h"
@@ -32,7 +34,7 @@ ModelLoader::ModelLoader(entt::registry& registry,
                          const std::shared_ptr<MaterialController>& materialController) : _registry{registry}, _meshController(meshController), _materialController(materialController) {}
 
 void ModelLoader::ImportModel(const std::string& modelPath) {
-    const auto* const scene{_importer.ReadFile(modelPath,aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_FlipUVs)};
+    const auto* const scene{_importer.ReadFile(modelPath,aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_FlipUVs | aiProcess_OptimizeMeshes | aiProcess_OptimizeGraph)};
     assert(scene);
 
     _modelDirectory = modelPath.substr(0, modelPath.find_last_of('/'));
@@ -48,30 +50,17 @@ void ModelLoader::_processNode(const aiNode* const node,
     // Accumulate this node's local transform on top of all ancestor transforms.
     aiMatrix4x4 worldTransform{accumulatedTransform * node->mTransformation};
 
-    if (node->mNumMeshes == 1) {
-        const auto meshIndex{node->mMeshes[0]};
-        auto* const mesh{scene->mMeshes[meshIndex]};
-        parentEntity = _processMesh(mesh, scene, parentEntity, meshIndex);
-        auto& relativeTransform{_registry.emplace<RelativeTransform>(parentEntity).Value};
-        const auto transform{DecomposeMatrixIntoTransform(worldTransform)};
-        relativeTransform.Position = transform.Position;
-        relativeTransform.Rotation = transform.Rotation;
-        relativeTransform.Scale = transform.Scale;
-        worldTransform = aiMatrix4x4{};
-    }
-
-    if (node->mNumMeshes > 1) {
+    if (node->mNumMeshes > 0) {
         // Create a node entity that holds the accumulated transform.
         // All mesh entities for this node become children of this node entity
         // with identity transforms, keeping the hierarchy correct even when
         // a single node contains multiple meshes.
-        const auto nodeEntity{_createNodeEntity(parentEntity, worldTransform)};
+        const auto nodeEntity{_createNodeEntity(parentEntity, worldTransform, node->mName.C_Str())};
 
         for(uint32_t i{0}; i < node->mNumMeshes; ++i) {
             const auto meshIndex{node->mMeshes[i]};
             const auto* const mesh{scene->mMeshes[meshIndex]};
-            const auto entity{_processMesh(mesh, scene, nodeEntity, meshIndex)};
-            _registry.emplace<RelativeTransform>(entity);
+            _processMesh(mesh, scene, nodeEntity, meshIndex);
         }
         worldTransform = aiMatrix4x4{};
         parentEntity = nodeEntity;
@@ -82,12 +71,14 @@ void ModelLoader::_processNode(const aiNode* const node,
     }
 }
 
-
-entt::entity ModelLoader::_createNodeEntity(const entt::entity parentEntity, const aiMatrix4x4& matrixTransform) const {
+entt::entity ModelLoader::_createNodeEntity(const entt::entity parentEntity, const aiMatrix4x4& matrixTransform, const std::string& nodeName) const {
     const auto nodeEntity{_registry.create()};
 
+    auto& name{_registry.emplace<Name>(nodeEntity).Value};
+    name = nodeName;
+
     auto& relationship{_registry.emplace<Relationship>(nodeEntity)};
-    relationship.parent = parentEntity;
+    relationship.Parent = parentEntity;
 
     auto& relativeTransform{_registry.emplace<RelativeTransform>(nodeEntity).Value};
     const auto transform{DecomposeMatrixIntoTransform(matrixTransform)};
@@ -95,21 +86,23 @@ entt::entity ModelLoader::_createNodeEntity(const entt::entity parentEntity, con
     relativeTransform.Rotation = transform.Rotation;
     relativeTransform.Scale = transform.Scale;
 
+    _registry.emplace<TransformDirtyFlag>(nodeEntity);
+    _registry.emplace<WorldTransform>(nodeEntity);
+    _registry.emplace<MeshNodeTag>(nodeEntity);
+
     return nodeEntity;
 }
 
-entt::entity ModelLoader::_processMesh(const aiMesh* const aiMesh, const aiScene* const scene, const entt::entity parentEntity, const uint32_t assimpMeshIndex) {
+void ModelLoader::_processMesh(const aiMesh* const aiMesh, const aiScene* const scene, const entt::entity parentEntity, const uint32_t assimpMeshIndex) {
     const auto meshEntity{_registry.create()};
 
     auto& relationship{_registry.emplace<Relationship>(meshEntity)};
-    relationship.parent = parentEntity;
-
-    _registry.emplace<WorldTransform>(meshEntity);
-    _registry.emplace<TransformDirtyFlag>(meshEntity);
+    relationship.Parent = parentEntity;
 
     if (const auto it{_processedMeshes.find(assimpMeshIndex)}; it != _processedMeshes.end()) {
-        _registry.emplace<InstancedMesh>(meshEntity, it->second.meshID);
-        return meshEntity;
+        _registry.emplace<InstancedMeshTag>(meshEntity);
+        _registry.emplace<Mesh>(meshEntity, it->second.meshID);
+        return;
     }
 
     std::vector<glm::vec3> vertices{};
@@ -156,8 +149,6 @@ entt::entity ModelLoader::_processMesh(const aiMesh* const aiMesh, const aiScene
 
     _processMaterials(scene, aiMesh, mesh.meshID);
     _generateBoundingSphere(meshEntity, mesh.meshID);
-
-    return meshEntity;
 }
 
 std::vector<Texture> ModelLoader::_loadMaterialTextures(const aiMaterial* const mat, const aiTextureType type) {
@@ -187,13 +178,13 @@ std::vector<Texture> ModelLoader::_loadMaterialTextures(const aiMaterial* const 
     return textures;
 }
 
-std::vector<Texture> ModelLoader::_loadTextures(const aiScene* const scene, aiMaterial* const material, const aiTextureType type) {
+std::vector<Texture> ModelLoader::_loadTextures(const aiScene* const scene, const aiMaterial* const material, const aiTextureType type) {
     std::vector<Texture> textures{};
 
     aiString texture_file{};
     material->Get(AI_MATKEY_TEXTURE(type, 0), texture_file);
 
-    if(const auto* aiTexture{scene->GetEmbeddedTexture(texture_file.C_Str())}){
+    if(const auto* const aiTexture{scene->GetEmbeddedTexture(texture_file.C_Str())}){
         Texture texture{};
         texture.CreateEmbeddedTexture(aiTexture);
         textures.emplace_back(texture);
@@ -211,7 +202,7 @@ void ModelLoader::_processMaterials(const aiScene* const scene, const aiMesh* co
     glm::vec4 diffuseColor{};
     glm::vec3 specularColor{};
 
-    auto* const aiMaterial{scene->mMaterials[mesh->mMaterialIndex]};
+    const auto * const aiMaterial{scene->mMaterials[mesh->mMaterialIndex]};
     if(aiMaterial->GetTextureCount(aiTextureType_DIFFUSE) > 0) [[likely]]{
         texturesDiffuse = _loadTextures(scene, aiMaterial, aiTextureType_DIFFUSE);
     } else [[unlikely]] {
