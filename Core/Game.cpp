@@ -11,6 +11,7 @@
 #include "Platform/Framebuffer.h"
 #include "Platform/Time.h"
 
+#include "Systems/DebugRenderPass.h"
 #include "Systems/SceneRenderPass.h"
 
 #include <filesystem>
@@ -23,7 +24,7 @@ Game::Game() {
         _registry,
         glm::vec3{0., 0., 0.},
         45.,
-        static_cast<double>(_window->GetWidth()) / _window->GetHeight(),
+        static_cast<float>(_window->GetWidth()) / static_cast<float>(_window->GetHeight()),
         0.1,
         100.,
         CameraType::Perspective)};
@@ -34,18 +35,19 @@ Game::Game() {
 
     const std::string shadersBasePath{std::string(PROJECT_SOURCE_DIR) + "/Shaders/GlslShaders/"};
 
-    _rendererSystem = std::make_unique<RendererSystem>();
+    // The scene is rendered into this offscreen framebuffer.
+    const auto sceneFrameBuffer{std::make_shared<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight())};
+    _rendererSystem = std::make_unique<RendererSystem>(sceneFrameBuffer, _window->GetEventDispatcher());
 
     const auto meshController{std::make_shared<MeshController>()};
     const auto materialController{std::make_shared<MaterialController>()};
 
-    // The scene is rendered into this offscreen framebuffer.
-    // ScenePanel reads its colour attachment and displays it as an ImGui::Image.
-    const auto sceneFrameBuffer{std::make_shared<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight())};
     auto mainShader{std::make_unique<Shader>(shadersBasePath + "vertex.glsl", shadersBasePath + "fragment.glsl")};
-    _rendererSystem->AddPass(std::make_unique<SceneRenderPass>(
-        std::move(mainShader), sceneFrameBuffer, _registry,
-        materialController, meshController, _window->GetEventDispatcher()));
+    _rendererSystem->AddPass(std::make_unique<SceneRenderPass>(std::move(mainShader), _registry, materialController, meshController));
+
+    // Debug pass
+    auto debugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
+    _rendererSystem->AddPass(std::make_unique<DebugRenderPass>(std::move(debugShader), _registry));
 
     _inputManager = std::make_shared<InputManager>(_window->GetGLFWwindow());
     _editorCameraMoveSystem = std::make_unique<EditorCameraMoveSystem>(_inputManager);
@@ -54,7 +56,7 @@ Game::Game() {
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWwindow(), sceneFrameBuffer, assetsRoot);
 
     ModelLoader modelLoader{_registry, meshController, materialController};
-    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/VeneziaTex.glb");
+    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/ezio.glb");
 
     _addLight();
 }

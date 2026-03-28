@@ -31,6 +31,8 @@ private:
 
     void _processMaterials(const aiScene* scene, const aiMesh* mesh, uint32_t meshID);
 
+    void _generateBoundingSphere(entt::entity meshEntity, uint32_t meshID) const;
+
     entt::registry& _registry;
 
     std::shared_ptr<MeshController> _meshController{};

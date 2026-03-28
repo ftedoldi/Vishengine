@@ -42,22 +42,16 @@ namespace {
 
 SceneRenderPass::SceneRenderPass(
     std::unique_ptr<Shader> shader,
-    const std::shared_ptr<Framebuffer>& targetFramebuffer,
     entt::registry& registry,
     const std::shared_ptr<MaterialController>& materialController,
-    const std::shared_ptr<MeshController>& meshController,
-    entt::dispatcher& windowDispatcher)
-    : _shader{std::move(shader)}, _targetFramebuffer{targetFramebuffer}, _registry{registry}, _materialController{materialController}, _meshController {meshController} {
-    windowDispatcher.sink<FrameBufferSizeChangedEvent>().connect<&SceneRenderPass::_onFramebufferSizeChanged>(this);
-}
+    const std::shared_ptr<MeshController>& meshController)
+    : _shader{std::move(shader)}, _registry{registry}, _materialController{materialController}, _meshController {meshController} {}
 
 SceneRenderPass::~SceneRenderPass() {
     _shader->DeleteProgram();
 }
 
 void SceneRenderPass::Execute() {
-    _targetFramebuffer->BindFrameBuffer();
-
     _render();
 }
 
@@ -169,6 +163,4 @@ void SceneRenderPass::_setUniformColors(const glm::vec4& colorDiffuse, const glm
     _shader->SetUniformVec3("SpecularColor", colorSpecular);
 }
 
-void SceneRenderPass::_onFramebufferSizeChanged(const FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const {
-    _targetFramebuffer->Resize(static_cast<int32_t>(frameBufferSizeChangedEvent.Width), static_cast<int32_t>(frameBufferSizeChangedEvent.Height));
-}
+

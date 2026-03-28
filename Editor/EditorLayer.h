@@ -44,22 +44,6 @@ private:
     void _renderMenuBar();
     void _layoutPanels(entt::registry& registry);
 
-    // ── Splitter helper ───────────────────────────────────────────────────
-    /**
-     * @brief Draws an invisible drag handle between two adjacent panels.
-     *
-     * @param vertical   true  → vertical splitter (adjusts widths left/right)
-     *                   false → horizontal splitter (adjusts heights top/bottom)
-     * @param thickness  Width (vertical) or height (horizontal) of the hit area in pixels.
-     * @param size1      Pointer to the size of the first region (modified on drag).
-     * @param size2      Pointer to the size of the second region (modified on drag).
-     * @param minSize1   Minimum allowed value for *size1.
-     * @param minSize2   Minimum allowed value for *size2.
-     */
-    static void _splitter(bool vertical, float thickness,
-                          float* size1, float* size2,
-                          float minSize1, float minSize2);
-
     ToolbarPanel        _toolbar{};
     HierarchyPanel      _hierarchy{};
     InspectorPanel      _inspector{};

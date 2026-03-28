@@ -87,7 +87,7 @@ void Window::Initialize(const int width, const int height, const std::string& wi
     glDebugMessageCallback(WindowSystemHelpers::message_callback, nullptr);
     glEnable(GL_DEPTH_TEST);
     // Cull faces with vertices in a clockwise order by default
-    glEnable(GL_CULL_FACE);
+    //glEnable(GL_CULL_FACE);
 
     // Sets the windowComponent user pointer to this so that in the glfw callbacks the pointer to this can be taken
     glfwSetWindowUserPointer(_window, this);

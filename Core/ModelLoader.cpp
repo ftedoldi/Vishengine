@@ -1,11 +1,12 @@
 #include "ModelLoader.h"
 
+#include "Components/BoundingSphere.h"
 #include "Components/InstancedMeshTag.h"
 #include "Components/Relationship.h"
-#include "Material/Texture.h"
-#include "Components/Transforms/WorldTransform.h"
 #include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/TransformDirtyFlag.h"
+#include "Components/Transforms/WorldTransform.h"
+#include "Material/Texture.h"
 
 #include "assimp/postprocess.h"
 
@@ -154,6 +155,7 @@ entt::entity ModelLoader::_processMesh(const aiMesh* const aiMesh, const aiScene
     _registry.emplace<Mesh>(meshEntity, mesh);
 
     _processMaterials(scene, aiMesh, mesh.meshID);
+    _generateBoundingSphere(meshEntity, mesh.meshID);
 
     return meshEntity;
 }
@@ -243,4 +245,28 @@ void ModelLoader::_processMaterials(const aiScene* const scene, const aiMesh* co
             diffuseColor,
             specularColor,
     });
+}
+
+void ModelLoader::_generateBoundingSphere(const entt::entity meshEntity, const uint32_t meshID) const {
+    const auto& rawMeshData{_meshController->GetRawMeshData(meshID)};
+    const auto& vertices{rawMeshData.Vertices};
+
+    if (vertices.empty()) {
+        _registry.emplace<BoundingSphere>(meshEntity, BoundingSphere{{0.f, 0.f, 0.f}, 0.f});
+        return;
+    }
+
+    glm::vec3 center{};
+    for (const auto& vertex : vertices) {
+        center += vertex;
+    }
+    center /= static_cast<float>(vertices.size());
+
+    float radiusSquared{};
+    for (const auto& vertex : vertices) {
+        const auto delta{vertex - center};
+        radiusSquared = std::max(radiusSquared, glm::dot(delta, delta));
+    }
+
+    _registry.emplace<BoundingSphere>(meshEntity, center, glm::sqrt(radiusSquared));
 }

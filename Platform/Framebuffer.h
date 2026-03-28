@@ -8,7 +8,7 @@ public:
 
     ~Framebuffer();
 
-    void BindFrameBuffer() const;
+    void Bind() const;
 
     [[nodiscard]] uint32_t GetColorAttachmentID() const;
 

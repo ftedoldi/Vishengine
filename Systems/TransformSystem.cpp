@@ -1,9 +1,10 @@
 #include "TransformSystem.h"
 
-#include "Components/Transforms/WorldTransform.h"
+#include "Components/BoundingSphere.h"
 #include "Components/Relationship.h"
 #include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/TransformDirtyFlag.h"
+#include "Components/Transforms/WorldTransform.h"
 
 void TransformSystem::Update(entt::registry& registry) {
     // TODO: very slow
@@ -14,6 +15,11 @@ void TransformSystem::Update(entt::registry& registry) {
             const auto worldTransform{_getOrComputeWorldTransform(entity, registry)};
             auto& worldTransformComponent{registry.get<WorldTransform>(entity)};
             worldTransformComponent.Value = worldTransform;
+            // Here I should probably fire an event about which entity had the world transform changed.
+            // But for now I write all the code related to the transform change here.
+            if (auto* const boundingSphere{registry.try_get<BoundingSphere>(entity)}) {
+                boundingSphere->Center = worldTransform.TransformPosition(boundingSphere->Center);
+            }
 
             transformFlag.ShouldUpdateTransform = false;
         }

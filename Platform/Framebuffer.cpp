@@ -15,7 +15,7 @@ Framebuffer::~Framebuffer() {
     glDeleteFramebuffers(1, &_framebuffer);
 }
 
-void Framebuffer::BindFrameBuffer() const {
+void Framebuffer::Bind() const {
     glViewport(_positionX, _positionY, _width, _height);
     glBindFramebuffer(GL_FRAMEBUFFER, _framebuffer);
     glEnable(GL_DEPTH_TEST);

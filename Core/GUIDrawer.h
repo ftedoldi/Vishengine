@@ -21,7 +21,7 @@
 class GUIDrawer {
 public:
     GUIDrawer(GLFWwindow* window,
-              std::shared_ptr<Framebuffer> sceneFramebuffer,
+              const std::shared_ptr<Framebuffer>& sceneFramebuffer,
               const std::filesystem::path& assetsRoot);
 
     /** Step 1: clear the default framebuffer and start a new ImGui frame. */
