@@ -23,7 +23,7 @@ private:
 
     entt::entity _createNodeEntity(entt::entity parentEntity, const aiMatrix4x4& matrixTransform, const std::string& nodeName) const;
 
-    void _processMesh(const aiMesh* aiMesh, const aiScene* scene, entt::entity parentEntity, uint32_t assimpMeshIndex);
+    Mesh _processMesh(const aiMesh* aiMesh, const aiScene* scene, entt::entity parentEntity, uint32_t assimpMeshIndex);
 
     std::vector<Texture> _loadMaterialTextures(const aiMaterial* mat, aiTextureType type);
 
@@ -31,7 +31,7 @@ private:
 
     void _processMaterials(const aiScene* scene, const aiMesh* mesh, uint32_t meshID);
 
-    void _generateBoundingSphere(entt::entity meshEntity, uint32_t meshID) const;
+    void _generateBoundingSphere(entt::entity meshNodeEntity, const std::vector<glm::vec3>& objectVertices) const;
 
     entt::registry& _registry;
 

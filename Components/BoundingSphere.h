@@ -3,9 +3,17 @@
 #include "glm/vec3.hpp"
 
 struct BoundingSphere {
-    BoundingSphere(const glm::vec3 center, const float radius) : Center{center}, Radius{radius} {}
+    BoundingSphere(const glm::vec3 localCenter, const float localRadius)
+        : LocalCenter{localCenter}
+        , LocalRadius{localRadius}
+        , WorldCenter{localCenter}
+        , WorldRadius{localRadius} {}
 
-    glm::vec3 Center{};
+    glm::vec3 LocalCenter{};
 
-    float Radius{};
+    float LocalRadius{};
+
+    glm::vec3 WorldCenter{};
+
+    float WorldRadius{};
 };

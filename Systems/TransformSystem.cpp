@@ -18,7 +18,8 @@ void TransformSystem::Update(entt::registry& registry) {
             // Here I should probably fire an event about which entity had the world transform changed.
             // But for now I write all the code related to the transform change here.
             if (auto* const boundingSphere{registry.try_get<BoundingSphere>(entity)}) {
-                boundingSphere->Center = worldTransform.TransformPosition(boundingSphere->Center);
+                boundingSphere->WorldCenter = worldTransform.TransformPosition(boundingSphere->LocalCenter);
+                boundingSphere->WorldRadius = boundingSphere->LocalRadius * worldTransform.Scale;
             }
 
             transformFlag.ShouldUpdateTransform = false;

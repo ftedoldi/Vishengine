@@ -85,17 +85,17 @@ void DebugRenderPass::_drawBoundingSpheres() const {
 
         const auto sphereView{_registry.view<BoundingSphere>()};
         for (const auto& [entity, sphere] : sphereView.each()) {
-            // Transform the sphere center from world space to view space
-            const auto centerViewSpace{camera.ViewTransform.TransformPosition(sphere.Center)};
+            // Transform the world-space sphere center into view space
+            const auto centerViewSpace{camera.ViewTransform.TransformPosition(sphere.WorldCenter)};
 
             // XY plane  (normal = Z)
-            AppendCircle(centerViewSpace, sphere.Radius, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, _segments, lineVertices);
+            AppendCircle(centerViewSpace, sphere.WorldRadius, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, _segments, lineVertices);
 
             // XZ plane  (normal = Y)
-            AppendCircle(centerViewSpace, sphere.Radius, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, _segments, lineVertices);
+            AppendCircle(centerViewSpace, sphere.WorldRadius, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, _segments, lineVertices);
 
             // YZ plane  (normal = X)
-            AppendCircle(centerViewSpace, sphere.Radius, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, _segments, lineVertices);
+            AppendCircle(centerViewSpace, sphere.WorldRadius, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, _segments, lineVertices);
         }
 
         if (lineVertices.empty()) {
