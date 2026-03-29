@@ -38,12 +38,65 @@ namespace {
         }
     }
 
+    // Append the 12 edges (24 vertices) of an axis-aligned box defined by min/max corners.
+    void AppendBox(const glm::vec3& min, const glm::vec3& max, std::vector<glm::vec3>& out) {
+        // 8 corners of the box
+        const glm::vec3 corners[8] = {
+            {min.x, min.y, min.z},
+            {max.x, min.y, min.z},
+            {max.x, max.y, min.z},
+            {min.x, max.y, min.z},
+            {min.x, min.y, max.z},
+            {max.x, min.y, max.z},
+            {max.x, max.y, max.z},
+            {min.x, max.y, max.z},
+        };
+
+        // 12 edges as index pairs
+        constexpr int edges[12][2] = {
+            {0, 1}, {1, 2}, {2, 3}, {3, 0}, // bottom face
+            {4, 5}, {5, 6}, {6, 7}, {7, 4}, // top face
+            {0, 4}, {1, 5}, {2, 6}, {3, 7}, // vertical edges
+        };
+
+        for (const auto& edge : edges) {
+            out.push_back(corners[edge[0]]);
+            out.push_back(corners[edge[1]]);
+        }
+    }
+
+    // Recursively collect box line vertices for all octree nodes.
+    void CollectOctreeBoxes(const Octree::Node* node,
+                            const Transform& viewTransform,
+                            std::vector<glm::vec3>& out) {
+        if (!node) {
+            return;
+        }
+
+        const glm::vec3 worldMin{node->Center - glm::vec3{node->HalfWidth}};
+        const glm::vec3 worldMax{node->Center + glm::vec3{node->HalfWidth}};
+
+        // Transform corners to view space
+        const glm::vec3 viewMin{viewTransform.TransformPosition(worldMin)};
+        const glm::vec3 viewMax{viewTransform.TransformPosition(worldMax)};
+
+        AppendBox(viewMin, viewMax, out);
+
+        for (const auto& child : node->Children) {
+            CollectOctreeBoxes(child.get(), viewTransform, out);
+        }
+    }
+
 }
 
-DebugRenderPass::DebugRenderPass(std::unique_ptr<Shader> shader,
+DebugRenderPass::DebugRenderPass(Octree::Node* const  octreeRootNode,
+                                 InputManager* const inputManager,
+                                 std::unique_ptr<Shader> shader,
                                  entt::registry& registry,
                                  const int segments)
-    : _shader{std::move(shader)}
+    : _octreeRootNode{octreeRootNode}
+    , _inputManager{inputManager}
+    , _shader{std::move(shader)}
     , _registry{registry}
     , _segments{segments} {
     glGenVertexArrays(1, &_vao);
@@ -52,7 +105,6 @@ DebugRenderPass::DebugRenderPass(std::unique_ptr<Shader> shader,
     glBindVertexArray(_vao);
     glBindBuffer(GL_ARRAY_BUFFER, _vbo);
 
-    // location 0 – vec3 position
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), nullptr);
 
@@ -66,7 +118,13 @@ DebugRenderPass::~DebugRenderPass() {
 }
 
 void DebugRenderPass::Execute() {
-    _drawBoundingSpheres();
+    if (_inputManager->IsKeyPressed(GLFW_KEY_B)) {
+        _drawBoundingSpheres();
+    }
+
+    if (_inputManager->IsKeyPressed(GLFW_KEY_O)) {
+        _drawOctree();
+    }
 }
 
 void DebugRenderPass::_drawBoundingSpheres() const {
@@ -97,6 +155,41 @@ void DebugRenderPass::_drawBoundingSpheres() const {
             // YZ plane  (normal = X)
             AppendCircle(centerViewSpace, sphere.WorldRadius, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}, _segments, lineVertices);
         }
+
+        if (lineVertices.empty()) {
+            return;
+        }
+
+        // Upload and draw
+        glBindVertexArray(_vao);
+        glBindBuffer(GL_ARRAY_BUFFER, _vbo);
+        glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(lineVertices.size() * sizeof(glm::vec3)),
+                     lineVertices.data(),
+                     GL_DYNAMIC_DRAW);
+
+        glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(lineVertices.size()));
+        glBindVertexArray(0);
+    }
+}
+
+void DebugRenderPass::_drawOctree() {
+    assert(_octreeRootNode);
+
+    const auto cameraView{_registry.view<Camera, WorldTransform, EditorCameraTag>()};
+
+    for (const auto& [cameraEntity, camera, cameraWorldTransform] : cameraView.each()) {
+        _shader->UseProgram();
+        _shader->SetUniformMat4("Perspective", camera.ProjectionMatrix);
+        // Draw octree node boxes in yellow so they are distinct from bounding spheres
+        _shader->SetUniformVec3("DebugColor", 1.f, 1.f, 0.f);
+
+        // Each node contributes 12 edges × 2 vertices = 24 vertices.
+        // Reserve a reasonable initial capacity; the vector will grow as needed.
+        std::vector<glm::vec3> lineVertices{};
+        lineVertices.reserve(24 * 64);
+
+        CollectOctreeBoxes(_octreeRootNode, camera.ViewTransform, lineVertices);
 
         if (lineVertices.empty()) {
             return;

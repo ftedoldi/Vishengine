@@ -3,11 +3,14 @@
 #include "Camera/CameraFactory.h"
 #include "Components/Light.h"
 #include "Components/Lights/PointLight.h"
+#include "Components/MeshNodeTag.h"
 #include "ModelLoader.h"
 
 #include "Components/Camera/ActiveCameraTag.h"
 #include "Components/Lights/DirectionalLight.h"
 #include "Components/Transforms/RelativeTransform.h"
+#include "DataStructures/Octree.h"
+#include "Libs/assimp/code/AssetLib/MMD/MMDCpp14.h"
 #include "Platform/Framebuffer.h"
 #include "Platform/Time.h"
 
@@ -45,18 +48,26 @@ Game::Game() {
     auto mainShader{std::make_unique<Shader>(shadersBasePath + "vertex.glsl", shadersBasePath + "fragment.glsl")};
     _rendererSystem->AddPass(std::make_unique<SceneRenderPass>(std::move(mainShader), _registry, materialController, meshController));
 
-    // Debug pass
-    auto debugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
-    _rendererSystem->AddPass(std::make_unique<DebugRenderPass>(std::move(debugShader), _registry));
-
     _inputManager = std::make_shared<InputManager>(_window->GetGLFWwindow());
+
+    // Debug pass
+
     _editorCameraMoveSystem = std::make_unique<EditorCameraMoveSystem>(_inputManager);
 
     const std::filesystem::path assetsRoot{std::string(PROJECT_SOURCE_DIR) + "/Assets"};
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWwindow(), sceneFrameBuffer, assetsRoot);
 
     ModelLoader modelLoader{_registry, meshController, materialController};
-    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/ezio.glb");
+    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/hierarchy.glb");
+
+    // Build the octree and fill it.
+    //_octreeRootNode = Octree::Build(_registry);
+
+    auto debugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
+    _rendererSystem->AddPass(std::make_unique<DebugRenderPass>(_octreeRootNode.get(), _inputManager.get(), std::move(debugShader), _registry));
+
+    // TODO: transform system should just fire an event when the transform of a specific entity is changed. It should not take an octree as input
+    _transformSystem = std::make_unique<TransformSystem>(_octreeRootNode.get());
 
     _addLight();
 }
@@ -68,7 +79,7 @@ void Game::Update() {
         Time::UpdateDeltaTime();
 
         // Update entity transforms and camera view matrix.
-        _transformSystem.Update(_registry);
+        _transformSystem->Update(_registry);
         _cameraSystem.Update(_registry);
         _editorCameraMoveSystem->Update(Time::GetDeltaTime(), _registry);
 

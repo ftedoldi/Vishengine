@@ -1,6 +1,6 @@
 #include "RendererSystem.h"
 
-RendererSystem::RendererSystem(const std::shared_ptr<Framebuffer>& sceneFramebuffer, entt::dispatcher& windowDispatcher) : _sceneFramebuffer(sceneFramebuffer) {
+RendererSystem::RendererSystem(std::shared_ptr<Framebuffer> sceneFramebuffer, entt::dispatcher& windowDispatcher) : _sceneFramebuffer(std::move(sceneFramebuffer)) {
     windowDispatcher.sink<FrameBufferSizeChangedEvent>().connect<&RendererSystem::_onFramebufferSizeChanged>(this);
 }
 
