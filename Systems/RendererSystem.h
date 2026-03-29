@@ -9,7 +9,7 @@
 
 class RendererSystem {
 public:
-    RendererSystem(const std::shared_ptr<Framebuffer>& sceneFramebuffer, entt::dispatcher& windowDispatcher);
+    RendererSystem(std::shared_ptr<Framebuffer> sceneFramebuffer, entt::dispatcher& windowDispatcher);
 
     void AddPass(std::unique_ptr<IRenderPass> pass);
 

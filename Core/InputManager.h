@@ -6,8 +6,8 @@ class InputManager {
 public:
     explicit InputManager(GLFWwindow* window);
 
-    bool IsKeyPressed(int key);
+    [[nodiscard]] bool IsKeyPressed(int key) const;
 
 private:
-    GLFWwindow* _mainWindow;
+    GLFWwindow* _mainWindow{};
 };
