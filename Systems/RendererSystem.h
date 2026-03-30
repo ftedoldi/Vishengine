@@ -3,6 +3,7 @@
 #include "Core/Window.h"
 #include "IRenderPass.h"
 #include "Platform/Framebuffer.h"
+#include "Events/WindowEvents.h"
 
 #include <memory>
 #include <vector>
@@ -16,7 +17,7 @@ public:
     void Update() const;
 
 private:
-    void _onFramebufferSizeChanged(FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const;
+    void _onFramebufferSizeChanged(WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const;
 
     std::vector<std::unique_ptr<IRenderPass>> _passes{};
 

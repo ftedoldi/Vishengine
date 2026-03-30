@@ -1,45 +1,29 @@
 #pragma once
 
+#include "Events/WindowEvents.h"
 #include "GLFW/glfw3.h"
 
 #include <entt/entt.hpp>
 
 #include <string>
 
-struct FrameBufferSizeChangedEvent {
-    float Width{};
-    float Height{};
-};
-
-struct KeyPressedEvent {
-    int Key{};
-    int Scancode{};
-    int Action{};
-    int Mods{};
-};
-
-struct MouseMovedEvent {
-    double XMousePosition{};
-    double YMousePosition{};
-};
-
 class Window {
 public:
+    Window(entt::dispatcher& eventDispatcher);
+
     ~Window();
 
     void Initialize(int width = 800, int height = 600, const std::string& windowName = "VishEngine");
 
-    bool ShouldWindowClose() const;
+    [[nodiscard]] bool ShouldWindowClose() const;
 
     void Update() const;
 
-    entt::dispatcher& GetEventDispatcher();
+    [[nodiscard]] int32_t GetHeight() const;
 
-    int32_t GetHeight() const;
+    [[nodiscard]] int32_t GetWidth() const;
 
-    int32_t GetWidth() const;
-
-    GLFWwindow* GetGLFWwindow();
+    [[nodiscard]] GLFWwindow* GetGLFWWindow() const;
 
 private:
     void _setFramebufferSizeCallback() const;
@@ -48,11 +32,11 @@ private:
 
     void _setMouseMovedCallback() const;
 
-    void _shouldCloseWindow(const KeyPressedEvent& keyPressedEvent);
+    void _shouldCloseWindow(const WindowsEvents::KeyPressedEvent& keyPressedEvent) const;
 
     GLFWwindow* _window{};
 
-    entt::dispatcher _eventDispatcher{};
+    entt::dispatcher& _eventDispatcher;
 
     int32_t _width{};
 

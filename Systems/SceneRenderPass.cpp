@@ -60,6 +60,7 @@ void SceneRenderPass::_render() const {
     _shader->UseProgram();
 
     const auto allMeshView{_registry.view<Mesh, Relationship>()};
+    // TODO: unordered map is bad for cache locality check if this is source of bottleneck
     std::unordered_map<uint32_t, std::vector<Transform>> transformsByMeshID{};
     for (const auto& [meshEntity, mesh, relationship] : allMeshView.each()) {
         const auto& worldTransform{_registry.get<WorldTransform>(relationship.Parent).Value};

@@ -7,6 +7,7 @@
 #include "Systems/CameraSystem.h"
 #include "Systems/EditorCameraMoveSystem.h"
 #include "Systems/RendererSystem.h"
+#include "Systems/SpatialSystem.h"
 #include "Systems/TransformSystem.h"
 #include "Window.h"
 
@@ -43,5 +44,9 @@ private:
 
     std::unique_ptr<TransformSystem> _transformSystem{};
 
+    std::unique_ptr<SpatialSystem> _spatialSystem{};
+
     CameraSystem _cameraSystem{};
+
+    entt::dispatcher _dispatcher{};
 };

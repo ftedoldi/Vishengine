@@ -1,7 +1,7 @@
 #include "RendererSystem.h"
 
 RendererSystem::RendererSystem(std::shared_ptr<Framebuffer> sceneFramebuffer, entt::dispatcher& windowDispatcher) : _sceneFramebuffer(std::move(sceneFramebuffer)) {
-    windowDispatcher.sink<FrameBufferSizeChangedEvent>().connect<&RendererSystem::_onFramebufferSizeChanged>(this);
+    windowDispatcher.sink<WindowsEvents::FrameBufferSizeChangedEvent>().connect<&RendererSystem::_onFramebufferSizeChanged>(this);
 }
 
 void RendererSystem::AddPass(std::unique_ptr<IRenderPass> pass) {
@@ -15,6 +15,6 @@ void RendererSystem::Update() const {
     }
 }
 
-void RendererSystem::_onFramebufferSizeChanged(const FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const {
+void RendererSystem::_onFramebufferSizeChanged(const WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const {
     _sceneFramebuffer->Resize(static_cast<int32_t>(frameBufferSizeChangedEvent.Width), static_cast<int32_t>(frameBufferSizeChangedEvent.Height));
 }

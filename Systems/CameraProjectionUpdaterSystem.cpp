@@ -6,18 +6,19 @@
 #include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/TransformDirtyFlag.h"
 #include "Platform/Mouse.h"
+#include "Events/WindowEvents.h"
 
 #include "glm/ext/quaternion_trigonometric.hpp"
 #include "glm/glm.hpp"
 #include "glm/gtc/quaternion.hpp"
 
-CameraProjectionUpdaterSystem::CameraProjectionUpdaterSystem(entt::registry& registry, entt::dispatcher& windowDispatcher) : _registry{registry} {
-    windowDispatcher.sink<FrameBufferSizeChangedEvent>().connect<&CameraProjectionUpdaterSystem::_onFramebufferSizeChanged>(this);
-    windowDispatcher.sink<MouseMovedEvent>().connect<&CameraProjectionUpdaterSystem::_onMouseMoved>(this);
+CameraProjectionUpdaterSystem::CameraProjectionUpdaterSystem(entt::registry& registry, entt::dispatcher& sceneDispatcher) : _registry{registry} {
+    sceneDispatcher.sink<WindowsEvents::FrameBufferSizeChangedEvent>().connect<&CameraProjectionUpdaterSystem::_onFramebufferSizeChanged>(this);
+    sceneDispatcher.sink<WindowsEvents::MouseMovedEvent>().connect<&CameraProjectionUpdaterSystem::_onMouseMoved>(this);
 }
 
-void CameraProjectionUpdaterSystem::_onFramebufferSizeChanged(const FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const {
-    auto view{_registry.view<Camera>()};
+void CameraProjectionUpdaterSystem::_onFramebufferSizeChanged(const WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const {
+    const auto view{_registry.view<Camera>()};
     for(const auto entity: view) {
         auto& cameraComponent{view.get<Camera>(entity)};
         const auto newHeight{frameBufferSizeChangedEvent.Height};
@@ -31,14 +32,14 @@ void CameraProjectionUpdaterSystem::_onFramebufferSizeChanged(const FrameBufferS
     }
 }
 
-void CameraProjectionUpdaterSystem::_onMouseMoved(const MouseMovedEvent mouseMovedEvent) const {
-    auto view{_registry.view<Camera, ActiveCameraTag, EditorCameraTag, RelativeTransform, TransformDirtyFlag>()};
+void CameraProjectionUpdaterSystem::_onMouseMoved(const WindowsEvents::MouseMovedEvent mouseMovedEvent) const {
+    const auto view{_registry.view<Camera, ActiveCameraTag, EditorCameraTag, RelativeTransform, TransformDirtyFlag>()};
 
     for(const auto entity: view) {
         auto& cameraComponent{view.get<Camera>(entity)};
-        auto& relativeTransform{view.get<RelativeTransform>(entity)};
-        auto& transformFlag{view.get<TransformDirtyFlag>(entity)};
-        transformFlag.ShouldUpdateTransform = true;
+        auto& relativeTransform{view.get<RelativeTransform>(entity).Value};
+        auto& transformFlag{view.get<TransformDirtyFlag>(entity).ShouldUpdateTransform};
+        transformFlag = true;
         // Setup editor camera mouse rotation.
         if (Mouse::FirstTimeMovingMouse){
             Mouse::LastXPos = mouseMovedEvent.XMousePosition;
@@ -71,6 +72,6 @@ void CameraProjectionUpdaterSystem::_onMouseMoved(const MouseMovedEvent mouseMov
         cameraComponent.Front = glm::normalize(q * glm::vec3{0.0, 0.0, -1.0});
         cameraComponent.Up = glm::normalize(q * glm::vec3{0.0, 1.0, 0.0});
 
-        relativeTransform.Value.Rotation = glm::quatLookAtRH(cameraComponent.Front, cameraComponent.Up);
+        relativeTransform.Rotation = glm::quatLookAtRH(cameraComponent.Front, cameraComponent.Up);
     }
 }

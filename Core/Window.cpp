@@ -8,10 +8,10 @@
 #include <stdexcept>
 
 namespace WindowSystemHelpers {
-    void message_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei, const GLchar* message, const void*){
+
+    void MessageCallback(const GLenum source, const GLenum type, const GLuint id, const GLenum severity, const GLsizei, const GLchar* const message, const void* const){
         const auto* const src_str = [source]() {
-            switch (source)
-            {
+            switch (source) {
                 case GL_DEBUG_SOURCE_API: return "API";
                 case GL_DEBUG_SOURCE_WINDOW_SYSTEM: return "WINDOW SYSTEM";
                 case GL_DEBUG_SOURCE_SHADER_COMPILER: return "SHADER COMPILER";
@@ -23,8 +23,7 @@ namespace WindowSystemHelpers {
         }();
 
         const auto* const type_str = [type]() {
-            switch (type)
-            {
+            switch (type) {
                 case GL_DEBUG_TYPE_ERROR: return "ERROR";
                 case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: return "DEPRECATED_BEHAVIOR";
                 case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: return "UNDEFINED_BEHAVIOR";
@@ -47,6 +46,11 @@ namespace WindowSystemHelpers {
         }();
         std::cout << src_str << ", " << type_str << ", " << severity_str << ", " << id << ": " << message << '\n';
     }
+
+}// namespace WindowSystemHelpers
+
+Window::Window(entt::dispatcher& eventDispatcher) : _eventDispatcher{eventDispatcher} {
+
 }
 
 Window::~Window() {
@@ -84,7 +88,7 @@ void Window::Initialize(const int width, const int height, const std::string& wi
     }
 
     glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback(WindowSystemHelpers::message_callback, nullptr);
+    glDebugMessageCallback(WindowSystemHelpers::MessageCallback, nullptr);
     glEnable(GL_DEPTH_TEST);
     // Cull faces with vertices in a clockwise order by default
     //glEnable(GL_CULL_FACE);
@@ -100,7 +104,7 @@ void Window::Initialize(const int width, const int height, const std::string& wi
     _setMouseMovedCallback();
 
     // Sets the windowComponent close event
-    _eventDispatcher.sink<KeyPressedEvent>().connect<&Window::_shouldCloseWindow>(this);
+    _eventDispatcher.sink<WindowsEvents::KeyPressedEvent>().connect<&Window::_shouldCloseWindow>(this);
 }
 
 bool Window::ShouldWindowClose() const {
@@ -108,8 +112,6 @@ bool Window::ShouldWindowClose() const {
 }
 
 void Window::Update() const {
-    //glfwPollEvents();
-
     glfwSwapBuffers(_window);
 }
 
@@ -125,9 +127,8 @@ void Window::_setFramebufferSizeCallback() const {
     auto framebufferSizeCallback = [](GLFWwindow* window, int width, int height) {
         glViewport(0, 0, width, height);
 
-        auto* const selfWindow{static_cast<Window*>(glfwGetWindowUserPointer(window))};
-        if(selfWindow) {
-            selfWindow->_eventDispatcher.trigger<FrameBufferSizeChangedEvent>({static_cast<float>(width), static_cast<float>(height)});
+        if (auto* const selfWindow{static_cast<Window *>(glfwGetWindowUserPointer(window))}) {
+            selfWindow->_eventDispatcher.trigger<WindowsEvents::FrameBufferSizeChangedEvent>({static_cast<float>(width), static_cast<float>(height)});
         }
     };
 
@@ -136,9 +137,8 @@ void Window::_setFramebufferSizeCallback() const {
 
 void Window::_setKeyPressedCallback() const {
     auto keyCallback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
-        auto* const selfWindow{static_cast<Window*>(glfwGetWindowUserPointer(window))};
-        if(selfWindow) {
-            selfWindow->_eventDispatcher.trigger<KeyPressedEvent>({key, scancode, action, mods});
+        if (auto* const selfWindow{static_cast<Window *>(glfwGetWindowUserPointer(window))}) {
+            selfWindow->_eventDispatcher.trigger<WindowsEvents::KeyPressedEvent>({key, scancode, action, mods});
         }
     };
 
@@ -147,25 +147,20 @@ void Window::_setKeyPressedCallback() const {
 
 void Window::_setMouseMovedCallback() const {
     auto mouseCallback = [](GLFWwindow* window, double xPos, double yPos) {
-        auto* const selfWindow{static_cast<Window*>(glfwGetWindowUserPointer(window))};
-        if(selfWindow) {
-            selfWindow->_eventDispatcher.trigger<MouseMovedEvent>({xPos, yPos});
+        if (auto* const selfWindow{static_cast<Window *>(glfwGetWindowUserPointer(window))}) {
+            selfWindow->_eventDispatcher.trigger<WindowsEvents::MouseMovedEvent>({xPos, yPos});
         }
     };
 
     glfwSetCursorPosCallback(_window, mouseCallback);
 }
 
-entt::dispatcher& Window::GetEventDispatcher() {
-    return _eventDispatcher;
-}
-
-void Window::_shouldCloseWindow(const KeyPressedEvent& keyPressedEvent) {
+void Window::_shouldCloseWindow(const WindowsEvents::KeyPressedEvent & keyPressedEvent) const {
     if (keyPressedEvent.Key == GLFW_KEY_ESCAPE) {
         glfwSetWindowShouldClose(_window, true);
     }
 }
 
-GLFWwindow* Window::GetGLFWwindow() {
+GLFWwindow* Window::GetGLFWWindow() const {
     return _window;
 }
