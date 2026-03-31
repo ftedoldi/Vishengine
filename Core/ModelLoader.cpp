@@ -57,6 +57,11 @@ void ModelLoader::_processNode(const aiNode* const node,
         // a single node contains multiple meshes.
         const auto nodeEntity{_createNodeEntity(parentEntity, worldTransform, node->mName.C_Str())};
 
+        if (parentEntity != entt::null) {
+            auto& [_, currentNumberOfChildren, children]{_registry.get<Relationship>(parentEntity)};
+            children[currentNumberOfChildren++] = nodeEntity;
+        }
+
         uint32_t allocationSize{};
         for(uint32_t i{0}; i < node->mNumMeshes; ++i) {
             const auto meshIndex{node->mMeshes[i]};

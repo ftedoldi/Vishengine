@@ -14,6 +14,8 @@ public:
     void Update(entt::registry& registry) const;
 
 private:
+    void _updateTransform(entt::entity entity, entt::registry& registry) const;
+
     entt::dispatcher& _eventDispatcher;
 };
 

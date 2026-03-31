@@ -28,16 +28,25 @@ TransformSystem::TransformSystem(entt::dispatcher& eventDispatcher) : _eventDisp
 }
 
 void TransformSystem::Update(entt::registry& registry) const {
-    // TODO: very slow
-    const auto view{registry.view<RelativeTransform, WorldTransform, TransformDirtyFlag>()};
+    const auto view{registry.view<RelativeTransform, WorldTransform, TransformDirtyFlag, Relationship>()};
     for (const auto entity: view) {
         if (auto& shouldUpdateTransform{view.get<TransformDirtyFlag>(entity).ShouldUpdateTransform}) {
-            const auto worldTransform{GetOrComputeWorldTransform(entity, registry)};
-            auto& worldTransformComponent{registry.get<WorldTransform>(entity).Value};
-            worldTransformComponent = worldTransform;
-            _eventDispatcher.trigger<GameEvents::TransformUpdatedEvent>({entity});
-
+            // Update the transforms of the current and child entities.
+            _updateTransform(entity, registry);
             shouldUpdateTransform = false;
         }
+    }
+}
+
+void TransformSystem::_updateTransform(const entt::entity entity, entt::registry& registry) const {
+    const auto& relationship{registry.get<Relationship>(entity)};
+
+    const auto worldTransform{GetOrComputeWorldTransform(entity, registry)};
+    auto& worldTransformComponent{registry.get<WorldTransform>(entity).Value};
+    worldTransformComponent = worldTransform;
+    _eventDispatcher.trigger<GameEvents::TransformUpdatedEvent>({entity});
+
+    for (uint32_t i{0}; i < relationship.Size; ++i) {
+        _updateTransform(relationship.Children[i], registry);
     }
 }

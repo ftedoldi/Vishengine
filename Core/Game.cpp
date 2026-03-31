@@ -56,7 +56,7 @@ Game::Game() {
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWWindow(), sceneFrameBuffer, assetsRoot);
 
     ModelLoader modelLoader{_registry, meshController, materialController};
-    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/hierarchy.glb");
+    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/megaHierarchy.glb");
 
     // Build the octree and fill it.
     //_octreeRootNode = Octree::Build(_registry);
