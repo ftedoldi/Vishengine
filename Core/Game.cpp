@@ -56,13 +56,15 @@ Game::Game() {
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWWindow(), sceneFrameBuffer, assetsRoot);
 
     ModelLoader modelLoader{_registry, meshController, materialController};
-    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/megaHierarchy.glb");
+    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/VeneziaTex.glb");
 
     // Build the octree and fill it.
     //_octreeRootNode = Octree::Build(_registry);
 
     auto debugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
-    _rendererSystem->AddPass(std::make_unique<DebugRenderPass>(_octreeRootNode.get(), _inputManager.get(), std::move(debugShader), _registry));
+    auto debugRenderPass{std::make_unique<DebugRenderPass>(_octreeRootNode.get(), _inputManager.get(), std::move(debugShader), _registry)};
+    _debugRenderPass = debugRenderPass.get();
+    _rendererSystem->AddPass(std::move(debugRenderPass));
 
     _transformSystem = std::make_unique<TransformSystem>(_dispatcher);
 
@@ -85,6 +87,13 @@ void Game::Update() {
         _editorCameraMoveSystem->Update(Time::GetDeltaTime(), _registry);
 
         _spatialSystem->Update(_registry);
+
+        static int prova = 0;
+        if (prova == 0) {
+            _octreeRootNode = Octree::Build(_registry);
+            _debugRenderPass->SetOctreeRootNode(_octreeRootNode.get());
+            prova = 1;
+        }
 
         // ── Render frame ──────────────────────────────────────────────────
         // 1. Clear the default framebuffer and start the ImGui frame.

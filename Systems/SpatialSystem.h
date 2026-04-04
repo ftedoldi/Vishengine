@@ -13,9 +13,7 @@ public:
 private:
     void _onTransformUpdated(GameEvents::TransformUpdatedEvent transformUpdatedEvent);
 
-    void _updateBoundingVolumes(entt::registry& registry) const;
-
-    void _updateOctree() const;
+    void _updateOctree(entt::registry& registry) const;
 
     std::vector<entt::entity> _entities{};
 };

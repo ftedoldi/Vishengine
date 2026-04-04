@@ -1,6 +1,5 @@
 #include "InspectorPanel.h"
 
-#include "Components/Mesh.h"
 #include "Components/Lights/PointLight.h"
 #include "Components/Lights/DirectionalLight.h"
 
@@ -13,7 +12,6 @@
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <optional>
 
 namespace {
 // Return whether a position was modified.

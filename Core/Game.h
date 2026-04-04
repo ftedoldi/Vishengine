@@ -5,6 +5,7 @@
 #include "InputManager.h"
 #include "Systems/CameraProjectionUpdaterSystem.h"
 #include "Systems/CameraSystem.h"
+#include "Systems/DebugRenderPass.h"
 #include "Systems/EditorCameraMoveSystem.h"
 #include "Systems/RendererSystem.h"
 #include "Systems/SpatialSystem.h"
@@ -45,6 +46,8 @@ private:
     std::unique_ptr<TransformSystem> _transformSystem{};
 
     std::unique_ptr<SpatialSystem> _spatialSystem{};
+
+    DebugRenderPass* _debugRenderPass{};
 
     CameraSystem _cameraSystem{};
 

@@ -1,5 +1,6 @@
 #include "ModelLoader.h"
 
+#include "Components/BoundingBox.h"
 #include "Components/BoundingSphere.h"
 #include "Components/InstancedMeshTag.h"
 #include "Components/MeshNodeTag.h"
@@ -8,6 +9,7 @@
 #include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/TransformDirtyFlag.h"
 #include "Components/Transforms/WorldTransform.h"
+#include "DataStructures/Box.h"
 #include "Material/Texture.h"
 
 #include "assimp/postprocess.h"
@@ -79,6 +81,7 @@ void ModelLoader::_processNode(const aiNode* const node,
         }
         // Create the bounding sphere given all the mesh vertices
         _generateBoundingSphere(nodeEntity, nodeMeshesVertices);
+        _generateBoundingBox(nodeEntity, nodeMeshesVertices);
         worldTransform = aiMatrix4x4{};
         parentEntity = nodeEntity;
     }
@@ -272,4 +275,10 @@ void ModelLoader::_generateBoundingSphere(const entt::entity meshNodeEntity, con
     }
 
     _registry.emplace<BoundingSphere>(meshNodeEntity, center, glm::sqrt(radiusSquared));
+}
+
+void ModelLoader::_generateBoundingBox(const entt::entity meshNodeEntity, const std::vector<glm::vec3>& objectVertices) const {
+    Box bbox{objectVertices};
+
+    _registry.emplace<BoundingBox>(meshNodeEntity, bbox);
 }

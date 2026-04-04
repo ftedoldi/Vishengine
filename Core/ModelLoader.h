@@ -33,6 +33,8 @@ private:
 
     void _generateBoundingSphere(entt::entity meshNodeEntity, const std::vector<glm::vec3>& objectVertices) const;
 
+    void _generateBoundingBox(entt::entity meshNodeEntity, const std::vector<glm::vec3>& objectVertices) const;
+
     entt::registry& _registry;
 
     std::shared_ptr<MeshController> _meshController{};

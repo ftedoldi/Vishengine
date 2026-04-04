@@ -36,10 +36,14 @@ public:
 
     void Execute() override;
 
+    void SetOctreeRootNode(Octree::Node* node) { _octreeRootNode = node; }
+
 private:
     void _drawBoundingSpheres() const;
 
-    void _drawOctree();
+    void _drawBoundingBox() const;
+
+    void _drawOctree() const;
 
     Octree::Node* _octreeRootNode{};
 

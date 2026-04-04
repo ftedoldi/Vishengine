@@ -69,7 +69,7 @@ void SceneRenderPass::_render() const {
 
     // Loop only on the actual meshes (not the instances).
     const auto actualMeshView{_registry.view<Mesh, Relationship>(entt::exclude<InstancedMeshTag>)};
-    auto cameraView{_registry.view<Camera, WorldTransform, EditorCameraTag>()};
+    const auto cameraView{_registry.view<Camera, WorldTransform, EditorCameraTag>()};
     for (const auto& [cameraEntity, camera, worldTransform] : cameraView.each()) {
         _shader->SetUniformMat4("Perspective", camera.ProjectionMatrix);
 
@@ -120,7 +120,7 @@ void SceneRenderPass::_drawLights(const Transform& cameraTransform, entt::regist
 
 void SceneRenderPass::_drawPointLights(const Transform& cameraTransform, entt::registry& registry) const {
     assert(_shader);
-    auto view{registry.view<PointLight, RelativeTransform>()};
+    const auto view{registry.view<PointLight, RelativeTransform>()};
 
     view.each([this, &cameraTransform = std::as_const(cameraTransform)](const PointLight& pointLight, const RelativeTransform& relativeTransform) {
         const auto invertedCameraTransform{cameraTransform.Invert()};
@@ -139,7 +139,7 @@ void SceneRenderPass::_drawPointLights(const Transform& cameraTransform, entt::r
 
 void SceneRenderPass::_drawDirectionalLights(const Transform& cameraTransform, entt::registry& registry) const {
     assert(_shader);
-    auto view{registry.view<DirectionalLight>()};
+    const auto view{registry.view<DirectionalLight>()};
 
     view.each([this, &cameraTransform = std::as_const(cameraTransform)](const DirectionalLight& dirLight) {
         const auto invertedCameraTransform{cameraTransform.Invert()};
