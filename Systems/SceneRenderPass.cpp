@@ -15,29 +15,29 @@
 
 namespace {
 
-    void DrawMesh(const std::vector<Transform>& instanceTransforms, const MeshGpuData& gpuData, const std::vector<uint32_t>& indices) {
-        // This should somehow optimized by using AOS instead of SOA
-        std::vector<InstanceData> instanceData{};
-        instanceData.reserve(instanceTransforms.size());
-        for (const auto& t : instanceTransforms) {
-            instanceData.push_back({
-                t.Position,
-                t.Scale,
-                glm::vec4{t.Rotation.x, t.Rotation.y, t.Rotation.z, t.Rotation.w},
-            });
-        }
-
-        const auto dataSize{static_cast<GLsizeiptr>(instanceData.size() * sizeof(InstanceData))};
-        glNamedBufferData(gpuData.InstanceVbo, dataSize, instanceData.data(), GL_DYNAMIC_DRAW);
-
-        glBindVertexArray(gpuData.Vao);
-        glDrawElementsInstanced(GL_TRIANGLES,
-                                static_cast<GLsizei>(indices.size()),
-                                GL_UNSIGNED_INT,
-                                nullptr,
-                                static_cast<GLsizei>(instanceTransforms.size()));
-        glBindVertexArray(0);
+void DrawMesh(const std::vector<Transform>& instanceTransforms, const MeshGpuData& gpuData, const std::vector<uint32_t>& indices) {
+    // This should somehow optimized by using AOS instead of SOA
+    std::vector<InstanceData> instanceData{};
+    instanceData.reserve(instanceTransforms.size());
+    for (const auto& t : instanceTransforms) {
+        instanceData.push_back({
+            t.Position,
+            t.Scale,
+            glm::vec4{t.Rotation.x, t.Rotation.y, t.Rotation.z, t.Rotation.w},
+        });
     }
+
+    const auto dataSize{static_cast<GLsizeiptr>(instanceData.size() * sizeof(InstanceData))};
+    glNamedBufferData(gpuData.InstanceVbo, dataSize, instanceData.data(), GL_DYNAMIC_DRAW);
+
+    glBindVertexArray(gpuData.Vao);
+    glDrawElementsInstanced(GL_TRIANGLES,
+                            static_cast<GLsizei>(indices.size()),
+                            GL_UNSIGNED_INT,
+                            nullptr,
+                            static_cast<GLsizei>(instanceTransforms.size()));
+    glBindVertexArray(0);
+}
 
 }
 

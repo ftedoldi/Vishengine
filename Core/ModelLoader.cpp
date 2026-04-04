@@ -18,16 +18,16 @@
 
 namespace {
 
-    Transform DecomposeMatrixIntoTransform(const aiMatrix4x4& transformMatrix) {
-        aiVector3D aiScaling{};
-        aiVector3D aiTranslation{};
-        aiQuaternion aiRotation{};
-        transformMatrix.Decompose(aiScaling, aiRotation, aiTranslation);
+Transform DecomposeMatrixIntoTransform(const aiMatrix4x4& transformMatrix) {
+    aiVector3D aiScaling{};
+    aiVector3D aiTranslation{};
+    aiQuaternion aiRotation{};
+    transformMatrix.Decompose(aiScaling, aiRotation, aiTranslation);
 
-        return Transform{{aiTranslation.x, aiTranslation.y, aiTranslation.z},
-            {aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w},
-            (aiScaling.x + aiScaling.y + aiScaling.z) / 3.f};
-    }
+    return Transform{{aiTranslation.x, aiTranslation.y, aiTranslation.z},
+        {aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w},
+        (aiScaling.x + aiScaling.y + aiScaling.z) / 3.f};
+}
 
 }
 

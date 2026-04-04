@@ -1,5 +1,6 @@
 #include "SpatialSystem.h"
 
+#include "Components/OctreeLocation.h"
 #include "DataStructures/Octree.h"
 
 SpatialSystem::SpatialSystem(entt::dispatcher& sceneDispatcher) {
@@ -13,11 +14,13 @@ void SpatialSystem::Update(entt::registry& registry) {
 
 void SpatialSystem::_onTransformUpdated(const GameEvents::TransformUpdatedEvent transformUpdatedEvent) {
     // TODO: use a custom allocator here
-    _entities.push_back(transformUpdatedEvent.entity);
+    _entities.insert(transformUpdatedEvent.entity);
 }
 
 void SpatialSystem::_updateOctree(entt::registry& registry) const {
     for (const auto entity : _entities) {
-        //Octree::Update(entity, registry);
+        if (registry.try_get<OctreeLocation>(entity)) {
+            Octree::Update(entity, registry);
+        }
     }
 }

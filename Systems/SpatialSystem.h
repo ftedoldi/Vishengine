@@ -3,6 +3,7 @@
 #include "Events/GameEvents.h"
 
 #include <entt/entt.hpp>
+#include <unordered_set>
 
 class SpatialSystem {
 public:
@@ -15,5 +16,5 @@ private:
 
     void _updateOctree(entt::registry& registry) const;
 
-    std::vector<entt::entity> _entities{};
+    std::unordered_set<entt::entity> _entities{};
 };

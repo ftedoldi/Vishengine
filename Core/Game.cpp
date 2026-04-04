@@ -56,7 +56,7 @@ Game::Game() {
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWWindow(), sceneFrameBuffer, assetsRoot);
 
     ModelLoader modelLoader{_registry, meshController, materialController};
-    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/VeneziaTex.glb");
+    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/hierarchy.glb");
 
     // Build the octree and fill it.
     //_octreeRootNode = Octree::Build(_registry);
@@ -85,10 +85,12 @@ void Game::Update() {
         _cameraSystem.Update(_registry);
 
         _editorCameraMoveSystem->Update(Time::GetDeltaTime(), _registry);
-
-        _spatialSystem->Update(_registry);
-
         static int prova = 0;
+
+        if (prova != 0)
+            _spatialSystem->Update(_registry);
+
+
         if (prova == 0) {
             _octreeRootNode = Octree::Build(_registry);
             _debugRenderPass->SetOctreeRootNode(_octreeRootNode.get());

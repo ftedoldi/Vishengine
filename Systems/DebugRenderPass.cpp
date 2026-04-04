@@ -20,78 +20,78 @@
 //   out      – destination buffer
 namespace {
 
-    void AppendCircle(const glm::vec3& center,
-                         const float radius,
-                         const glm::vec3& axis0,
-                         const glm::vec3& axis1,
-                         const int segments,
-                         std::vector<glm::vec3>& out) {
-        const float step{glm::two_pi<float>() / static_cast<float>(segments)};
-        for (int i = 0; i < segments; ++i) {
-            const float a0{step * static_cast<float>(i)};
-            const float a1{step * static_cast<float>(i + 1)};
+void AppendCircle(const glm::vec3& center,
+                     const float radius,
+                     const glm::vec3& axis0,
+                     const glm::vec3& axis1,
+                     const int segments,
+                     std::vector<glm::vec3>& out) {
+    const float step{glm::two_pi<float>() / static_cast<float>(segments)};
+    for (int i = 0; i < segments; ++i) {
+        const float a0{step * static_cast<float>(i)};
+        const float a1{step * static_cast<float>(i + 1)};
 
-            const glm::vec3 p0{center + radius * (glm::cos(a0) * axis0 + glm::sin(a0) * axis1)};
-            const glm::vec3 p1{center + radius * (glm::cos(a1) * axis0 + glm::sin(a1) * axis1)};
+        const glm::vec3 p0{center + radius * (glm::cos(a0) * axis0 + glm::sin(a0) * axis1)};
+        const glm::vec3 p1{center + radius * (glm::cos(a1) * axis0 + glm::sin(a1) * axis1)};
 
-            out.push_back(p0);
-            out.push_back(p1);
-        }
+        out.push_back(p0);
+        out.push_back(p1);
+    }
+}
+
+// Append the 12 edges (24 vertices) of an axis-aligned box defined by min/max corners.
+std::vector<glm::vec3> AppendBox(const glm::vec3& min, const glm::vec3& max) {
+    std::vector<glm::vec3> out{};
+    // 8 corners of the box
+    const glm::vec3 corners[8] = {
+        {min.x, min.y, min.z},
+        {max.x, min.y, min.z},
+        {max.x, max.y, min.z},
+        {min.x, max.y, min.z},
+        {min.x, min.y, max.z},
+        {max.x, min.y, max.z},
+        {max.x, max.y, max.z},
+        {min.x, max.y, max.z},
+    };
+
+    // 12 edges as index pairs
+    constexpr int edges[12][2] = {
+        {0, 1}, {1, 2}, {2, 3}, {3, 0}, // bottom face
+        {4, 5}, {5, 6}, {6, 7}, {7, 4}, // top face
+        {0, 4}, {1, 5}, {2, 6}, {3, 7}, // vertical edges
+    };
+
+    for (const auto& edge : edges) {
+        out.push_back(corners[edge[0]]);
+        out.push_back(corners[edge[1]]);
     }
 
-    // Append the 12 edges (24 vertices) of an axis-aligned box defined by min/max corners.
-    std::vector<glm::vec3> AppendBox(const glm::vec3& min, const glm::vec3& max) {
-        std::vector<glm::vec3> out{};
-        // 8 corners of the box
-        const glm::vec3 corners[8] = {
-            {min.x, min.y, min.z},
-            {max.x, min.y, min.z},
-            {max.x, max.y, min.z},
-            {min.x, max.y, min.z},
-            {min.x, min.y, max.z},
-            {max.x, min.y, max.z},
-            {max.x, max.y, max.z},
-            {min.x, max.y, max.z},
-        };
+    return out;
+}
 
-        // 12 edges as index pairs
-        constexpr int edges[12][2] = {
-            {0, 1}, {1, 2}, {2, 3}, {3, 0}, // bottom face
-            {4, 5}, {5, 6}, {6, 7}, {7, 4}, // top face
-            {0, 4}, {1, 5}, {2, 6}, {3, 7}, // vertical edges
-        };
-
-        for (const auto& edge : edges) {
-            out.push_back(corners[edge[0]]);
-            out.push_back(corners[edge[1]]);
-        }
-
-        return out;
+// Recursively collect box line vertices for all octree nodes.
+void CollectOctreeBoxes(const Octree::Node* node,
+                        const Transform& viewTransform,
+                        std::vector<glm::vec3>& out) {
+    if (!node) {
+        return;
     }
 
-    // Recursively collect box line vertices for all octree nodes.
-    void CollectOctreeBoxes(const Octree::Node* node,
-                            const Transform& viewTransform,
-                            std::vector<glm::vec3>& out) {
-        if (!node) {
-            return;
-        }
+    const glm::vec3 worldMin{node->Center - glm::vec3{node->HalfWidth}};
+    const glm::vec3 worldMax{node->Center + glm::vec3{node->HalfWidth}};
 
-        const glm::vec3 worldMin{node->Center - glm::vec3{node->HalfWidth}};
-        const glm::vec3 worldMax{node->Center + glm::vec3{node->HalfWidth}};
+    auto res = AppendBox(worldMin, worldMax);
+    std::ranges::for_each(res, [&viewTransform = std::as_const(viewTransform)](glm::vec3& point) {
+        point = viewTransform.TransformPosition(point);
+    });
 
-        auto res = AppendBox(worldMin, worldMax);
-        std::ranges::for_each(res, [&viewTransform = std::as_const(viewTransform)](glm::vec3& point) {
-            point = viewTransform.TransformPosition(point);
-        });
-
-        out.insert(out.begin(), res.cbegin(), res.cend());
+    out.insert(out.begin(), res.cbegin(), res.cend());
 
 
-        for (const auto& child : node->Children) {
-            CollectOctreeBoxes(child.get(), viewTransform, out);
-        }
+    for (const auto& child : node->Children) {
+        CollectOctreeBoxes(child.get(), viewTransform, out);
     }
+}
 
 }
 
@@ -132,9 +132,9 @@ void DebugRenderPass::Execute() {
         _drawBoundingBox();
     }
 
-    if (_inputManager->IsKeyPressed(GLFW_KEY_O)) {
+    //if (_inputManager->IsKeyPressed(GLFW_KEY_O)) {
         _drawOctree();
-    }
+    //}
 }
 
 void DebugRenderPass::_drawBoundingSpheres() const {

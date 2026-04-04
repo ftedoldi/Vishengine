@@ -14,6 +14,9 @@ namespace Octree {
 
 namespace {
 
+// Node boxes are 50% bigger
+constexpr float LOOSE_FACTOR{1.5f};
+
 /**
  * \brief Preallocates an octree down to a specific depth.
  * \param center The center of the root node.
@@ -26,7 +29,7 @@ std::unique_ptr<Node> BuildOctreeNodes(const glm::vec3 center, const float halfW
         return nullptr;
     }
 
-    auto node{std::make_unique<Node>(center, halfWidth)};
+    auto node{std::make_unique<Node>(center, halfWidth * LOOSE_FACTOR)};
 
     glm::vec3 offset{};
     const float step{halfWidth * 0.5f};
@@ -36,7 +39,7 @@ std::unique_ptr<Node> BuildOctreeNodes(const glm::vec3 center, const float halfW
         offset.x = ((i & 1) ? step : -step);
         offset.y = ((i & 2) ? step : -step);
         offset.z = ((i & 4) ? step : -step);
-        node->Children[i] = BuildOctreeNodes(center + offset, step, stopDepth - 1);
+        node->Children[i] = BuildOctreeNodes((center + offset), step * LOOSE_FACTOR, stopDepth - 1);
         if (node->Children[i]) {
             node->Children[i]->Parent = node.get();
         }
@@ -46,11 +49,10 @@ std::unique_ptr<Node> BuildOctreeNodes(const glm::vec3 center, const float halfW
 }
 
 bool ContainsBBox(const Node* const node, const Box& box) {
-    if (const Box octreeNodeBox{node->Center, node->HalfWidth}; !octreeNodeBox.Intersect(box)) {
-        return true;
-    }
-
-    return false;
+    const Box octreeNodeBox{node->Center, node->HalfWidth};
+    return (box.Min.x >= octreeNodeBox.Min.x && box.Max.x <= octreeNodeBox.Max.x &&
+            box.Min.y >= octreeNodeBox.Min.y && box.Max.y <= octreeNodeBox.Max.y &&
+            box.Min.z >= octreeNodeBox.Min.z && box.Max.z <= octreeNodeBox.Max.z);
 }
 
 }
@@ -73,7 +75,7 @@ std::unique_ptr<Node> Build(entt::registry& registry) {
 
     const auto size{sceneBoundingBox.GetSize()};
     const auto width{glm::max(size.x, glm::max(size.y, size.z))};
-    auto rootNode{BuildOctreeNodes(sceneBoundingBox.GetCenter(), width * 0.5f, 1)};
+    auto rootNode{BuildOctreeNodes(sceneBoundingBox.GetCenter(), width * 0.5f, 3)};
 
     const auto meshNodeView{registry.view<MeshNodeTag>()};
     for (const auto meshEntity : meshNodeView) {
@@ -93,14 +95,15 @@ void InsertEntity(Node* const node, const entt::entity entity, entt::registry& r
     const auto worldSpaceCenter{worldTransform.TransformPosition(center)};
     const auto worldSpaceRadius{worldTransform.Scale * radius};
 
-    int32_t index{0}, straddle{0};
+    bool straddle{};
+    int32_t index{};
     // Compute the octant number [0, 7] the entity bounding sphere is in.
     // If straddling any of the dividing x, y, z planes, exit.
     for (int32_t i{0}; i < 3; ++i) {
         // For each coordinate check if there is a straddling between the node and the geometry.
         const float delta{worldSpaceCenter[i] - node->Center[i]};
-        if (std::abs(delta) < node->HalfWidth + worldSpaceRadius) {
-            straddle = 1;
+        if (std::abs(delta) < worldSpaceRadius) {
+            straddle = true;
             break;
         }
 
@@ -110,12 +113,12 @@ void InsertEntity(Node* const node, const entt::entity entity, entt::registry& r
     }
 
     if (!straddle && node->Children[index]) {
-        node->Children[index]->Parent = node;
         // TODO: maybe add here that if a child is null it gets created
         InsertEntity(node->Children[index].get(), entity, registry);
     } else {
         // If the entity is straddling in any of the dividing axes, add the entity on the current node.
         node->Entities.push_back(entity);
+        registry.get<OctreeLocation>(entity).Node = node;
     }
 }
 

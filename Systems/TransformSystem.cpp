@@ -8,19 +8,19 @@
 
 namespace {
 
-    Transform GetOrComputeWorldTransform(const entt::entity entity, entt::registry& registry) {
-        const auto relativeTransform{registry.get<RelativeTransform>(entity).Value};
-        auto finalTransform{relativeTransform};
+Transform GetOrComputeWorldTransform(const entt::entity entity, entt::registry& registry) {
+    const auto relativeTransform{registry.get<RelativeTransform>(entity).Value};
+    auto finalTransform{relativeTransform};
 
-        if (registry.all_of<Relationship>(entity)) {
-            if (const auto parentEntity{registry.get<Relationship>(entity).Parent}; parentEntity != entt::null) {
-                const auto parentWorld{GetOrComputeWorldTransform(parentEntity, registry)};
-                finalTransform = parentWorld.Cumulate(relativeTransform);
-            }
+    if (registry.all_of<Relationship>(entity)) {
+        if (const auto parentEntity{registry.get<Relationship>(entity).Parent}; parentEntity != entt::null) {
+            const auto parentWorld{GetOrComputeWorldTransform(parentEntity, registry)};
+            finalTransform = parentWorld.Cumulate(relativeTransform);
         }
-
-        return finalTransform;
     }
+
+    return finalTransform;
+}
 
 }
 
