@@ -2,7 +2,6 @@
 
 #include "Box.h"
 #include "Components/BoundingBox.h"
-#include "Components/BoundingSphere.h"
 #include "Components/MeshNodeTag.h"
 #include "Components/OctreeLocation.h"
 #include "Components/Transforms/WorldTransform.h"
@@ -11,6 +10,7 @@
 #include "glm/common.hpp"
 
 namespace OC {
+
 namespace {
 
 // Node boxes are 50% bigger
