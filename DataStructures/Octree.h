@@ -13,7 +13,7 @@ struct Node {
     glm::vec3 Center{};
 
     // The half width of the octree node volume.
-    float HalfWidth{};
+    glm::vec3 HalfWidth{};
 
     // The parent node.
     Node* Parent{};

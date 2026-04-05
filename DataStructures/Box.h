@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Math/Math.h"
 #include "glm/vec3.hpp"
 
 struct Box {
@@ -71,6 +72,12 @@ struct Box {
         }
 
         return true;
+    }
+
+    [[nodiscard]] bool Contains(const Box& other) const {
+        return Math::IsGreaterOrEqual(Min.x, other.Min.x) && Math::IsLesserOrEqual(Max.x, other.Max.x) &&
+            Math::IsGreaterOrEqual(Min.y, other.Min.y) && Math::IsLesserOrEqual(Max.y, other.Max.y) &&
+            Math::IsGreaterOrEqual(Min.z, other.Min.z) && Math::IsLesserOrEqual(Max.z, other.Max.z);
     }
 
 };
