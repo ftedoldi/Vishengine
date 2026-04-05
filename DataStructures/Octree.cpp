@@ -10,8 +10,7 @@
 #include "entt/entity/registry.hpp"
 #include "glm/common.hpp"
 
-namespace Octree {
-
+namespace OC {
 namespace {
 
 // Node boxes are 50% bigger
@@ -34,7 +33,10 @@ void BuildOctreeNodes(Node* parentNode, const glm::vec3 center, const glm::vec3 
 
 }
 
-std::unique_ptr<Node> Build(entt::registry& registry) {
+}
+
+void Octree::Init(entt::registry& registry, int32_t maxDepth) {
+    _maxDepth = maxDepth;
     Box sceneBoundingBox{glm::vec3{std::numeric_limits<float>::max()}, glm::vec3{std::numeric_limits<float>::lowest()}};
 
     const auto boundingBoxView{registry.view<BoundingBox, WorldTransform>()};
@@ -50,19 +52,19 @@ std::unique_ptr<Node> Build(entt::registry& registry) {
         });
     }
 
-    auto rootNode{std::make_unique<Node>(sceneBoundingBox.GetCenter(), sceneBoundingBox.GetExtent()/* * LOOSE_FACTOR*/)};
+    auto rootNode{std::make_unique<OC::Node>(sceneBoundingBox.GetCenter(), sceneBoundingBox.GetExtent()/* * LOOSE_FACTOR*/)};
 
     const auto meshNodeView{registry.view<MeshNodeTag>()};
     for (const auto meshEntity : meshNodeView) {
         // Each mesh that participates in the octree should save the pointer to the nodes it is contained.
         registry.emplace<OctreeLocation>(meshEntity);
-        InsertEntity(rootNode.get(), meshEntity, registry);
+        InsertEntity(rootNode.get(), meshEntity, registry, maxDepth);
     }
 
-    return rootNode;
+    _rootNode = std::move(rootNode);
 }
 
-void InsertEntity(Node* const node, const entt::entity entity, entt::registry& registry) {
+void Octree::InsertEntity(OC::Node* const node, const entt::entity entity, entt::registry& registry, int32_t maxDepth) {
     assert(node);
     const auto& [localMin, localMax]{registry.get<BoundingBox>(entity).Box};
     const auto& worldTransform{registry.get<WorldTransform>(entity).Value};
@@ -79,7 +81,7 @@ void InsertEntity(Node* const node, const entt::entity entity, entt::registry& r
     for (int32_t i{0}; i < 3; ++i) {
         // For each coordinate check if there is a straddling between the node and the geometry.
         const float delta{worldSpaceCenter[i] - node->Center[i]};
-        if (std::abs(delta) < worldSpaceExtent[i] || std::abs(delta) + worldSpaceExtent[i] > node->HalfWidth[i]) {
+        if (std::abs(delta) < worldSpaceExtent[i]/* || std::abs(delta) + worldSpaceExtent[i] > node->HalfWidth[i]*/) {
             straddle = true;
             break;
         }
@@ -92,10 +94,11 @@ void InsertEntity(Node* const node, const entt::entity entity, entt::registry& r
     if (!straddle) {
         // Se non sta straddlando significa che l'entity e' completamente contenuta in un nodo figlio
         // creo dunque gli 8 figli e richiamo questa funzione
-        if (!node->Children[0]) {
-            BuildOctreeNodes(node, node->Center, node->HalfWidth);
+        if (!node->Children[0] && _maxDepth > -1) {
+            OC::BuildOctreeNodes(node, node->Center, node->HalfWidth);
+            _maxDepth--;
         }
-        InsertEntity(node->Children[index].get(), entity, registry);
+        InsertEntity(node->Children[index].get(), entity, registry, maxDepth);
     } else {
         // If the entity is straddling in any of the dividing axes, add the entity on the current node.
         node->Entities.push_back(entity);
@@ -103,7 +106,7 @@ void InsertEntity(Node* const node, const entt::entity entity, entt::registry& r
     }
 }
 
-void Update(const entt::entity entity, entt::registry& registry) {
+void Octree::Update(const entt::entity entity, entt::registry& registry) {
     const auto& localSpaceBoundingBox{registry.get<BoundingBox>(entity).Box};
     const auto& worldTransform{registry.get<WorldTransform>(entity).Value};
     const Box entityWorldSpaceBoundingBox{worldTransform.TransformPosition(localSpaceBoundingBox.Min), worldTransform.TransformPosition(localSpaceBoundingBox.Max)};
@@ -111,20 +114,34 @@ void Update(const entt::entity entity, entt::registry& registry) {
     auto* const oldNode{registry.get<OctreeLocation>(entity).Node};
     auto* octreeNode{oldNode};
     assert(octreeNode);
-    const Box octreeNodeBox{octreeNode->Center, octreeNode->HalfWidth};
+    Box octreeNodeBox{octreeNode->Center, octreeNode->HalfWidth};
+    bool isRoot{};
     while (!octreeNodeBox.Contains(entityWorldSpaceBoundingBox)) {
         // If we are at the root node, exit the loop and use the root node as starting point to insert the new entity.
         if (!octreeNode->Parent) {
+            isRoot = true;
             break;
         }
 
         octreeNode = octreeNode->Parent;
+        octreeNodeBox = {octreeNode->Center, octreeNode->HalfWidth};
+    }
+
+    if (isRoot) {
+        // If we are in the root node, we check if the entity bounding box is contained in it. If true we don't have to expand the octree
+        // otherwise we have to expand it to encapsulate the new entity.
+        if (!octreeNodeBox.Contains(entityWorldSpaceBoundingBox)) {
+            int x = 0;
+        }
     }
 
     const auto removedElementsNum{oldNode->Entities.remove(entity)};
     assert(removedElementsNum == 1);
 
-    InsertEntity(octreeNode, entity, registry);
+    InsertEntity(octreeNode, entity, registry, _maxDepth);
 }
 
-} // namespace Octree
+OC::Node* Octree::GetRootNode() const {
+    return _rootNode.get();
+}
+

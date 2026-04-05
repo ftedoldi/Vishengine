@@ -41,13 +41,11 @@ private:
 
     std::unique_ptr<GUIDrawer> _guiDrawer{};
 
-    std::unique_ptr<Octree::Node> _octreeRootNode{};
+    std::unique_ptr<Octree> _octree{};
 
     std::unique_ptr<TransformSystem> _transformSystem{};
 
     std::unique_ptr<SpatialSystem> _spatialSystem{};
-
-    DebugRenderPass* _debugRenderPass{};
 
     CameraSystem _cameraSystem{};
 

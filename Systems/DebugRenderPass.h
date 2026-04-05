@@ -26,7 +26,7 @@ public:
      * @param registry The ECS registry.
      * @param segments Number of line segments used to approximate each circle (default 64).
      */
-    DebugRenderPass(Octree::Node* octreeRootNode,
+    DebugRenderPass(Octree* octree,
                     InputManager* inputManager,
                     std::unique_ptr<Shader> shader,
                     entt::registry& registry,
@@ -36,8 +36,6 @@ public:
 
     void Execute() override;
 
-    void SetOctreeRootNode(Octree::Node* node) { _octreeRootNode = node; }
-
 private:
     void _drawBoundingSpheres() const;
 
@@ -45,7 +43,7 @@ private:
 
     void _drawOctree() const;
 
-    Octree::Node* _octreeRootNode{};
+    Octree* _octree{};
 
     InputManager* _inputManager{};
 

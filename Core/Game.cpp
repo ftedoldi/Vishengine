@@ -56,19 +56,19 @@ Game::Game() {
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWWindow(), sceneFrameBuffer, assetsRoot);
 
     ModelLoader modelLoader{_registry, meshController, materialController};
-    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/hierarchy.glb");
+    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/testOctree.glb");
 
     // Build the octree and fill it.
     //_octreeRootNode = Octree::Build(_registry);
 
+    _octree = std::make_unique<Octree>();
     auto debugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
-    auto debugRenderPass{std::make_unique<DebugRenderPass>(_octreeRootNode.get(), _inputManager.get(), std::move(debugShader), _registry)};
-    _debugRenderPass = debugRenderPass.get();
+    auto debugRenderPass{std::make_unique<DebugRenderPass>(_octree.get(), _inputManager.get(), std::move(debugShader), _registry)};
     _rendererSystem->AddPass(std::move(debugRenderPass));
 
     _transformSystem = std::make_unique<TransformSystem>(_dispatcher);
 
-    _spatialSystem = std::make_unique<SpatialSystem>(_dispatcher);
+    _spatialSystem = std::make_unique<SpatialSystem>(_octree.get(), _registry, _dispatcher);
 
     _addLight();
 }
@@ -85,17 +85,6 @@ void Game::Update() {
         _cameraSystem.Update(_registry);
 
         _editorCameraMoveSystem->Update(Time::GetDeltaTime(), _registry);
-        static int prova = 0;
-
-        if (prova != 0)
-            _spatialSystem->Update(_registry);
-
-
-        if (prova == 0) {
-            _octreeRootNode = Octree::Build(_registry);
-            _debugRenderPass->SetOctreeRootNode(_octreeRootNode.get());
-            prova = 1;
-        }
 
         // ── Render frame ──────────────────────────────────────────────────
         // 1. Clear the default framebuffer and start the ImGui frame.

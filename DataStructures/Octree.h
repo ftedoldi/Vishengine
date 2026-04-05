@@ -5,8 +5,7 @@
 
 #include <list>
 
-namespace Octree {
-
+namespace OC {
 // Each node of the octree can contain a full mesh. If the mesh is split between two nodes it will be put on the parent node.
 struct Node {
     // The center point of the octree node.
@@ -25,10 +24,20 @@ struct Node {
     std::list<entt::entity> Entities{};
 };
 
-std::unique_ptr<Node> Build(entt::registry& registry);
-
-void InsertEntity(Node* node, entt::entity entity, entt::registry& registry);
-
-void Update(entt::entity entity, entt::registry& registry);
-
 }
+
+class Octree {
+public:
+    void Init(entt::registry& registry, int32_t maxDepth);
+
+    void InsertEntity(OC::Node* node, entt::entity entity, entt::registry& registry, int32_t maxDepth);
+
+    void Update(entt::entity entity, entt::registry& registry);
+
+    [[nodiscard]] OC::Node* GetRootNode() const;
+
+private:
+    int32_t _maxDepth{};
+
+    std::unique_ptr<OC::Node> _rootNode{};
+};

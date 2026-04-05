@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DataStructures/Octree.h"
 #include "Events/GameEvents.h"
 
 #include <entt/entt.hpp>
@@ -7,14 +8,22 @@
 
 class SpatialSystem {
 public:
-    SpatialSystem(entt::dispatcher& sceneDispatcher);
+    SpatialSystem(Octree* octree, entt::registry& registry, entt::dispatcher& sceneDispatcher);
 
     void Update(entt::registry& registry);
 
 private:
-    void _onTransformUpdated(GameEvents::TransformUpdatedEvent transformUpdatedEvent);
+    void _onTransformUpdated(GameEvents::TransformUpdated transformUpdatedEvent);
 
     void _updateOctree(entt::registry& registry) const;
 
+    void _initOctree(GameEvents::AllTransformsUpdated allTransformsUpdated);
+
     std::unordered_set<entt::entity> _entities{};
+
+    Octree* _octree{};
+
+    entt::registry& _registry;
+
+    entt::dispatcher& _sceneDispatcher;
 };

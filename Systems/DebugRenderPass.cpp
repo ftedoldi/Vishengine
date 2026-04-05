@@ -70,7 +70,7 @@ std::vector<glm::vec3> AppendBox(const glm::vec3& min, const glm::vec3& max) {
 }
 
 // Recursively collect box line vertices for all octree nodes.
-void CollectOctreeBoxes(const Octree::Node* node,
+void CollectOctreeBoxes(const OC::Node* node,
                         const Transform& viewTransform,
                         std::vector<glm::vec3>& out) {
     if (!node) {
@@ -95,12 +95,12 @@ void CollectOctreeBoxes(const Octree::Node* node,
 
 }
 
-DebugRenderPass::DebugRenderPass(Octree::Node* const  octreeRootNode,
+DebugRenderPass::DebugRenderPass(Octree* const octree,
                                  InputManager* const inputManager,
                                  std::unique_ptr<Shader> shader,
                                  entt::registry& registry,
                                  const int segments)
-    : _octreeRootNode{octreeRootNode}
+    : _octree{octree}
     , _inputManager{inputManager}
     , _shader{std::move(shader)}
     , _registry{registry}
@@ -228,8 +228,6 @@ void DebugRenderPass::_drawBoundingBox() const {
 }
 
 void DebugRenderPass::_drawOctree() const {
-    assert(_octreeRootNode);
-
     const auto cameraView{_registry.view<Camera, WorldTransform, EditorCameraTag>()};
 
     for (const auto& [cameraEntity, camera, cameraWorldTransform] : cameraView.each()) {
@@ -243,7 +241,7 @@ void DebugRenderPass::_drawOctree() const {
         std::vector<glm::vec3> lineVertices{};
         lineVertices.reserve(24 * 64);
 
-        CollectOctreeBoxes(_octreeRootNode, camera.ViewTransform, lineVertices);
+        CollectOctreeBoxes(_octree->GetRootNode(), camera.ViewTransform, lineVertices);
 
         if (lineVertices.empty()) {
             return;

@@ -36,6 +36,8 @@ void TransformSystem::Update(entt::registry& registry) const {
             shouldUpdateTransform = false;
         }
     }
+
+    _eventDispatcher.trigger<GameEvents::AllTransformsUpdated>();
 }
 
 void TransformSystem::_updateTransform(const entt::entity entity, entt::registry& registry) const {
@@ -44,7 +46,7 @@ void TransformSystem::_updateTransform(const entt::entity entity, entt::registry
     const auto worldTransform{GetOrComputeWorldTransform(entity, registry)};
     auto& worldTransformComponent{registry.get<WorldTransform>(entity).Value};
     worldTransformComponent = worldTransform;
-    _eventDispatcher.trigger<GameEvents::TransformUpdatedEvent>({entity});
+    _eventDispatcher.trigger<GameEvents::TransformUpdated>({entity});
 
     for (uint32_t i{0}; i < relationship.Size; ++i) {
         _updateTransform(relationship.Children[i], registry);
