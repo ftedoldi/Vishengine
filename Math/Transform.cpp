@@ -21,7 +21,7 @@ Transform Transform::Invert() const {
 
 glm::vec3 Transform::TransformPosition(const glm::vec3 position) const {
     // 1. Scale (Multiply components)
-    glm::vec3 scaledPoint{position.x * Scale,
+    const glm::vec3 scaledPoint{position.x * Scale,
         position.y * Scale,
         position.z * Scale};
 

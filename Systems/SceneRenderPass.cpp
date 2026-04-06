@@ -15,29 +15,29 @@
 
 namespace {
 
-    void DrawMesh(const std::vector<Transform>& instanceTransforms, const MeshGpuData& gpuData, const std::vector<uint32_t>& indices) {
-        // This should somehow optimized by using AOS instead of SOA
-        std::vector<InstanceData> instanceData{};
-        instanceData.reserve(instanceTransforms.size());
-        for (const auto& t : instanceTransforms) {
-            instanceData.push_back({
-                t.Position,
-                t.Scale,
-                glm::vec4{t.Rotation.x, t.Rotation.y, t.Rotation.z, t.Rotation.w},
-            });
-        }
-
-        const auto dataSize{static_cast<GLsizeiptr>(instanceData.size() * sizeof(InstanceData))};
-        glNamedBufferData(gpuData.InstanceVbo, dataSize, instanceData.data(), GL_DYNAMIC_DRAW);
-
-        glBindVertexArray(gpuData.Vao);
-        glDrawElementsInstanced(GL_TRIANGLES,
-                                static_cast<GLsizei>(indices.size()),
-                                GL_UNSIGNED_INT,
-                                nullptr,
-                                static_cast<GLsizei>(instanceTransforms.size()));
-        glBindVertexArray(0);
+void DrawMesh(const std::vector<Transform>& instanceTransforms, const MeshGpuData& gpuData, const std::vector<uint32_t>& indices) {
+    // This should somehow optimized by using AOS instead of SOA
+    std::vector<InstanceData> instanceData{};
+    instanceData.reserve(instanceTransforms.size());
+    for (const auto& t : instanceTransforms) {
+        instanceData.push_back({
+            t.Position,
+            t.Scale,
+            glm::vec4{t.Rotation.x, t.Rotation.y, t.Rotation.z, t.Rotation.w},
+        });
     }
+
+    const auto dataSize{static_cast<GLsizeiptr>(instanceData.size() * sizeof(InstanceData))};
+    glNamedBufferData(gpuData.InstanceVbo, dataSize, instanceData.data(), GL_DYNAMIC_DRAW);
+
+    glBindVertexArray(gpuData.Vao);
+    glDrawElementsInstanced(GL_TRIANGLES,
+                            static_cast<GLsizei>(indices.size()),
+                            GL_UNSIGNED_INT,
+                            nullptr,
+                            static_cast<GLsizei>(instanceTransforms.size()));
+    glBindVertexArray(0);
+}
 
 }
 
@@ -60,6 +60,7 @@ void SceneRenderPass::_render() const {
     _shader->UseProgram();
 
     const auto allMeshView{_registry.view<Mesh, Relationship>()};
+    // TODO: unordered map is bad for cache locality check if this is source of bottleneck
     std::unordered_map<uint32_t, std::vector<Transform>> transformsByMeshID{};
     for (const auto& [meshEntity, mesh, relationship] : allMeshView.each()) {
         const auto& worldTransform{_registry.get<WorldTransform>(relationship.Parent).Value};
@@ -68,7 +69,7 @@ void SceneRenderPass::_render() const {
 
     // Loop only on the actual meshes (not the instances).
     const auto actualMeshView{_registry.view<Mesh, Relationship>(entt::exclude<InstancedMeshTag>)};
-    auto cameraView{_registry.view<Camera, WorldTransform, EditorCameraTag>()};
+    const auto cameraView{_registry.view<Camera, WorldTransform, EditorCameraTag>()};
     for (const auto& [cameraEntity, camera, worldTransform] : cameraView.each()) {
         _shader->SetUniformMat4("Perspective", camera.ProjectionMatrix);
 
@@ -119,7 +120,7 @@ void SceneRenderPass::_drawLights(const Transform& cameraTransform, entt::regist
 
 void SceneRenderPass::_drawPointLights(const Transform& cameraTransform, entt::registry& registry) const {
     assert(_shader);
-    auto view{registry.view<PointLight, RelativeTransform>()};
+    const auto view{registry.view<PointLight, RelativeTransform>()};
 
     view.each([this, &cameraTransform = std::as_const(cameraTransform)](const PointLight& pointLight, const RelativeTransform& relativeTransform) {
         const auto invertedCameraTransform{cameraTransform.Invert()};
@@ -138,7 +139,7 @@ void SceneRenderPass::_drawPointLights(const Transform& cameraTransform, entt::r
 
 void SceneRenderPass::_drawDirectionalLights(const Transform& cameraTransform, entt::registry& registry) const {
     assert(_shader);
-    auto view{registry.view<DirectionalLight>()};
+    const auto view{registry.view<DirectionalLight>()};
 
     view.each([this, &cameraTransform = std::as_const(cameraTransform)](const DirectionalLight& dirLight) {
         const auto invertedCameraTransform{cameraTransform.Invert()};

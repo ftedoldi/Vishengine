@@ -65,9 +65,12 @@ file(GLOB PROJECT_HEADERS
         Components/*.h
         Components/Camera/*.h
         Components/Lights/*.h
+        Components/Transforms/*.h
         Systems/*.h
         Mesh/*.h
         InputManager/*.h
+        Events/*.h
+        DataStructures/*.h
 )
 
 file(GLOB PROJECT_SOURCES
@@ -82,9 +85,12 @@ file(GLOB PROJECT_SOURCES
         Components/*.cpp
         Components/Camera/*.cpp
         Components/Lights/*.cpp
+        Components/Transforms/*.cpp
         Systems/*.cpp
         Mesh/*.cpp
         InputManager/*.cpp
+        Events/*.cpp
+        DataStructures/*.cpp
         ./*.cpp
 )
 

@@ -1,5 +1,6 @@
 #include "ModelLoader.h"
 
+#include "Components/BoundingBox.h"
 #include "Components/BoundingSphere.h"
 #include "Components/InstancedMeshTag.h"
 #include "Components/MeshNodeTag.h"
@@ -8,6 +9,7 @@
 #include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/TransformDirtyFlag.h"
 #include "Components/Transforms/WorldTransform.h"
+#include "DataStructures/Box.h"
 #include "Material/Texture.h"
 
 #include "assimp/postprocess.h"
@@ -16,16 +18,16 @@
 
 namespace {
 
-    Transform DecomposeMatrixIntoTransform(const aiMatrix4x4& transformMatrix) {
-        aiVector3D aiScaling{};
-        aiVector3D aiTranslation{};
-        aiQuaternion aiRotation{};
-        transformMatrix.Decompose(aiScaling, aiRotation, aiTranslation);
+Transform DecomposeMatrixIntoTransform(const aiMatrix4x4& transformMatrix) {
+    aiVector3D aiScaling{};
+    aiVector3D aiTranslation{};
+    aiQuaternion aiRotation{};
+    transformMatrix.Decompose(aiScaling, aiRotation, aiTranslation);
 
-        return Transform{{aiTranslation.x, aiTranslation.y, aiTranslation.z},
-            {aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w},
-            (aiScaling.x + aiScaling.y + aiScaling.z) / 3.f};
-    }
+    return Transform{{aiTranslation.x, aiTranslation.y, aiTranslation.z},
+        {aiRotation.x, aiRotation.y, aiRotation.z, aiRotation.w},
+        (aiScaling.x + aiScaling.y + aiScaling.z) / 3.f};
+}
 
 }
 
@@ -57,6 +59,11 @@ void ModelLoader::_processNode(const aiNode* const node,
         // a single node contains multiple meshes.
         const auto nodeEntity{_createNodeEntity(parentEntity, worldTransform, node->mName.C_Str())};
 
+        if (parentEntity != entt::null) {
+            auto& [_, currentNumberOfChildren, children]{_registry.get<Relationship>(parentEntity)};
+            children[currentNumberOfChildren++] = nodeEntity;
+        }
+
         uint32_t allocationSize{};
         for(uint32_t i{0}; i < node->mNumMeshes; ++i) {
             const auto meshIndex{node->mMeshes[i]};
@@ -74,6 +81,7 @@ void ModelLoader::_processNode(const aiNode* const node,
         }
         // Create the bounding sphere given all the mesh vertices
         _generateBoundingSphere(nodeEntity, nodeMeshesVertices);
+        _generateBoundingBox(nodeEntity, nodeMeshesVertices);
         worldTransform = aiMatrix4x4{};
         parentEntity = nodeEntity;
     }
@@ -267,4 +275,10 @@ void ModelLoader::_generateBoundingSphere(const entt::entity meshNodeEntity, con
     }
 
     _registry.emplace<BoundingSphere>(meshNodeEntity, center, glm::sqrt(radiusSquared));
+}
+
+void ModelLoader::_generateBoundingBox(const entt::entity meshNodeEntity, const std::vector<glm::vec3>& objectVertices) const {
+    Box bbox{objectVertices};
+
+    _registry.emplace<BoundingBox>(meshNodeEntity, bbox);
 }

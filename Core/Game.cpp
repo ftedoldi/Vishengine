@@ -8,6 +8,7 @@
 #include "Components/Camera/ActiveCameraTag.h"
 #include "Components/Lights/DirectionalLight.h"
 #include "Components/Transforms/RelativeTransform.h"
+#include "DataStructures/Octree.h"
 #include "Platform/Framebuffer.h"
 #include "Platform/Time.h"
 
@@ -17,7 +18,7 @@
 #include <filesystem>
 
 Game::Game() {
-    _window = std::make_unique<Window>();
+    _window = std::make_unique<Window>(_dispatcher);
     _window->Initialize();
 
     const auto editorCamera{CameraFactory::CreateEditorCamera(
@@ -31,13 +32,13 @@ Game::Game() {
 
     _registry.emplace<ActiveCameraTag>(editorCamera);
 
-    _cameraProjectionUpdaterSystem = std::make_unique<CameraProjectionUpdaterSystem>(_registry, _window->GetEventDispatcher());
+    _cameraProjectionUpdaterSystem = std::make_unique<CameraProjectionUpdaterSystem>(_registry, _dispatcher);
 
     const std::string shadersBasePath{std::string(PROJECT_SOURCE_DIR) + "/Shaders/GlslShaders/"};
 
     // The scene is rendered into this offscreen framebuffer.
     const auto sceneFrameBuffer{std::make_shared<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight())};
-    _rendererSystem = std::make_unique<RendererSystem>(sceneFrameBuffer, _window->GetEventDispatcher());
+    _rendererSystem = std::make_unique<RendererSystem>(sceneFrameBuffer, _dispatcher);
 
     const auto meshController{std::make_shared<MeshController>()};
     const auto materialController{std::make_shared<MaterialController>()};
@@ -45,18 +46,26 @@ Game::Game() {
     auto mainShader{std::make_unique<Shader>(shadersBasePath + "vertex.glsl", shadersBasePath + "fragment.glsl")};
     _rendererSystem->AddPass(std::make_unique<SceneRenderPass>(std::move(mainShader), _registry, materialController, meshController));
 
-    // Debug pass
-    auto debugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
-    _rendererSystem->AddPass(std::make_unique<DebugRenderPass>(std::move(debugShader), _registry));
+    _inputManager = std::make_shared<InputManager>(_window->GetGLFWWindow());
 
-    _inputManager = std::make_shared<InputManager>(_window->GetGLFWwindow());
+    // Debug pass
+
     _editorCameraMoveSystem = std::make_unique<EditorCameraMoveSystem>(_inputManager);
 
     const std::filesystem::path assetsRoot{std::string(PROJECT_SOURCE_DIR) + "/Assets"};
-    _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWwindow(), sceneFrameBuffer, assetsRoot);
+    _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWWindow(), sceneFrameBuffer, assetsRoot);
 
     ModelLoader modelLoader{_registry, meshController, materialController};
-    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/ezio.glb");
+    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/testOctree.glb");
+
+    _octree = std::make_unique<Octree>();
+    auto debugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
+    auto debugRenderPass{std::make_unique<DebugRenderPass>(_octree.get(), _inputManager.get(), std::move(debugShader), _registry)};
+    _rendererSystem->AddPass(std::move(debugRenderPass));
+
+    _transformSystem = std::make_unique<TransformSystem>(_dispatcher);
+
+    _spatialSystem = std::make_unique<SpatialSystem>(_octree.get(), _registry, _dispatcher);
 
     _addLight();
 }
@@ -68,9 +77,13 @@ void Game::Update() {
         Time::UpdateDeltaTime();
 
         // Update entity transforms and camera view matrix.
-        _transformSystem.Update(_registry);
+        _transformSystem->Update(_registry);
+
         _cameraSystem.Update(_registry);
+
         _editorCameraMoveSystem->Update(Time::GetDeltaTime(), _registry);
+
+        _spatialSystem->Update(_registry);
 
         // ── Render frame ──────────────────────────────────────────────────
         // 1. Clear the default framebuffer and start the ImGui frame.

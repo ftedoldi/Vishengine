@@ -1,13 +1,16 @@
 #pragma once
 
-#include "Window.h"
-#include "InputManager.h"
+#include "DataStructures/Octree.h"
 #include "GUIDrawer.h"
+#include "InputManager.h"
 #include "Systems/CameraProjectionUpdaterSystem.h"
 #include "Systems/CameraSystem.h"
+#include "Systems/DebugRenderPass.h"
 #include "Systems/EditorCameraMoveSystem.h"
 #include "Systems/RendererSystem.h"
+#include "Systems/SpatialSystem.h"
 #include "Systems/TransformSystem.h"
+#include "Window.h"
 
 #include <entt/entt.hpp>
 
@@ -38,7 +41,13 @@ private:
 
     std::unique_ptr<GUIDrawer> _guiDrawer{};
 
-    TransformSystem _transformSystem{};
+    std::unique_ptr<Octree> _octree{};
+
+    std::unique_ptr<TransformSystem> _transformSystem{};
+
+    std::unique_ptr<SpatialSystem> _spatialSystem{};
 
     CameraSystem _cameraSystem{};
+
+    entt::dispatcher _dispatcher{};
 };
