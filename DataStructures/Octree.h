@@ -2,13 +2,13 @@
 
 #include "Box.h"
 #include "entt/entity/entity.hpp"
-#include "glm/vec3.hpp"
 
 #include <array>
 #include <list>
 #include <memory>
 
 namespace OC {
+
 // Each node of the octree can contain a full mesh. If the mesh is split between two nodes it will be put on the parent node.
 struct Node {
     // The center point of the octree node.
@@ -44,7 +44,7 @@ private:
     // Expand the octree root until it contains the given world space bounding box.
     void _expand(const Box& entityBox);
 
-    // Walk up from 'node' and prune any children whose entire subtree is empty.
+    // Walk up from node and prune any children whose entire subtree is empty.
     void _shrink(OC::Node* node) const;
 
     int32_t _maxDepth{};

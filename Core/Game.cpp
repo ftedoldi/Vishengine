@@ -58,9 +58,6 @@ Game::Game() {
     ModelLoader modelLoader{_registry, meshController, materialController};
     modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/testOctree.glb");
 
-    // Build the octree and fill it.
-    //_octreeRootNode = Octree::Build(_registry);
-
     _octree = std::make_unique<Octree>();
     auto debugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
     auto debugRenderPass{std::make_unique<DebugRenderPass>(_octree.get(), _inputManager.get(), std::move(debugShader), _registry)};

@@ -2,21 +2,21 @@
 
 namespace WindowsEvents {
 
-    struct FrameBufferSizeChangedEvent {
-        float Width{};
-        float Height{};
-    };
+struct FrameBufferSizeChangedEvent {
+    float Width{};
+    float Height{};
+};
 
-    struct KeyPressedEvent {
-        int Key{};
-        int Scancode{};
-        int Action{};
-        int Mods{};
-    };
+struct KeyPressedEvent {
+    int Key{};
+    int Scancode{};
+    int Action{};
+    int Mods{};
+};
 
-    struct MouseMovedEvent {
-        double XMousePosition{};
-        double YMousePosition{};
-    };
+struct MouseMovedEvent {
+    double XMousePosition{};
+    double YMousePosition{};
+};
 
 }

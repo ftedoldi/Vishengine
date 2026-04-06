@@ -125,6 +125,53 @@ void Octree::InsertEntity(OC::Node* const node, const entt::entity entity, entt:
     OC::InsertEntityAtDepth(node, entity, registry, _maxDepth);
 }
 
+void Octree::Update(const entt::entity entity, entt::registry& registry) {
+    const auto& localSpaceBoundingBox{registry.get<BoundingBox>(entity).Box};
+    const auto& worldTransform{registry.get<WorldTransform>(entity).Value};
+    const Box entityWorldSpaceBoundingBox{
+        worldTransform.TransformPosition(localSpaceBoundingBox.Min),
+        worldTransform.TransformPosition(localSpaceBoundingBox.Max)
+    };
+
+    auto* const oldNode{registry.get<OctreeLocation>(entity).Node};
+    assert(oldNode);
+
+    // Walk upward from the old node to find an ancestor that fully contains the entity new bounding box.
+    auto* octreeNode{oldNode};
+    auto octreeNodeBox{Box::FromCenterHalfWidth(octreeNode->Center, octreeNode->HalfWidth)};
+
+    while (!octreeNodeBox.Contains(entityWorldSpaceBoundingBox)) {
+        if (!octreeNode->Parent) {
+            // Entity has escaped the root, we need to expand.
+            break;
+        }
+        octreeNode = octreeNode->Parent;
+        octreeNodeBox = Box::FromCenterHalfWidth(octreeNode->Center, octreeNode->HalfWidth);
+    }
+
+    // If the entity is still outside the root, expand the tree.
+    if (!octreeNodeBox.Contains(entityWorldSpaceBoundingBox)) {
+        // octreeNode is the root here (no parent).
+        _expand(entityWorldSpaceBoundingBox);
+        // After expansion the root now contains the entity. Insert the entity from the root.
+        octreeNode = _rootNode.get();
+    }
+
+    // Remove entity from its old node.
+    const auto removedElementsNum{oldNode->Entities.remove(entity)};
+    assert(removedElementsNum == 1);
+
+    // Insert entity starting from the ancestor found above.
+    InsertEntity(octreeNode, entity, registry);
+
+    // Prune any nodes that became empty as a result of the removal.
+    _shrink(oldNode);
+}
+
+OC::Node* Octree::GetRootNode() const {
+    return _rootNode.get();
+}
+
 void Octree::_expand(const Box& entityBox) {
     while (!Box::FromCenterHalfWidth(_rootNode->Center, _rootNode->HalfWidth).Contains(entityBox)) {
         const auto entityCenter{entityBox.GetCenter()};
@@ -193,51 +240,4 @@ void Octree::_shrink(OC::Node* node) const {
             break;
         }
     }
-}
-
-void Octree::Update(const entt::entity entity, entt::registry& registry) {
-    const auto& localSpaceBoundingBox{registry.get<BoundingBox>(entity).Box};
-    const auto& worldTransform{registry.get<WorldTransform>(entity).Value};
-    const Box entityWorldSpaceBoundingBox{
-        worldTransform.TransformPosition(localSpaceBoundingBox.Min),
-        worldTransform.TransformPosition(localSpaceBoundingBox.Max)
-    };
-
-    auto* const oldNode{registry.get<OctreeLocation>(entity).Node};
-    assert(oldNode);
-
-    // Walk upward from the old node to find an ancestor that fully contains the entity new bounding box.
-    auto* octreeNode{oldNode};
-    auto octreeNodeBox{Box::FromCenterHalfWidth(octreeNode->Center, octreeNode->HalfWidth)};
-
-    while (!octreeNodeBox.Contains(entityWorldSpaceBoundingBox)) {
-        if (!octreeNode->Parent) {
-            // Entity has escaped the root, we need to expand.
-            break;
-        }
-        octreeNode = octreeNode->Parent;
-        octreeNodeBox = Box::FromCenterHalfWidth(octreeNode->Center, octreeNode->HalfWidth);
-    }
-
-    // If the entity is still outside the root, expand the tree.
-    if (!octreeNodeBox.Contains(entityWorldSpaceBoundingBox)) {
-        // octreeNode is the root here (no parent).
-        _expand(entityWorldSpaceBoundingBox);
-        // After expansion the root now contains the entity. Insert the entity from the root.
-        octreeNode = _rootNode.get();
-    }
-
-    // Remove entity from its old node.
-    const auto removedElementsNum{oldNode->Entities.remove(entity)};
-    assert(removedElementsNum == 1);
-
-    // Insert entity starting from the ancestor found above.
-    InsertEntity(octreeNode, entity, registry);
-
-    // Prune any nodes that became empty as a result of the removal.
-    _shrink(oldNode);
-}
-
-OC::Node* Octree::GetRootNode() const {
-    return _rootNode.get();
 }
