@@ -1,9 +1,12 @@
 #pragma once
 
+#include "Box.h"
 #include "entt/entity/entity.hpp"
 #include "glm/vec3.hpp"
 
+#include <array>
 #include <list>
+#include <memory>
 
 namespace OC {
 // Each node of the octree can contain a full mesh. If the mesh is split between two nodes it will be put on the parent node.
@@ -30,13 +33,20 @@ class Octree {
 public:
     void Init(entt::registry& registry, int32_t maxDepth);
 
-    void InsertEntity(OC::Node* node, entt::entity entity, entt::registry& registry, int32_t maxDepth);
+    // Public entry point: inserts entity starting from the given node at full allowed depth.
+    void InsertEntity(OC::Node* node, entt::entity entity, entt::registry& registry) const;
 
     void Update(entt::entity entity, entt::registry& registry);
 
     [[nodiscard]] OC::Node* GetRootNode() const;
 
 private:
+    // Expand the octree root until it contains the given world space bounding box.
+    void _expand(const Box& entityBox);
+
+    // Walk up from 'node' and prune any children whose entire subtree is empty.
+    void _shrink(OC::Node* node) const;
+
     int32_t _maxDepth{};
 
     std::unique_ptr<OC::Node> _rootNode{};

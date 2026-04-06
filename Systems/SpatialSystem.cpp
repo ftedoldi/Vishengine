@@ -20,6 +20,7 @@ void SpatialSystem::_onTransformUpdated(const GameEvents::TransformUpdated trans
 }
 
 void SpatialSystem::_updateOctree(entt::registry& registry) const {
+    // TODO: the octree update is performed even after initializing the octree (which is already correctly created). It should not happen
     assert(_octree);
     for (const auto entity : _entities) {
         if (registry.try_get<OctreeLocation>(entity)) {
