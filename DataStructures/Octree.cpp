@@ -64,7 +64,7 @@ void Octree::Init(entt::registry& registry, int32_t maxDepth) {
     _rootNode = std::move(rootNode);
 }
 
-void Octree::InsertEntity(OC::Node* const node, const entt::entity entity, entt::registry& registry, int32_t maxDepth) {
+void Octree::InsertEntity(OC::Node* const node, const entt::entity entity, entt::registry& registry, const int32_t maxDepth) {
     assert(node);
     const auto& [localMin, localMax]{registry.get<BoundingBox>(entity).Box};
     const auto& worldTransform{registry.get<WorldTransform>(entity).Value};
@@ -114,7 +114,7 @@ void Octree::Update(const entt::entity entity, entt::registry& registry) {
     auto* const oldNode{registry.get<OctreeLocation>(entity).Node};
     auto* octreeNode{oldNode};
     assert(octreeNode);
-    Box octreeNodeBox{octreeNode->Center, octreeNode->HalfWidth};
+    auto octreeNodeBox{Box::FromCenterHalfWidth(octreeNode->Center, octreeNode->HalfWidth)};
     bool isRoot{};
     while (!octreeNodeBox.Contains(entityWorldSpaceBoundingBox)) {
         // If we are at the root node, exit the loop and use the root node as starting point to insert the new entity.
@@ -124,7 +124,7 @@ void Octree::Update(const entt::entity entity, entt::registry& registry) {
         }
 
         octreeNode = octreeNode->Parent;
-        octreeNodeBox = {octreeNode->Center, octreeNode->HalfWidth};
+        octreeNodeBox = Box::FromCenterHalfWidth(octreeNode->Center, octreeNode->HalfWidth);
     }
 
     if (isRoot) {

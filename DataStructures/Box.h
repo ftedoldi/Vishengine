@@ -8,6 +8,10 @@ struct Box {
 
     glm::vec3 Max{};
 
+    static Box FromCenterHalfWidth(const glm::vec3& center, const glm::vec3& halfWidth) {
+        return Box{center - halfWidth, center + halfWidth};
+    }
+
     Box() = default;
 
     Box(const glm::vec3 min, const glm::vec3 max) : Min{min}, Max{max} {}
@@ -30,8 +34,6 @@ struct Box {
             Max.z = std::max(Max.z, v.z);
         }
     }
-
-    Box(const glm::vec3 center, const float halfWidth) : Min{center - halfWidth}, Max{center + halfWidth} {}
 
     [[nodiscard]] glm::vec3 GetCenter() const {
         return (Min + Max) * 0.5f;
@@ -75,9 +77,9 @@ struct Box {
     }
 
     [[nodiscard]] bool Contains(const Box& other) const {
-        return Math::IsGreaterOrEqual(Min.x, other.Min.x) && Math::IsLesserOrEqual(Max.x, other.Max.x) &&
-            Math::IsGreaterOrEqual(Min.y, other.Min.y) && Math::IsLesserOrEqual(Max.y, other.Max.y) &&
-            Math::IsGreaterOrEqual(Min.z, other.Min.z) && Math::IsLesserOrEqual(Max.z, other.Max.z);
+        return Math::IsLesserOrEqual(Min.x, other.Min.x) && Math::IsGreaterOrEqual(Max.x, other.Max.x) &&
+               Math::IsLesserOrEqual(Min.y, other.Min.y) && Math::IsGreaterOrEqual(Max.y, other.Max.y) &&
+               Math::IsLesserOrEqual(Min.z, other.Min.z) && Math::IsGreaterOrEqual(Max.z, other.Max.z);
     }
 
 };

@@ -86,6 +86,8 @@ void Game::Update() {
 
         _editorCameraMoveSystem->Update(Time::GetDeltaTime(), _registry);
 
+        _spatialSystem->Update(_registry);
+
         // ── Render frame ──────────────────────────────────────────────────
         // 1. Clear the default framebuffer and start the ImGui frame.
         _guiDrawer->BeginFrame();
