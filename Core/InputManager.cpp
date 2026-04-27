@@ -14,6 +14,7 @@ InputManager::InputManager(GLFWwindow* const window) : _mainWindow{window} {
 }
 
 void InputManager::Update() {
+    // TODO: refactor this trash
     double x{}, y{};
     glfwGetCursorPos(_mainWindow, &x, &y);
     _mouseDelta    = {static_cast<float>(x - _lastMousePos.x), static_cast<float>(y - _lastMousePos.y)};

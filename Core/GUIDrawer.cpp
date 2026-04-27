@@ -5,6 +5,7 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include "imgui.h"
+#include "ImGuizmo.h"
 
 #include <glad/gl.h>
 
@@ -19,6 +20,7 @@ GUIDrawer::GUIDrawer(GLFWwindow* const window,
     ImGuiIO& io{ImGui::GetIO()};
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     EditorStyle::ApplyDarkTheme();
 
@@ -30,6 +32,7 @@ void GUIDrawer::BeginFrame() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    ImGuizmo::BeginFrame();
 }
 
 void GUIDrawer::DrawUI(entt::dispatcher& dispatcher, entt::registry& registry) {

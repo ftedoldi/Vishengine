@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "ContentBrowserPanel.h"
@@ -9,41 +8,21 @@
 #include "ToolbarPanel.h"
 #include "Platform/Framebuffer.h"
 
+#include "imgui.h"
+
 #include <entt/entt.hpp>
 #include <memory>
 
-/**
- * @brief Orchestrates all editor panels and the fixed-layout UI.
- *
- * EditorLayer owns every panel instance and is responsible for:
- *  - Computing and applying the fixed panel layout each frame.
- *  - Rendering the main menu bar (File / Edit / View).
- *  - Forwarding the selected entity from HierarchyPanel to InspectorPanel.
- *  - Calling OnRender() on every panel.
- */
 class EditorLayer {
 public:
-    /**
-     * @param sceneFramebuffer  The framebuffer whose colour attachment is
-     *                          displayed in the ScenePanel viewport.
-     * @param assetsRoot        Absolute path to the project Assets/ directory.
-     */
     explicit EditorLayer(std::shared_ptr<Framebuffer> sceneFramebuffer,
                          const std::filesystem::path& assetsRoot);
 
-    /** Called once per frame between ImGui::NewFrame() and ImGui::Render(). */
     void OnRender(entt::dispatcher& dispatcher, entt::registry& registry);
 
-    /** Convenience accessors used by Game to query editor state. */
     [[nodiscard]] bool IsPlaying() const;
 
-    [[nodiscard]] bool IsPaused() const;
-
-    ConsolePanel& GetConsole();
-
-    ScenePanel& GetScenePanel();
-
-    HierarchyPanel& GetHierarchyPanel();
+    [[nodiscard]] bool IsPaused()  const;
 
 private:
     void _renderMenuBar();
@@ -56,10 +35,4 @@ private:
     ScenePanel          _scene;
     ConsolePanel        _console{};
     ContentBrowserPanel _contentBrowser;
-
-    float _hierarchyW  {200.f};   ///< Width of the Hierarchy panel
-    float _inspectorW  {260.f};   ///< Width of the Inspector panel
-    float _bottomH     {200.f};   ///< Height of the bottom strip (Console + Content Browser)
-    float _consoleFrac {0.35f};   ///< Fraction of the bottom strip width used by the Console
 };
-

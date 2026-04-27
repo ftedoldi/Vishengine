@@ -7,13 +7,6 @@
 #include <entt/entt.hpp>
 #include <memory>
 
-/**
- * @brief Renders the scene viewport into an ImGui window (centre panel).
- *
- * The panel reads the colour-attachment texture from the provided Framebuffer
- * and blits it as an ImGui::Image.  It also handles viewport resize events so
- * the framebuffer stays in sync with the panel size.
- */
 class ScenePanel final : public IPanel {
 public:
     explicit ScenePanel(std::shared_ptr<Framebuffer> framebuffer);
@@ -21,8 +14,10 @@ public:
     void OnRender(entt::dispatcher& dispatcher, entt::registry& registry) override;
 
 private:
+    void _drawGizmo(ImVec2 panelPos, ImVec2 panelSize, entt::registry& registry) const;
+
     std::shared_ptr<Framebuffer> _framebuffer{};
 
     ImVec2 _lastSize{};
-    ImVec2 _lastMousePosition{};
+    ImVec2 _panelPos{};
 };

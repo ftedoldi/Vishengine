@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Window.h"
+#include "Events/ScenePanelEvents.h"
 
 #include <entt/entt.hpp>
 
@@ -10,6 +11,10 @@ public:
 
 private:
     void _onFramebufferSizeChanged(WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const;
+
+    void _onScenePanelResized(ScenePanelEvents::ScenePanelResizedEvent scenePanelResizedEvent) const;
+
+    void _updateProjection(float width, float height) const;
 
     entt::registry& _registry;
 };

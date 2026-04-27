@@ -51,6 +51,13 @@ target_sources(imgui PRIVATE
 target_link_libraries(imgui PUBLIC glfw OpenGL::GL)
 
 # -----------------------------
+# ImGuizmo
+# -----------------------------
+add_library(imguizmo Libs/imguizmo/ImGuizmo.cpp)
+target_include_directories(imguizmo PUBLIC Libs/imguizmo)
+target_link_libraries(imguizmo PUBLIC imgui)
+
+# -----------------------------
 # Project files
 # -----------------------------
 file(GLOB PROJECT_HEADERS
@@ -161,6 +168,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         glfw
         EnTT::EnTT
         imgui
+        imguizmo
         glad
         OpenGL::GL
 )

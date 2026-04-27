@@ -178,7 +178,7 @@ void Octree::Update(const entt::entity entity, entt::registry& registry) {
     InsertEntity(octreeNode, entity, registry);
 
     // Prune any nodes that became empty as a result of the removal.
-    _shrink(oldNode);
+    //_shrink(oldNode);
 }
 
 std::optional<RaycastHit> Octree::Raycast(const Ray& ray, entt::registry& registry) const {

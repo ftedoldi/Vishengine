@@ -1,57 +1,91 @@
 #include "EditorLayer.h"
 
 #include "imgui.h"
+#include "imgui_internal.h"
+
+namespace {
+
+void BuildInitialDockLayout(const ImGuiID dockId, const ImVec2 size) {
+    ImGui::DockBuilderRemoveNode(dockId);
+    ImGui::DockBuilderAddNode(dockId, ImGuiDockNodeFlags_DockSpace);
+    ImGui::DockBuilderSetNodeSize(dockId, size);
+
+    // Top: toolbar strip (~5% of height).
+    ImGuiID dockToolbar{};
+    ImGuiID dockBody{};
+    ImGui::DockBuilderSplitNode(dockId, ImGuiDir_Up, 0.05f, &dockToolbar, &dockBody);
+
+    // Bottom: console + content browser (~25% of remaining height).
+    ImGuiID dockBottom{};
+    ImGuiID dockMiddle{};
+    ImGui::DockBuilderSplitNode(dockBody, ImGuiDir_Down, 0.25f, &dockBottom, &dockMiddle);
+
+    ImGuiID dockConsole{};
+    ImGuiID dockContent{};
+    ImGui::DockBuilderSplitNode(dockBottom, ImGuiDir_Left, 0.4f, &dockConsole, &dockContent);
+
+    // Middle row: hierarchy | scene | inspector.
+    ImGuiID dockHierarchy{};
+    ImGuiID dockCenterRight{};
+    ImGui::DockBuilderSplitNode(dockMiddle, ImGuiDir_Left, 0.15f, &dockHierarchy, &dockCenterRight);
+
+    ImGuiID dockInspector{};
+    ImGuiID dockScene{};
+    ImGui::DockBuilderSplitNode(dockCenterRight, ImGuiDir_Right, 0.28f, &dockInspector, &dockScene);
+
+    ImGui::DockBuilderDockWindow("##Toolbar", dockToolbar);
+    ImGui::DockBuilderDockWindow("Hierarchy", dockHierarchy);
+    ImGui::DockBuilderDockWindow("Scene",dockScene);
+    ImGui::DockBuilderDockWindow("Inspector", dockInspector);
+    ImGui::DockBuilderDockWindow("Console",dockConsole);
+    ImGui::DockBuilderDockWindow("Content Browser", dockContent);
+
+    // Hide the tab bar on the toolbar strip so it looks like a proper toolbar.
+    if (auto* toolbarNode{ImGui::DockBuilderGetNode(dockToolbar)}) {
+        toolbarNode->LocalFlags |= ImGuiDockNodeFlags_NoTabBar;
+    }
+
+    ImGui::DockBuilderFinish(dockId);
+}
+
+}
 
 EditorLayer::EditorLayer(std::shared_ptr<Framebuffer> sceneFramebuffer,
                          const std::filesystem::path& assetsRoot)
     : _scene{std::move(sceneFramebuffer)}
     , _contentBrowser{assetsRoot} {}
 
-// ── Public ────────────────────────────────────────────────────────────────────
+bool EditorLayer::IsPlaying() const {
+    return _toolbar.IsPlaying();
+}
+
+bool EditorLayer::IsPaused() const {
+    return _toolbar.IsPaused();
+}
 
 void EditorLayer::OnRender(entt::dispatcher& dispatcher, entt::registry& registry) {
     _renderMenuBar();
     _layoutPanels(dispatcher, registry);
 }
 
-bool EditorLayer::IsPlaying() const {
-    return _toolbar.IsPlaying();
-}
-
-bool EditorLayer::IsPaused()  const {
-    return _toolbar.IsPaused();
-}
-
-ConsolePanel& EditorLayer::GetConsole() {
-    return _console;
-}
-
-ScenePanel& EditorLayer::GetScenePanel() {
-    return _scene;
-}
-
-HierarchyPanel& EditorLayer::GetHierarchyPanel() {
-    return _hierarchy;
-}
-
 void EditorLayer::_renderMenuBar() {
     if (!ImGui::BeginMainMenuBar()) { return; }
 
     if (ImGui::BeginMenu("File")) {
-        if (ImGui::MenuItem("New Scene",  "Ctrl+N")) { /* TODO */ }
-        if (ImGui::MenuItem("Open Scene", "Ctrl+O")) { /* TODO */ }
+        if (ImGui::MenuItem("New Scene",  "Ctrl+N")) {}
+        if (ImGui::MenuItem("Open Scene", "Ctrl+O")) {}
         ImGui::Separator();
-        if (ImGui::MenuItem("Save Scene", "Ctrl+S")) { /* TODO */ }
+        if (ImGui::MenuItem("Save Scene", "Ctrl+S")) {}
         ImGui::Separator();
-        if (ImGui::MenuItem("Exit", "Alt+F4"))        { /* TODO */ }
+        if (ImGui::MenuItem("Exit", "Alt+F4"))       {}
         ImGui::EndMenu();
     }
 
     if (ImGui::BeginMenu("Edit")) {
-        if (ImGui::MenuItem("Undo", "Ctrl+Z")) { /* TODO */ }
-        if (ImGui::MenuItem("Redo", "Ctrl+Y")) { /* TODO */ }
+        if (ImGui::MenuItem("Undo", "Ctrl+Z")) {}
+        if (ImGui::MenuItem("Redo", "Ctrl+Y")) {}
         ImGui::Separator();
-        if (ImGui::MenuItem("Preferences"))    { /* TODO */ }
+        if (ImGui::MenuItem("Preferences"))    {}
         ImGui::EndMenu();
     }
 
@@ -68,107 +102,58 @@ void EditorLayer::_renderMenuBar() {
 }
 
 void EditorLayer::_layoutPanels(entt::dispatcher& dispatcher, entt::registry& registry) {
-    // ── Compute layout regions ────────────────────────────────────────────
-    // We replicate the Unity-like layout from the reference image:
-    //
-    //  ┌──────────────────────────────────────────────────────────────┐
-    //  │  MenuBar  (ImGui main menu bar, handled above)               │
-    //  ├──────────────────────────────────────────────────────────────┤
-    //  │  Toolbar  (thin strip, centred play/pause/stop)              │
-    //  ├────────────┬─────────────────────────────┬───────────────────┤
-    //  │ Hierarchy  │        Scene viewport        │    Inspector      │
-    //  │            │                              │                   │
-    //  ├────────────┴──────────────────────────────┴───────────────────┤
-    //  │  Console / Content Browser  (bottom strip)                    │
-    //  └──────────────────────────────────────────────────────────────┘
+    // Fullscreen transparent host window that owns the dockspace.
+    const ImGuiViewport* const vp{ImGui::GetMainViewport()};
+    ImGui::SetNextWindowPos(vp->WorkPos);
+    ImGui::SetNextWindowSize(vp->WorkSize);
+    ImGui::SetNextWindowViewport(vp->ID);
 
-    const ImGuiIO& io{ImGui::GetIO()};
-    const float screenW{io.DisplaySize.x};
-    const float screenH{io.DisplaySize.y};
+    constexpr ImGuiWindowFlags kHostFlags{
+        ImGuiWindowFlags_NoTitleBar            |
+        ImGuiWindowFlags_NoCollapse            |
+        ImGuiWindowFlags_NoResize              |
+        ImGuiWindowFlags_NoMove                |
+        ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoNavFocus            |
+        ImGuiWindowFlags_NoBackground          };
 
-    // Reserve space for the main menu bar
-    const float menuBarH{ImGui::GetFrameHeight()};
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,   0.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,    ImVec2{0.f, 0.f});
+    ImGui::Begin("##DockspaceHost", nullptr, kHostFlags);
+    ImGui::PopStyleVar(3);
 
-    // Fixed panel widths / heights
-    const float toolbarH    {32.f};
-    const float hierarchyW  {200.f};
-    const float inspectorW  {600.f};
-    const float bottomH     {200.f};
+    const ImGuiID dockId{ImGui::GetID("MainDockspace")};
+    ImGui::DockSpace(dockId, ImVec2{0.f, 0.f}, ImGuiDockNodeFlags_None);
 
-    const float topY        {menuBarH};
-    const float toolbarY    {topY};
-    const float panelsY     {topY + toolbarH};
-    const float sceneW      {screenW - hierarchyW - inspectorW};
-    const float panelsH     {screenH - menuBarH - toolbarH - bottomH};
-    const float bottomY     {panelsY + panelsH};
+    // Build the default layout once. Skipped when imgui.ini already has a saved layout.
+    if (const auto* node{ImGui::DockBuilderGetNode(dockId)}; !node || node->IsLeafNode()) {
+        BuildInitialDockLayout(dockId, vp->WorkSize);
+    }
 
-    // Common flags for fixed, non-movable panels
-    constexpr ImGuiWindowFlags panelFlags{
-        ImGuiWindowFlags_NoTitleBar   |
-        ImGuiWindowFlags_NoResize     |
-        ImGuiWindowFlags_NoMove       |
-        ImGuiWindowFlags_NoCollapse   };
+    ImGui::End();
 
-    // ── Toolbar ───────────────────────────────────────────────────────────
-    ImGui::SetNextWindowPos(ImVec2{0.f, toolbarY});
-    ImGui::SetNextWindowSize(ImVec2{screenW, toolbarH});
-    _toolbar.OnRender(dispatcher, registry);   // ToolbarPanel uses its own Begin/End
+    if (_toolbar.IsVisible) {
+        _toolbar.OnRender(dispatcher, registry);
+    }
 
-    // ── Hierarchy ─────────────────────────────────────────────────────────
     if (_hierarchy.IsVisible) {
-        ImGui::SetNextWindowPos(ImVec2{0.f, panelsY});
-        ImGui::SetNextWindowSize(ImVec2{hierarchyW, panelsH});
-        ImGui::SetNextWindowBgAlpha(1.f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
-        // Override Begin inside HierarchyPanel — we set pos/size before it calls Begin
         _hierarchy.OnRender(dispatcher, registry);
-        ImGui::PopStyleVar(2);
     }
 
-    // ── Scene viewport ────────────────────────────────────────────────────
     if (_scene.IsVisible) {
-        ImGui::SetNextWindowPos(ImVec2{hierarchyW, panelsY});
-        ImGui::SetNextWindowSize(ImVec2{sceneW, panelsH});
-        ImGui::SetNextWindowBgAlpha(1.f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
         _scene.OnRender(dispatcher, registry);
-        ImGui::PopStyleVar(2);
     }
 
-    // ── Inspector ─────────────────────────────────────────────────────────
     if (_inspector.IsVisible) {
-        ImGui::SetNextWindowPos(ImVec2{hierarchyW + sceneW, panelsY});
-        ImGui::SetNextWindowSize(ImVec2{inspectorW, panelsH});
-        ImGui::SetNextWindowBgAlpha(1.f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
         _inspector.OnRender(dispatcher, registry);
-        ImGui::PopStyleVar(2);
     }
-
-    // ── Bottom strip: Console (left) + Content Browser (right) ───────────
-    const float consolePanelW{screenW * 0.35f};
-    const float contentBrowserW{screenW - consolePanelW};
 
     if (_console.IsVisible) {
-        ImGui::SetNextWindowPos(ImVec2{0.f, bottomY});
-        ImGui::SetNextWindowSize(ImVec2{consolePanelW, bottomH});
-        ImGui::SetNextWindowBgAlpha(1.f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
         _console.OnRender(dispatcher, registry);
-        ImGui::PopStyleVar(2);
     }
 
     if (_contentBrowser.IsVisible) {
-        ImGui::SetNextWindowPos(ImVec2{consolePanelW, bottomY});
-        ImGui::SetNextWindowSize(ImVec2{contentBrowserW, bottomH});
-        ImGui::SetNextWindowBgAlpha(1.f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
         _contentBrowser.OnRender(dispatcher, registry);
-        ImGui::PopStyleVar(2);
     }
 }

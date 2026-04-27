@@ -1,12 +1,23 @@
 #include "ScenePanel.h"
 #include "Events/ScenePanelEvents.h"
 
+#include "Components/Camera/Camera.h"
+#include "Components/Camera/EditorCameraTag.h"
+#include "Components/SelectedTag.h"
+#include "Components/Relationship.h"
+#include "Components/Transforms/RelativeTransform.h"
+#include "Components/Transforms/TransformDirtyFlag.h"
+#include "Components/Transforms/WorldTransform.h"
+
+#include "ImGuizmo.h"
+#include "glm/gtc/quaternion.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #include "imgui.h"
 
 ScenePanel::ScenePanel(std::shared_ptr<Framebuffer> framebuffer)
     : _framebuffer{std::move(framebuffer)} {}
 
-void ScenePanel::OnRender(entt::dispatcher& dispatcher, entt::registry& /*registry*/) {
+void ScenePanel::OnRender(entt::dispatcher& dispatcher, entt::registry& registry) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0.f, 0.f});
 
     constexpr ImGuiWindowFlags flags{
@@ -16,27 +27,93 @@ void ScenePanel::OnRender(entt::dispatcher& dispatcher, entt::registry& /*regist
 
     ImGui::Begin("Scene", nullptr, flags);
 
-    if (const auto contentPos{ImGui::GetCursorScreenPos()}; _lastMousePosition.x != contentPos.x || _lastMousePosition.y != contentPos.y) {
-        const glm::vec2 scenePanelMousePosition{contentPos.x, contentPos.y};
-        dispatcher.trigger<ScenePanelEvents::ScenePanelMouseMovedEvent>({scenePanelMousePosition});
-        _lastMousePosition = contentPos;
+    const auto contentPos{ImGui::GetCursorScreenPos()};
+    if (contentPos.x != _panelPos.x || contentPos.y != _panelPos.y) {
+        dispatcher.trigger<ScenePanelEvents::ScenePanelMouseMovedEvent>({glm::vec2{contentPos.x, contentPos.y}});
+        _panelPos = contentPos;
     }
 
     const auto regionSize{ImGui::GetContentRegionAvail()};
     if (_lastSize.x != regionSize.x || _lastSize.y != regionSize.y) {
-        const glm::vec2 scenePanelSize{regionSize.x, regionSize.y};
-        dispatcher.trigger<ScenePanelEvents::ScenePanelResizedEvent>({scenePanelSize});
+        dispatcher.trigger<ScenePanelEvents::ScenePanelResizedEvent>({glm::vec2{regionSize.x, regionSize.y}});
         _lastSize = regionSize;
     }
 
-    // Blit framebuffer color attachment as an ImGui image.
     const auto textureID{_framebuffer->GetColorAttachmentID()};
     ImGui::Image(
-        reinterpret_cast<ImTextureID>(static_cast<uintptr_t>(textureID)),
+        textureID,
         regionSize,
-        ImVec2{0.f, 1.f}, // UV top-left
-        ImVec2{1.f, 0.f});  // UV bot-right
+        ImVec2{0.f, 1.f},
+        ImVec2{1.f, 0.f});
+
+    _drawGizmo(contentPos, regionSize, registry);
 
     ImGui::End();
     ImGui::PopStyleVar();
+}
+
+void ScenePanel::_drawGizmo(const ImVec2 panelPos, const ImVec2 panelSize, entt::registry& registry) const {
+    // TODO: improve this code.
+    // Find selected entity that has a world transform.
+    const auto selectedView{registry.view<SelectedTag, WorldTransform>()};
+    if (selectedView.begin() == selectedView.end()) return;
+
+    const auto selectedEntity{*selectedView.begin()};
+    const auto& worldTransform{registry.get<WorldTransform>(selectedEntity).Value};
+
+    // Get editor camera.
+    const auto cameraView{registry.view<Camera, EditorCameraTag>()};
+    if (cameraView.begin() == cameraView.end()) return;
+
+    const auto& camera{cameraView.get<Camera>(*cameraView.begin())};
+
+    // Build view matrix from the camera's ViewTransform (which is world.Invert()).
+    glm::mat4 viewMat{glm::mat4_cast(camera.ViewTransform.Rotation)};
+    viewMat[3] = glm::vec4{camera.ViewTransform.Position, 1.f};
+
+    // Build world matrix for the selected entity: T * R * S.
+    const glm::mat4 worldMat{
+        glm::translate(glm::mat4{1.f}, worldTransform.Position) *
+        glm::mat4_cast(worldTransform.Rotation) *
+        glm::scale(glm::mat4{1.f}, glm::vec3{worldTransform.Scale})};
+
+    ImGuizmo::SetOrthographic(false);
+    ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
+    ImGuizmo::SetRect(panelPos.x, panelPos.y, panelSize.x, panelSize.y);
+
+    glm::mat4 manipulated{worldMat};
+    const bool changed{ImGuizmo::Manipulate(
+        glm::value_ptr(viewMat),
+        glm::value_ptr(camera.ProjectionMatrix),
+        ImGuizmo::TRANSLATE | ImGuizmo::ROTATE | ImGuizmo::SCALE,
+        ImGuizmo::WORLD,
+        glm::value_ptr(manipulated))};
+
+    if (!changed) return;
+
+    // Decompose the new world matrix.
+
+    float newPosition[3]{};
+    float newScale[3]{};
+    float newRotation[4]{};
+    ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(manipulated), newPosition, newRotation, newScale);
+
+    glm::vec3 eulerAngles{newRotation[0], newRotation[1], newRotation[2]};
+
+    Transform newWorld{{newPosition[0], newPosition[1], newPosition[2]}, eulerAngles, newScale[0]};
+
+    // Factor out parent world transform to get the new relative transform.
+    auto& relTransform{registry.get<RelativeTransform>(selectedEntity).Value};
+    const auto* relationship{registry.try_get<Relationship>(selectedEntity)};
+    if (relationship && relationship->Parent != entt::null) {
+        if (const auto* parentWorld{registry.try_get<WorldTransform>(relationship->Parent)}) {
+            relTransform = parentWorld->Value.Invert().Cumulate(newWorld);
+        }
+    } else {
+        relTransform = newWorld;
+    }
+
+    if (auto* dirty{registry.try_get<TransformDirtyFlag>(selectedEntity)}) {
+        dirty->ShouldUpdateTransform = true;
+    }
 }
