@@ -14,13 +14,7 @@ class HierarchyPanel final : public IPanel {
 public:
     HierarchyPanel() = default;
 
-    void OnRender(entt::registry& registry) override;
-
-    /** Returns the currently selected entity (entt::null if none). */
-    [[nodiscard]] entt::entity GetSelectedEntity() const { return _selectedEntity; }
-
-    /** Allows other panels (e.g. ScenePanel) to clear the selection. */
-    void SetSelectedEntity(entt::entity entity) { _selectedEntity = entity; }
+    void OnRender(entt::dispatcher& dispatcher, entt::registry& registry) override;
 
 private:
     void _drawEntity(entt::registry& registry, entt::entity entity, const char* displayName);
@@ -30,6 +24,4 @@ private:
     void _drawLights(entt::registry& registry);
 
     void _drawEntityNode(entt::entity entity, entt::registry& registry);
-
-    entt::entity _selectedEntity{entt::null};
 };

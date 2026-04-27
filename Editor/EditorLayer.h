@@ -32,17 +32,23 @@ public:
                          const std::filesystem::path& assetsRoot);
 
     /** Called once per frame between ImGui::NewFrame() and ImGui::Render(). */
-    void OnRender(entt::registry& registry);
+    void OnRender(entt::dispatcher& dispatcher, entt::registry& registry);
 
     /** Convenience accessors used by Game to query editor state. */
-    [[nodiscard]] bool IsPlaying() const { return _toolbar.IsPlaying(); }
-    [[nodiscard]] bool IsPaused()  const { return _toolbar.IsPaused();  }
+    [[nodiscard]] bool IsPlaying() const;
 
-    ConsolePanel& GetConsole() { return _console; }
+    [[nodiscard]] bool IsPaused() const;
+
+    ConsolePanel& GetConsole();
+
+    ScenePanel& GetScenePanel();
+
+    HierarchyPanel& GetHierarchyPanel();
 
 private:
     void _renderMenuBar();
-    void _layoutPanels(entt::registry& registry);
+
+    void _layoutPanels(entt::dispatcher& dispatcher, entt::registry& registry);
 
     ToolbarPanel        _toolbar{};
     HierarchyPanel      _hierarchy{};
@@ -51,7 +57,6 @@ private:
     ConsolePanel        _console{};
     ContentBrowserPanel _contentBrowser;
 
-    // ── Persistent layout sizes (user-resizable via splitters) ────────────
     float _hierarchyW  {200.f};   ///< Width of the Hierarchy panel
     float _inspectorW  {260.f};   ///< Width of the Inspector panel
     float _bottomH     {200.f};   ///< Height of the bottom strip (Console + Content Browser)

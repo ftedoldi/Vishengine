@@ -133,7 +133,7 @@ void DebugRenderPass::Execute() {
     }
 
     //if (_inputManager->IsKeyPressed(GLFW_KEY_O)) {
-        _drawOctree();
+        //_drawOctree();
     //}
 }
 

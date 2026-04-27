@@ -7,7 +7,7 @@ void ConsolePanel::Log(const LogLevel level, const std::string& message) {
     _scrollToBottom = true;
 }
 
-void ConsolePanel::OnRender(entt::registry& /*registry*/) {
+void ConsolePanel::OnRender(entt::dispatcher&, entt::registry&) {
     constexpr ImGuiWindowFlags flags{
         ImGuiWindowFlags_NoCollapse};
 

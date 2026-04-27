@@ -9,7 +9,7 @@ ContentBrowserPanel::ContentBrowserPanel(const std::filesystem::path& assetsRoot
     : _assetsRoot{assetsRoot}
     , _currentDir{assetsRoot} {}
 
-void ContentBrowserPanel::OnRender(entt::registry& /*registry*/) {
+void ContentBrowserPanel::OnRender(entt::dispatcher&, entt::registry&) {
     constexpr ImGuiWindowFlags flags{
         ImGuiWindowFlags_NoCollapse};
 

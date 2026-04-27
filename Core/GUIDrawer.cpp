@@ -32,10 +32,10 @@ void GUIDrawer::BeginFrame() {
     ImGui::NewFrame();
 }
 
-void GUIDrawer::DrawUI(entt::registry& registry) {
+void GUIDrawer::DrawUI(entt::dispatcher& dispatcher, entt::registry& registry) {
     // The scene has already been rendered into the offscreen framebuffer by
     // this point, so ScenePanel::OnRender() will sample the correct texture.
-    _editorLayer.OnRender(registry);
+    _editorLayer.OnRender(dispatcher, registry);
 }
 
 void GUIDrawer::Render() {

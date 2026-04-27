@@ -19,14 +19,20 @@ public:
 
     void Update() const;
 
-    [[nodiscard]] int32_t GetHeight() const;
+    void SetWidth(int32_t width);
+
+    void SetHeight(int32_t height);
 
     [[nodiscard]] int32_t GetWidth() const;
+
+    [[nodiscard]] int32_t GetHeight() const;
 
     [[nodiscard]] GLFWwindow* GetGLFWWindow() const;
 
 private:
     void _setFramebufferSizeCallback() const;
+
+    void _setMouseButtonCallback() const;
 
     void _setKeyPressedCallback() const;
 

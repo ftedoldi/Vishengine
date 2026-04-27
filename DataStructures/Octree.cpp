@@ -9,6 +9,10 @@
 #include "entt/entity/registry.hpp"
 #include "glm/common.hpp"
 
+#include <limits>
+#include <queue>
+#include <vector>
+
 namespace OC {
 
 namespace {
@@ -48,14 +52,27 @@ bool IsSubtreeEmpty(const Node* node) {
     return true;
 }
 
-void InsertEntityAtDepth(OC::Node* const node, const entt::entity entity, entt::registry& registry, const int32_t remainingDepth) {
-    assert(node);
-    const auto& [localMin, localMax]{registry.get<BoundingBox>(entity).Box};
+Box ComputeWorldSpaceBox(const entt::entity entity, entt::registry& registry) {
+    const auto& localSpaceBox{registry.get<BoundingBox>(entity).Box};
     const auto& worldTransform{registry.get<WorldTransform>(entity).Value};
 
-    const auto worldSpaceMin{worldTransform.TransformPosition(localMin)};
-    const auto worldSpaceMax{worldTransform.TransformPosition(localMax)};
-    const Box worldSpaceBox{worldSpaceMin, worldSpaceMax};
+    Box worldSpaceBox{
+        glm::vec3{std::numeric_limits<float>::max()},
+        glm::vec3{std::numeric_limits<float>::lowest()}
+    };
+
+    for (const auto& vertex : localSpaceBox.GetVertices()) {
+        const auto worldSpaceVertex{worldTransform.TransformPosition(vertex)};
+        worldSpaceBox.Min = glm::min(worldSpaceBox.Min, worldSpaceVertex);
+        worldSpaceBox.Max = glm::max(worldSpaceBox.Max, worldSpaceVertex);
+    }
+
+    return worldSpaceBox;
+}
+
+void InsertEntityAtDepth(OC::Node* const node, const entt::entity entity, entt::registry& registry, const int32_t remainingDepth) {
+    assert(node);
+    const Box worldSpaceBox{ComputeWorldSpaceBox(entity, registry)};
     const auto worldSpaceCenter{worldSpaceBox.GetCenter()};
     const auto worldSpaceExtent{worldSpaceBox.GetExtent()};
 
@@ -80,7 +97,7 @@ void InsertEntityAtDepth(OC::Node* const node, const entt::entity entity, entt::
     // have depth budget left.
     if (!straddle && remainingDepth > 0) {
         if (!node->Children[0]) {
-            OC::BuildOctreeNodes(node, node->Center, node->HalfWidth);
+            BuildOctreeNodes(node, node->Center, node->HalfWidth);
         }
         InsertEntityAtDepth(node->Children[index].get(), entity, registry, remainingDepth - 1);
     } else {
@@ -126,12 +143,7 @@ void Octree::InsertEntity(OC::Node* const node, const entt::entity entity, entt:
 }
 
 void Octree::Update(const entt::entity entity, entt::registry& registry) {
-    const auto& localSpaceBoundingBox{registry.get<BoundingBox>(entity).Box};
-    const auto& worldTransform{registry.get<WorldTransform>(entity).Value};
-    const Box entityWorldSpaceBoundingBox{
-        worldTransform.TransformPosition(localSpaceBoundingBox.Min),
-        worldTransform.TransformPosition(localSpaceBoundingBox.Max)
-    };
+    const Box entityWorldSpaceBoundingBox{OC::ComputeWorldSpaceBox(entity, registry)};
 
     auto* const oldNode{registry.get<OctreeLocation>(entity).Node};
     assert(oldNode);
@@ -146,6 +158,7 @@ void Octree::Update(const entt::entity entity, entt::registry& registry) {
             break;
         }
         octreeNode = octreeNode->Parent;
+        // todo : octreeNode ognit tanto e' nullo
         octreeNodeBox = Box::FromCenterHalfWidth(octreeNode->Center, octreeNode->HalfWidth);
     }
 
@@ -166,6 +179,76 @@ void Octree::Update(const entt::entity entity, entt::registry& registry) {
 
     // Prune any nodes that became empty as a result of the removal.
     _shrink(oldNode);
+}
+
+std::optional<RaycastHit> Octree::Raycast(const Ray& ray, entt::registry& registry) const {
+    if (!_rootNode) {
+        return std::nullopt;
+    }
+
+    float rootDistance{};
+    if (!Raycaster::IntersectBox(ray, Box::FromCenterHalfWidth(_rootNode->Center, _rootNode->HalfWidth), rootDistance)) {
+        return std::nullopt;
+    }
+
+    struct NodeRayHit {
+        const OC::Node* Node{};
+        float Distance{};
+    };
+
+    const auto compareClosestFirst{[](const NodeRayHit& lhs, const NodeRayHit& rhs) {
+        return lhs.Distance > rhs.Distance;
+    }};
+
+    std::priority_queue<NodeRayHit, std::vector<NodeRayHit>, decltype(compareClosestFirst)> nodesToVisit{compareClosestFirst};
+    nodesToVisit.push(NodeRayHit{_rootNode.get(), rootDistance});
+
+    RaycastHit closestHit{};
+    float closestDistance{ray.MaxDistance};
+    bool foundHit{};
+
+    while (!nodesToVisit.empty()) {
+        const auto [node, nodeEntryDistance]{nodesToVisit.top()};
+        nodesToVisit.pop();
+
+        if (!node || nodeEntryDistance > closestDistance) {
+            continue;
+        }
+
+        for (const auto entity : node->Entities) {
+            if (!registry.valid(entity) || !registry.all_of<BoundingBox, WorldTransform>(entity)) {
+                continue;
+            }
+
+            const Box entityBox{OC::ComputeWorldSpaceBox(entity, registry)};
+            float entityDistance{};
+            if (!Raycaster::IntersectBox(ray, entityBox, entityDistance) || entityDistance > closestDistance) {
+                continue;
+            }
+
+            closestDistance = entityDistance;
+            closestHit = RaycastHit{entity, entityDistance, ray.Origin + ray.Direction * entityDistance};
+            foundHit = true;
+        }
+
+        for (const auto& child : node->Children) {
+            if (!child) {
+                continue;
+            }
+
+            float childEntryDistance{};
+            if (Raycaster::IntersectBox(ray, Box::FromCenterHalfWidth(child->Center, child->HalfWidth), childEntryDistance) &&
+                childEntryDistance <= closestDistance) {
+                nodesToVisit.push(NodeRayHit{child.get(), childEntryDistance});
+            }
+        }
+    }
+
+    if (!foundHit) {
+        return std::nullopt;
+    }
+
+    return closestHit;
 }
 
 OC::Node* Octree::GetRootNode() const {

@@ -28,7 +28,7 @@ public:
     void BeginFrame();
 
     /** Step 3: build all ImGui panel draw-lists (call AFTER the renderer). */
-    void DrawUI(entt::registry& registry);
+    void DrawUI(entt::dispatcher& dispatcher, entt::registry& registry);
 
     /** Step 4: submit ImGui draw-lists to OpenGL. */
     void Render();

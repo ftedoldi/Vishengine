@@ -11,7 +11,5 @@ public:
 private:
     void _onFramebufferSizeChanged(WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const;
 
-    void _onMouseMoved(WindowsEvents::MouseMovedEvent mouseMovedEvent) const;
-
     entt::registry& _registry;
 };

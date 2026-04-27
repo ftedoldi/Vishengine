@@ -100,6 +100,7 @@ void Window::Initialize(const int width, const int height, const std::string& wi
     glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
     _setFramebufferSizeCallback();
+    _setMouseButtonCallback();
     _setKeyPressedCallback();
     _setMouseMovedCallback();
 
@@ -115,29 +116,51 @@ void Window::Update() const {
     glfwSwapBuffers(_window);
 }
 
-int32_t Window::GetHeight() const {
-    return _height;
+void Window::SetWidth(const int32_t width) {
+    _width = width;
+}
+
+void Window::SetHeight(const int32_t height) {
+    _height = height;
 }
 
 int32_t Window::GetWidth() const {
     return _width;
 }
 
+int32_t Window::GetHeight() const {
+    return _height;
+}
+
 void Window::_setFramebufferSizeCallback() const {
-    auto framebufferSizeCallback = [](GLFWwindow* window, int width, int height) {
+    auto framebufferSizeCallback = [](GLFWwindow* window, const int width, const int height) {
         glViewport(0, 0, width, height);
 
-        if (auto* const selfWindow{static_cast<Window *>(glfwGetWindowUserPointer(window))}) {
+        if (auto* const selfWindow{static_cast<Window*>(glfwGetWindowUserPointer(window))}) {
             selfWindow->_eventDispatcher.trigger<WindowsEvents::FrameBufferSizeChangedEvent>({static_cast<float>(width), static_cast<float>(height)});
+            selfWindow->SetWidth(width);
+            selfWindow->SetHeight(height);
         }
     };
 
     glfwSetFramebufferSizeCallback(_window, framebufferSizeCallback);
 }
 
+void Window::_setMouseButtonCallback() const {
+    auto mouseButtonCallback{[](GLFWwindow* window, int button, int action, int) {
+        if (const auto* const selfWindow{static_cast<Window*>(glfwGetWindowUserPointer(window))}) {
+            double xPosition{}, yPosition{};
+            glfwGetCursorPos(window, &xPosition, &yPosition);
+            selfWindow->_eventDispatcher.trigger<WindowsEvents::MousePressedEvent>({button, action, xPosition, yPosition});
+        }
+    }};
+
+    glfwSetMouseButtonCallback(_window, mouseButtonCallback);
+}
+
 void Window::_setKeyPressedCallback() const {
     auto keyCallback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
-        if (auto* const selfWindow{static_cast<Window *>(glfwGetWindowUserPointer(window))}) {
+        if (auto* const selfWindow{static_cast<Window*>(glfwGetWindowUserPointer(window))}) {
             selfWindow->_eventDispatcher.trigger<WindowsEvents::KeyPressedEvent>({key, scancode, action, mods});
         }
     };
@@ -147,7 +170,7 @@ void Window::_setKeyPressedCallback() const {
 
 void Window::_setMouseMovedCallback() const {
     auto mouseCallback = [](GLFWwindow* window, double xPos, double yPos) {
-        if (auto* const selfWindow{static_cast<Window *>(glfwGetWindowUserPointer(window))}) {
+        if (const auto* const selfWindow{static_cast<Window*>(glfwGetWindowUserPointer(window))}) {
             selfWindow->_eventDispatcher.trigger<WindowsEvents::MouseMovedEvent>({xPos, yPos});
         }
     };

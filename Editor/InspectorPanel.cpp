@@ -6,6 +6,7 @@
 #include "Components/Camera/Camera.h"
 #include "Components/MeshNodeTag.h"
 #include "Components/Name.h"
+#include "Components/SelectedTag.h"
 #include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/TransformDirtyFlag.h"
 #include "imgui.h"
@@ -98,66 +99,43 @@ bool DrawAndUpdateVec3Widget(const char* label, glm::vec3& values) {
 
 }
 
-void InspectorPanel::OnRender(entt::registry& registry) {
+void InspectorPanel::OnRender(entt::dispatcher&, entt::registry& registry) {
     constexpr ImGuiWindowFlags flags{ImGuiWindowFlags_None};
 
     ImGui::Begin("Inspector", nullptr, flags);
+    const auto selectedEntitiesView{registry.view<SelectedTag>()};
 
-    if (_selectedEntity == entt::null || !registry.valid(_selectedEntity)) {
-        ImGui::TextDisabled("No entity selected.");
-        ImGui::End();
-        return;
+    for (const auto selectedEntity : selectedEntitiesView) {
+        ImGui::Text("Entity  %u", static_cast<unsigned>(entt::to_integral(selectedEntity)));
+        ImGui::Separator();
+
+        _drawMeshComponent(selectedEntity, registry);
+        _drawPointLightComponent(selectedEntity, registry);
+        _drawDirectionalLightComponent(selectedEntity, registry);
+        _drawCameraComponent(selectedEntity, registry);
+
+        ImGui::Spacing();
+        ImGui::Separator();
     }
-
-    // Entity header
-    ImGui::Text("Entity  %u", static_cast<unsigned>(entt::to_integral(_selectedEntity)));
-    ImGui::Separator();
-
-    _drawMeshComponent(registry);
-    _drawPointLightComponent(registry);
-    _drawDirectionalLightComponent(registry);
-    _drawCameraComponent(registry);
-
-    ImGui::Spacing();
-    ImGui::Separator();
-
-    // Add Component button
-    /*const float buttonWidth{ImGui::GetContentRegionAvail().x};
-    if (ImGui::Button("Add Component", ImVec2{buttonWidth, 0.f})) {
-        ImGui::OpenPopup("AddComponentPopup");
-    }
-
-    if (ImGui::BeginPopup("AddComponentPopup")) {
-        if (ImGui::MenuItem("Position") && !registry.all_of<Position>(_selectedEntity)) {
-            registry.emplace<Position>(_selectedEntity);
-        }
-        if (ImGui::MenuItem("Rotation") && !registry.all_of<Rotation>(_selectedEntity)) {
-            registry.emplace<Rotation>(_selectedEntity);
-        }
-        if (ImGui::MenuItem("Scale") && !registry.all_of<Scale>(_selectedEntity)) {
-            registry.emplace<Scale>(_selectedEntity);
-        }
-        ImGui::EndPopup();
-    }*/
 
     ImGui::End();
 }
 
-void InspectorPanel::_drawTransformComponent(entt::registry& registry) const {
-    if (!registry.all_of<RelativeTransform>(_selectedEntity)) {
+void InspectorPanel::_drawTransformComponent(const entt::entity selectedEntity, entt::registry& registry) const {
+    if (!registry.all_of<RelativeTransform>(selectedEntity)) {
         return;
     }
 
     // TODO: this (along with DrawAndUpdateVec3Widget) is bad and need to be refactored.
-    const ImGuiTreeNodeFlags flags{
+    constexpr ImGuiTreeNodeFlags flags{
         ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
         ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowOverlap |
         ImGuiTreeNodeFlags_FramePadding};
 
     if (ImGui::TreeNodeEx("##Transform", flags, "Transform")) {
         // Position
-        auto& relativeTransform{registry.get<RelativeTransform>(_selectedEntity).Value};
-        auto& transformFlag{registry.get<TransformDirtyFlag>(_selectedEntity)};
+        auto& relativeTransform{registry.get<RelativeTransform>(selectedEntity).Value};
+        auto& transformFlag{registry.get<TransformDirtyFlag>(selectedEntity)};
         if (DrawAndUpdateVec3Widget("Position", relativeTransform.Position)) {
             transformFlag.ShouldUpdateTransform = true;
         }
@@ -182,55 +160,55 @@ void InspectorPanel::_drawTransformComponent(entt::registry& registry) const {
     }
 }
 
-void InspectorPanel::_drawMeshComponent(entt::registry& registry) const {
-    if (!registry.any_of<MeshNodeTag>(_selectedEntity)) {
+void InspectorPanel::_drawMeshComponent(const entt::entity selectedEntity, entt::registry& registry) const {
+    if (!registry.any_of<MeshNodeTag>(selectedEntity)) {
         return;
     }
 
-    const ImGuiTreeNodeFlags flags{
+    constexpr ImGuiTreeNodeFlags flags{
         ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
         ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding};
 
     if (ImGui::TreeNodeEx("##Mesh", flags, "Mesh")) {
-        if (auto* const meshName{registry.try_get<Name>(_selectedEntity)}) {
+        if (auto* const meshName{registry.try_get<Name>(selectedEntity)}) {
             ImGui::Text("Mesh ID : %s", meshName->Value.c_str());
         }
 
         ImGui::TreePop();
     }
 
-    _drawTransformComponent(registry);
+    _drawTransformComponent(selectedEntity, registry);
 }
 
-void InspectorPanel::_drawPointLightComponent(entt::registry& registry) const {
-    if (!registry.all_of<PointLight>(_selectedEntity)) {
+void InspectorPanel::_drawPointLightComponent(const entt::entity selectedEntity, entt::registry& registry) const {
+    if (!registry.all_of<PointLight>(selectedEntity)) {
         return;
     }
-    const ImGuiTreeNodeFlags flags{
+    constexpr ImGuiTreeNodeFlags flags{
         ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
         ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding};
 
     if (ImGui::TreeNodeEx("##PointLight", flags, "Point Light")) {
-        auto& pointLight{registry.get<PointLight>(_selectedEntity)};
+        auto& pointLight{registry.get<PointLight>(selectedEntity)};
         ImGui::ColorEdit3("Ambient",  &pointLight.Ambient.x);
         ImGui::ColorEdit3("Diffuse",  &pointLight.Diffuse.x);
         ImGui::ColorEdit3("Specular", &pointLight.Specular.x);
         ImGui::TreePop();
     }
 
-    _drawTransformComponent(registry);
+    _drawTransformComponent(selectedEntity, registry);
 }
 
-void InspectorPanel::_drawDirectionalLightComponent(entt::registry& registry) const {
-    if (!registry.all_of<DirectionalLight>(_selectedEntity)) {
+void InspectorPanel::_drawDirectionalLightComponent(const entt::entity selectedEntity, entt::registry& registry) const {
+    if (!registry.all_of<DirectionalLight>(selectedEntity)) {
         return;
     }
-    const ImGuiTreeNodeFlags flags{
+    constexpr ImGuiTreeNodeFlags flags{
         ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
         ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding};
 
     if (ImGui::TreeNodeEx("##DirectionalLight", flags, "Directional Light")) {
-        auto& directionalLight{registry.get<DirectionalLight>(_selectedEntity)};
+        auto& directionalLight{registry.get<DirectionalLight>(selectedEntity)};
         DrawAndUpdateVec3Widget("Direction", directionalLight.Direction);
         ImGui::ColorEdit3("Ambient",  &directionalLight.Ambient.x);
         ImGui::ColorEdit3("Diffuse",  &directionalLight.Diffuse.x);
@@ -239,12 +217,12 @@ void InspectorPanel::_drawDirectionalLightComponent(entt::registry& registry) co
     }
 }
 
-void InspectorPanel::_drawCameraComponent(entt::registry& registry) const {
-    if (!registry.all_of<Camera>(_selectedEntity)) {
+void InspectorPanel::_drawCameraComponent(const entt::entity selectedEntity, entt::registry& registry) const {
+    if (!registry.all_of<Camera>(selectedEntity)) {
         return;
     }
 
-    const ImGuiTreeNodeFlags flags{
+    constexpr ImGuiTreeNodeFlags flags{
         ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
         ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding};
 
@@ -253,6 +231,6 @@ void InspectorPanel::_drawCameraComponent(entt::registry& registry) const {
         ImGui::TreePop();
     }
 
-    _drawTransformComponent(registry);
+    _drawTransformComponent(selectedEntity, registry);
 }
 

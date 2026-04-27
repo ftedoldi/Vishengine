@@ -15,7 +15,7 @@ class ContentBrowserPanel final : public IPanel {
 public:
     explicit ContentBrowserPanel(const std::filesystem::path& assetsRoot);
 
-    void OnRender(entt::registry& registry) override;
+    void OnRender(entt::dispatcher& dispatcher, entt::registry& registry) override;
 
 private:
     void _renderBreadcrumb();

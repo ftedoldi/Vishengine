@@ -14,20 +14,16 @@ class InspectorPanel final : public IPanel {
 public:
     InspectorPanel() = default;
 
-    void OnRender(entt::registry& registry) override;
-
-    void SetSelectedEntity(entt::entity entity) { _selectedEntity = entity; }
+    void OnRender(entt::dispatcher& dispatcher, entt::registry& registry) override;
 
 private:
-    void _drawTransformComponent(entt::registry& registry) const;
+    void _drawTransformComponent(entt::entity selectedEntity, entt::registry& registry) const;
 
-    void _drawMeshComponent(entt::registry& registry) const;
+    void _drawMeshComponent(entt::entity selectedEntity, entt::registry& registry) const;
 
-    void _drawPointLightComponent(entt::registry& registry) const;
+    void _drawPointLightComponent(entt::entity selectedEntity, entt::registry& registry) const;
 
-    void _drawDirectionalLightComponent(entt::registry& registry) const;
+    void _drawDirectionalLightComponent(entt::entity selectedEntity, entt::registry& registry) const;
 
-    void _drawCameraComponent(entt::registry& registry) const;
-
-    entt::entity _selectedEntity{entt::null};
+    void _drawCameraComponent(entt::entity selectedEntity, entt::registry& registry) const;
 };

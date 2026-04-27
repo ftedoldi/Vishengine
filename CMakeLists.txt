@@ -71,6 +71,7 @@ file(GLOB PROJECT_HEADERS
         InputManager/*.h
         Events/*.h
         DataStructures/*.h
+        RenderingComponents/*.h
 )
 
 file(GLOB PROJECT_SOURCES
@@ -91,6 +92,7 @@ file(GLOB PROJECT_SOURCES
         InputManager/*.cpp
         Events/*.cpp
         DataStructures/*.cpp
+        RenderingComponents/*.cpp
         ./*.cpp
 )
 

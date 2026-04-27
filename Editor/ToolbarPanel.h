@@ -14,7 +14,7 @@ class ToolbarPanel final : public IPanel {
 public:
     ToolbarPanel() = default;
 
-    void OnRender(entt::registry& registry) override;
+    void OnRender(entt::dispatcher& dispatcher, entt::registry& registry) override;
 
     [[nodiscard]] bool IsPlaying() const { return _isPlaying; }
     [[nodiscard]] bool IsPaused()  const { return _isPaused;  }

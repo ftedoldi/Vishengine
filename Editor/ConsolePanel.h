@@ -26,7 +26,7 @@ class ConsolePanel final : public IPanel {
 public:
     ConsolePanel() = default;
 
-    void OnRender(entt::registry& registry) override;
+    void OnRender(entt::dispatcher& dispatcher, entt::registry& registry) override;
 
     /** Push a new log entry. */
     void Log(LogLevel level, const std::string& message);

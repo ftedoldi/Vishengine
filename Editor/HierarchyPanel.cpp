@@ -5,9 +5,10 @@
 #include "Components/MeshNodeTag.h"
 #include "Components/Name.h"
 #include "Components/Relationship.h"
+#include "Components/SelectedTag.h"
 #include "imgui.h"
 
-void HierarchyPanel::OnRender(entt::registry& registry) {
+void HierarchyPanel::OnRender(entt::dispatcher&, entt::registry& registry) {
     constexpr ImGuiWindowFlags hierarchyFlags{ImGuiWindowFlags_NoCollapse};
 
     ImGui::Begin("Hierarchy", nullptr, hierarchyFlags);
@@ -16,22 +17,18 @@ void HierarchyPanel::OnRender(entt::registry& registry) {
     _drawLights(registry);
 
     // Click on empty space → deselect
+    const auto selectedEntitiesView{registry.view<SelectedTag>()};
     if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && ImGui::IsWindowHovered()) {
-        _selectedEntity = entt::null;
-    }
-
-    if (ImGui::BeginPopupContextWindow("entity_creation_popup", ImGuiPopupFlags_NoOpenOverItems | ImGuiPopupFlags_MouseButtonRight)) {
-        if (ImGui::Selectable("Create entity")) {
-            _selectedEntity = registry.create();
+        for (const auto selectedEntity : selectedEntitiesView) {
+            registry.remove<SelectedTag>(selectedEntity);
         }
-        ImGui::EndPopup();
     }
 
     ImGui::End();
 }
 
 void HierarchyPanel::_drawEntity(entt::registry& registry, const entt::entity entity, const char* displayName) {
-    const bool isSelected{entity == _selectedEntity};
+    const bool isSelected{registry.any_of<SelectedTag>(entity)};
 
     ImGuiTreeNodeFlags flags =
         ImGuiTreeNodeFlags_OpenOnArrow |
@@ -44,15 +41,12 @@ void HierarchyPanel::_drawEntity(entt::registry& registry, const entt::entity en
 
     const bool opened{ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<intptr_t>(entt::to_integral(entity))), flags, "%s", displayName)};
     if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
-        _selectedEntity = entity;
+        registry.get_or_emplace<SelectedTag>(entity);
     }
 
     if (ImGui::BeginPopupContextItem("entity_deletion_popup")) {
         if (ImGui::Selectable("Delete entity")) {
             registry.destroy(entity);
-            if (_selectedEntity == entity) {
-                _selectedEntity = entt::null;
-            }
         }
         ImGui::EndPopup();
     }
@@ -109,7 +103,7 @@ void HierarchyPanel::_drawEntityNode(const entt::entity entity, entt::registry& 
 
     if (ImGui::TreeNodeEx(reinterpret_cast<void*>(entity), flags, "%s", name.c_str())) {
         if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
-            _selectedEntity = entity;
+            registry.get_or_emplace<SelectedTag>(entity);
         }
 
         auto view{registry.view<Relationship, MeshNodeTag>()};

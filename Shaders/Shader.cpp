@@ -81,13 +81,11 @@ void Shader::SetBool(const std::string &uniformName, const bool value) const {
     glUniform1i(glGetUniformLocation(_programID, uniformName.c_str()), value);
 }
 
-void Shader::UseProgram() const
-{
+void Shader::UseProgram() const {
     glUseProgram(_programID);
 }
 
-void Shader::_compileShaders(const std::string& vertexShaderCode, const std::string& fragmentShaderCode)
-{
+void Shader::_compileShaders(const std::string& vertexShaderCode, const std::string& fragmentShaderCode) {
     const auto* vShaderCode = vertexShaderCode.c_str();
     const auto* fShaderCode = fragmentShaderCode.c_str();
 

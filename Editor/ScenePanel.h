@@ -2,6 +2,7 @@
 
 #include "IPanel.h"
 #include "Platform/Framebuffer.h"
+#include "imgui.h"
 
 #include <entt/entt.hpp>
 #include <memory>
@@ -17,15 +18,11 @@ class ScenePanel final : public IPanel {
 public:
     explicit ScenePanel(std::shared_ptr<Framebuffer> framebuffer);
 
-    void OnRender(entt::registry& registry) override;
-
-    [[nodiscard]] float GetViewportWidth()  const;
-
-    [[nodiscard]] float GetViewportHeight() const;
+    void OnRender(entt::dispatcher& dispatcher, entt::registry& registry) override;
 
 private:
     std::shared_ptr<Framebuffer> _framebuffer{};
 
-    float _viewportWidth{0.f};
-    float _viewportHeight{0.f};
+    ImVec2 _lastSize{};
+    ImVec2 _lastMousePosition{};
 };

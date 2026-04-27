@@ -7,6 +7,7 @@
 #include "Systems/CameraSystem.h"
 #include "Systems/DebugRenderPass.h"
 #include "Systems/EditorCameraMoveSystem.h"
+#include "Systems/PickingSystem.h"
 #include "Systems/RendererSystem.h"
 #include "Systems/SpatialSystem.h"
 #include "Systems/TransformSystem.h"
@@ -46,6 +47,8 @@ private:
     std::unique_ptr<TransformSystem> _transformSystem{};
 
     std::unique_ptr<SpatialSystem> _spatialSystem{};
+
+    std::unique_ptr<PickingSystem> _pickingSystem{};
 
     CameraSystem _cameraSystem{};
 

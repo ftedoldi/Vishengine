@@ -12,6 +12,7 @@
 #include "Platform/Framebuffer.h"
 #include "Platform/Time.h"
 
+#include "RenderingComponents/LineDrawer.h"
 #include "Systems/DebugRenderPass.h"
 #include "Systems/SceneRenderPass.h"
 
@@ -67,12 +68,17 @@ Game::Game() {
 
     _spatialSystem = std::make_unique<SpatialSystem>(_octree.get(), _registry, _dispatcher);
 
+    _pickingSystem = std::make_unique<PickingSystem>(_window.get(), _octree.get(), _dispatcher, _registry);
+
+    LineDrawer::Initialize(_registry);
+
     _addLight();
 }
 
 void Game::Update() {
     while (!_window->ShouldWindowClose()) {
         glfwPollEvents();
+        _inputManager->Update();
 
         Time::UpdateDeltaTime();
 
@@ -91,10 +97,11 @@ void Game::Update() {
 
         // 2. Render the scene into the offscreen framebuffer.
         _rendererSystem->Update();
+        _pickingSystem->DrawPickingRay();
 
         // 3. Build ImGui panel draw-lists (ScenePanel reads the now-populated
         //    offscreen framebuffer texture).
-        _guiDrawer->DrawUI(_registry);
+        _guiDrawer->DrawUI(_dispatcher, _registry);
 
         // 4. Submit ImGui draw-lists to the default framebuffer.
         _guiDrawer->Render();

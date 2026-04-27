@@ -8,10 +8,8 @@ class EditorCameraMoveSystem {
 public:
     explicit EditorCameraMoveSystem(const std::shared_ptr<InputManager>& inputManager);
 
-    void Update(float deltaTime, entt::registry& registry);
+    void Update(float deltaTime, entt::registry& registry) const;
 
 private:
     std::shared_ptr<InputManager> _inputManager{};
-
-    float _cameraYPosition{0.f};
 };

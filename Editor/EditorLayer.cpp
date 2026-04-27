@@ -9,12 +9,30 @@ EditorLayer::EditorLayer(std::shared_ptr<Framebuffer> sceneFramebuffer,
 
 // ── Public ────────────────────────────────────────────────────────────────────
 
-void EditorLayer::OnRender(entt::registry& registry) {
+void EditorLayer::OnRender(entt::dispatcher& dispatcher, entt::registry& registry) {
     _renderMenuBar();
-    _layoutPanels(registry);
+    _layoutPanels(dispatcher, registry);
 }
 
-// ── Private ───────────────────────────────────────────────────────────────────
+bool EditorLayer::IsPlaying() const {
+    return _toolbar.IsPlaying();
+}
+
+bool EditorLayer::IsPaused()  const {
+    return _toolbar.IsPaused();
+}
+
+ConsolePanel& EditorLayer::GetConsole() {
+    return _console;
+}
+
+ScenePanel& EditorLayer::GetScenePanel() {
+    return _scene;
+}
+
+HierarchyPanel& EditorLayer::GetHierarchyPanel() {
+    return _hierarchy;
+}
 
 void EditorLayer::_renderMenuBar() {
     if (!ImGui::BeginMainMenuBar()) { return; }
@@ -49,7 +67,7 @@ void EditorLayer::_renderMenuBar() {
     ImGui::EndMainMenuBar();
 }
 
-void EditorLayer::_layoutPanels(entt::registry& registry) {
+void EditorLayer::_layoutPanels(entt::dispatcher& dispatcher, entt::registry& registry) {
     // ── Compute layout regions ────────────────────────────────────────────
     // We replicate the Unity-like layout from the reference image:
     //
@@ -94,7 +112,7 @@ void EditorLayer::_layoutPanels(entt::registry& registry) {
     // ── Toolbar ───────────────────────────────────────────────────────────
     ImGui::SetNextWindowPos(ImVec2{0.f, toolbarY});
     ImGui::SetNextWindowSize(ImVec2{screenW, toolbarH});
-    _toolbar.OnRender(registry);   // ToolbarPanel uses its own Begin/End
+    _toolbar.OnRender(dispatcher, registry);   // ToolbarPanel uses its own Begin/End
 
     // ── Hierarchy ─────────────────────────────────────────────────────────
     if (_hierarchy.IsVisible) {
@@ -104,7 +122,7 @@ void EditorLayer::_layoutPanels(entt::registry& registry) {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
         // Override Begin inside HierarchyPanel — we set pos/size before it calls Begin
-        _hierarchy.OnRender(registry);
+        _hierarchy.OnRender(dispatcher, registry);
         ImGui::PopStyleVar(2);
     }
 
@@ -115,19 +133,18 @@ void EditorLayer::_layoutPanels(entt::registry& registry) {
         ImGui::SetNextWindowBgAlpha(1.f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
-        _scene.OnRender(registry);
+        _scene.OnRender(dispatcher, registry);
         ImGui::PopStyleVar(2);
     }
 
     // ── Inspector ─────────────────────────────────────────────────────────
     if (_inspector.IsVisible) {
-        _inspector.SetSelectedEntity(_hierarchy.GetSelectedEntity());
         ImGui::SetNextWindowPos(ImVec2{hierarchyW + sceneW, panelsY});
         ImGui::SetNextWindowSize(ImVec2{inspectorW, panelsH});
         ImGui::SetNextWindowBgAlpha(1.f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
-        _inspector.OnRender(registry);
+        _inspector.OnRender(dispatcher, registry);
         ImGui::PopStyleVar(2);
     }
 
@@ -141,7 +158,7 @@ void EditorLayer::_layoutPanels(entt::registry& registry) {
         ImGui::SetNextWindowBgAlpha(1.f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
-        _console.OnRender(registry);
+        _console.OnRender(dispatcher, registry);
         ImGui::PopStyleVar(2);
     }
 
@@ -151,7 +168,7 @@ void EditorLayer::_layoutPanels(entt::registry& registry) {
         ImGui::SetNextWindowBgAlpha(1.f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
-        _contentBrowser.OnRender(registry);
+        _contentBrowser.OnRender(dispatcher, registry);
         ImGui::PopStyleVar(2);
     }
 }

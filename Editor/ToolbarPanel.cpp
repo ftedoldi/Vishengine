@@ -2,7 +2,7 @@
 
 #include "imgui.h"
 
-void ToolbarPanel::OnRender(entt::registry& /*registry*/) {
+void ToolbarPanel::OnRender(entt::dispatcher&, entt::registry&) {
     // Render as a slim, full-width window pinned to the top of the editor layout
     constexpr ImGuiWindowFlags toolbarFlags{
         ImGuiWindowFlags_NoScrollbar       |

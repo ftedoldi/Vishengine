@@ -16,7 +16,6 @@
 namespace {
 
 void DrawMesh(const std::vector<Transform>& instanceTransforms, const MeshGpuData& gpuData, const std::vector<uint32_t>& indices) {
-    // This should somehow optimized by using AOS instead of SOA
     std::vector<InstanceData> instanceData{};
     instanceData.reserve(instanceTransforms.size());
     for (const auto& t : instanceTransforms) {

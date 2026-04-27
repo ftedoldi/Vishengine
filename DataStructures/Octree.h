@@ -1,11 +1,13 @@
 #pragma once
 
 #include "Box.h"
+#include "Core/Raycaster.h"
 #include "entt/entity/entity.hpp"
 
 #include <array>
 #include <list>
 #include <memory>
+#include <optional>
 
 namespace OC {
 
@@ -37,6 +39,8 @@ public:
     void InsertEntity(OC::Node* node, entt::entity entity, entt::registry& registry) const;
 
     void Update(entt::entity entity, entt::registry& registry);
+
+    [[nodiscard]] std::optional<RaycastHit> Raycast(const Ray& ray, entt::registry& registry) const;
 
     [[nodiscard]] OC::Node* GetRootNode() const;
 
