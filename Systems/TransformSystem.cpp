@@ -27,6 +27,15 @@ Transform GetOrComputeWorldTransform(const entt::entity entity, entt::registry& 
 TransformSystem::TransformSystem(entt::dispatcher& eventDispatcher) : _eventDispatcher{eventDispatcher} {
 }
 
+void TransformSystem::Init(entt::registry& registry) const {
+    const auto view{registry.view<RelativeTransform, WorldTransform, Relationship>()};
+    for (const auto entity : view) {
+        if (registry.get<Relationship>(entity).Parent == entt::null) {
+            _initTransform(entity, registry);
+        }
+    }
+}
+
 void TransformSystem::Update(entt::registry& registry) const {
     const auto view{registry.view<RelativeTransform, WorldTransform, TransformDirtyFlag, Relationship>()};
     for (const auto entity: view) {
@@ -36,8 +45,14 @@ void TransformSystem::Update(entt::registry& registry) const {
             shouldUpdateTransform = false;
         }
     }
+}
 
-    _eventDispatcher.trigger<GameEvents::AllTransformsUpdated>();
+void TransformSystem::_initTransform(const entt::entity entity, entt::registry& registry) const {
+    const auto& relationship{registry.get<Relationship>(entity)};
+    registry.get<WorldTransform>(entity).Value = GetOrComputeWorldTransform(entity, registry);
+    for (uint32_t i{0}; i < relationship.Size; ++i) {
+        _initTransform(relationship.Children[i], registry);
+    }
 }
 
 void TransformSystem::_updateTransform(const entt::entity entity, entt::registry& registry) const {

@@ -10,6 +10,8 @@ class SpatialSystem {
 public:
     SpatialSystem(Octree* octree, entt::registry& registry, entt::dispatcher& sceneDispatcher);
 
+    void Init() const;
+
     void Update(entt::registry& registry);
 
 private:
@@ -17,13 +19,9 @@ private:
 
     void _updateOctree(entt::registry& registry) const;
 
-    void _initOctree(GameEvents::AllTransformsUpdated allTransformsUpdated);
-
     std::unordered_set<entt::entity> _entities{};
 
     Octree* _octree{};
 
     entt::registry& _registry;
-
-    entt::dispatcher& _sceneDispatcher;
 };

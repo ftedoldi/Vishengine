@@ -56,17 +56,19 @@ Game::Game() {
     const std::filesystem::path assetsRoot{std::string(PROJECT_SOURCE_DIR) + "/Assets"};
     _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWWindow(), sceneFrameBuffer, assetsRoot);
 
+    _transformSystem = std::make_unique<TransformSystem>(_dispatcher);
+
     ModelLoader modelLoader{_registry, meshController, materialController};
     modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/testOctree.glb");
+    _transformSystem->Init(_registry);
 
     _octree = std::make_unique<Octree>();
     auto debugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
     auto debugRenderPass{std::make_unique<DebugRenderPass>(_octree.get(), _inputManager.get(), std::move(debugShader), _registry)};
     _rendererSystem->AddPass(std::move(debugRenderPass));
 
-    _transformSystem = std::make_unique<TransformSystem>(_dispatcher);
-
     _spatialSystem = std::make_unique<SpatialSystem>(_octree.get(), _registry, _dispatcher);
+    _spatialSystem->Init();
 
     _pickingSystem = std::make_unique<PickingSystem>(_window.get(), _octree.get(), _dispatcher, _registry);
 

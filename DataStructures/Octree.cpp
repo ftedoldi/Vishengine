@@ -61,7 +61,7 @@ Box ComputeWorldSpaceBox(const entt::entity entity, entt::registry& registry) {
         glm::vec3{std::numeric_limits<float>::lowest()}
     };
 
-    for (const auto& vertex : localSpaceBox.GetVertices()) {
+    for (const auto vertex : localSpaceBox.GetVertices()) {
         const auto worldSpaceVertex{worldTransform.TransformPosition(vertex)};
         worldSpaceBox.Min = glm::min(worldSpaceBox.Min, worldSpaceVertex);
         worldSpaceBox.Max = glm::max(worldSpaceBox.Max, worldSpaceVertex);
@@ -70,7 +70,7 @@ Box ComputeWorldSpaceBox(const entt::entity entity, entt::registry& registry) {
     return worldSpaceBox;
 }
 
-void InsertEntityAtDepth(OC::Node* const node, const entt::entity entity, entt::registry& registry, const int32_t remainingDepth) {
+void InsertEntityAtDepth(Node* const node, const entt::entity entity, entt::registry& registry, const int32_t remainingDepth) {
     assert(node);
     const Box worldSpaceBox{ComputeWorldSpaceBox(entity, registry)};
     const auto worldSpaceCenter{worldSpaceBox.GetCenter()};
@@ -111,7 +111,7 @@ void InsertEntityAtDepth(OC::Node* const node, const entt::entity entity, entt::
 
 }
 
-void Octree::Init(entt::registry& registry, int32_t maxDepth) {
+void Octree::Init(entt::registry& registry, const int32_t maxDepth) {
     _maxDepth = maxDepth;
     Box sceneBoundingBox{glm::vec3{std::numeric_limits<float>::max()}, glm::vec3{std::numeric_limits<float>::lowest()}};
 
