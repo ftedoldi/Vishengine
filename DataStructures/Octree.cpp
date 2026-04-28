@@ -11,6 +11,7 @@
 
 #include <limits>
 #include <queue>
+#include <ranges>
 #include <vector>
 
 namespace OC {
@@ -152,18 +153,19 @@ void Octree::Update(const entt::entity entity, entt::registry& registry) {
     auto* octreeNode{oldNode};
     auto octreeNodeBox{Box::FromCenterHalfWidth(octreeNode->Center, octreeNode->HalfWidth)};
 
+    bool expandOctree{};
     while (!octreeNodeBox.Contains(entityWorldSpaceBoundingBox)) {
         if (!octreeNode->Parent) {
             // Entity has escaped the root, we need to expand.
+            expandOctree = true;
             break;
         }
         octreeNode = octreeNode->Parent;
-        // todo : octreeNode ognit tanto e' nullo
         octreeNodeBox = Box::FromCenterHalfWidth(octreeNode->Center, octreeNode->HalfWidth);
     }
 
     // If the entity is still outside the root, expand the tree.
-    if (!octreeNodeBox.Contains(entityWorldSpaceBoundingBox)) {
+    if (expandOctree) {
         // octreeNode is the root here (no parent).
         _expand(entityWorldSpaceBoundingBox);
         // After expansion the root now contains the entity. Insert the entity from the root.
@@ -177,8 +179,8 @@ void Octree::Update(const entt::entity entity, entt::registry& registry) {
     // Insert entity starting from the ancestor found above.
     InsertEntity(octreeNode, entity, registry);
 
-    // Prune any nodes that became empty as a result of the removal.
-    //_shrink(oldNode);
+    // Shrink the octree if only one of the child nodes of the root node exists.
+    _shrink();
 }
 
 std::optional<RaycastHit> Octree::Raycast(const Ray& ray, entt::registry& registry) const {
@@ -303,24 +305,29 @@ void Octree::_expand(const Box& entityBox) {
     }
 }
 
-void Octree::_shrink(OC::Node* node) const {
-    while (node && node != _rootNode.get()) {
-        // Remove any children whose entire subtree is empty.
-        for (auto& child : node->Children) {
-            if (child && OC::IsSubtreeEmpty(child.get())) {
-                child.reset();
-            }
-        }
+void Octree::_shrink() {
+    // TODO: can be optimized
+    uint32_t numOfRootChildrenWithEntities{};
 
-        // If this node itself is now empty and has no remaining children,
-        // keep walking upward so the parent can also be pruned.
-        const bool selfEmpty{node->Entities.empty()};
-        const bool noChildren{std::ranges::all_of(node->Children, [](const auto& c) { return !c; })};
+    // No need to shrink if the root node has no children.
+    if (!_rootNode->Entities.empty()) {
+        return;
+    }
 
-        if (selfEmpty && noChildren) {
-            node = node->Parent;
-        } else {
-            break;
+    for (const auto& child : _rootNode->Children) {
+        if (child && !OC::IsSubtreeEmpty(child.get())) {
+            numOfRootChildrenWithEntities++;
         }
+    }
+
+    if (numOfRootChildrenWithEntities == 1) {
+        auto childWithEntitiesIterator{std::ranges::find_if(_rootNode->Children, [](const auto& child) {
+            return !OC::IsSubtreeEmpty(child.get());
+        })};
+
+        auto childWithEntities = std::move(*childWithEntitiesIterator);
+        childWithEntities->Parent = nullptr;
+
+        _rootNode = std::move(childWithEntities);
     }
 }

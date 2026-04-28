@@ -9,6 +9,4 @@ struct TransformUpdated {
     entt::entity entity{};
 };
 
-struct AllTransformsUpdated {};
-
 }

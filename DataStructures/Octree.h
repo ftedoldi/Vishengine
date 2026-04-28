@@ -48,8 +48,7 @@ private:
     // Expand the octree root until it contains the given world space bounding box.
     void _expand(const Box& entityBox);
 
-    // Walk up from node and prune any children whose entire subtree is empty.
-    void _shrink(OC::Node* node) const;
+    void _shrink();
 
     int32_t _maxDepth{};
 
