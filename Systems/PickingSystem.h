@@ -17,8 +17,6 @@ public:
 
     void DrawPickingRay() const;
 
-    [[nodiscard]] entt::entity GetLastPickedEntity() const { return _lastPickedEntity; }
-
 private:
     void _onMouseButtonPressed(const WindowsEvents::MousePressedEvent& mousePressedEvent);
 
@@ -26,13 +24,15 @@ private:
 
     void _onScenePanelMouseMovedEvent(ScenePanelEvents::ScenePanelMouseMovedEvent scenePanelMouseMovedEvent);
 
+    void _removeSelectedEntities() const;
+
+    void _drawDebug(const RaycastHit& raycastHit) const;
+
     Window* _window{};
 
     Octree* _octree{};
 
     entt::registry& _registry;
-
-    entt::entity _lastPickedEntity{};
 
     std::optional<std::pair<glm::vec3, glm::vec3>> _lastRay{};
 

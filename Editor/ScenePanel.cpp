@@ -85,7 +85,7 @@ void ScenePanel::_drawGizmo(const ImVec2 panelPos, const ImVec2 panelSize, entt:
     const bool changed{ImGuizmo::Manipulate(
         glm::value_ptr(viewMat),
         glm::value_ptr(camera.ProjectionMatrix),
-        ImGuizmo::TRANSLATE | ImGuizmo::ROTATE | ImGuizmo::SCALE,
+        ImGuizmo::TRANSLATE,
         ImGuizmo::WORLD,
         glm::value_ptr(manipulated))};
 
@@ -95,22 +95,20 @@ void ScenePanel::_drawGizmo(const ImVec2 panelPos, const ImVec2 panelSize, entt:
 
     float newPosition[3]{};
     float newScale[3]{};
-    float newRotation[4]{};
+    float newRotation[3]{};
     ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(manipulated), newPosition, newRotation, newScale);
 
-    glm::vec3 eulerAngles{newRotation[0], newRotation[1], newRotation[2]};
-
-    Transform newWorld{{newPosition[0], newPosition[1], newPosition[2]}, eulerAngles, newScale[0]};
+    const glm::quat newWorldQuat{glm::radians(glm::vec3{newRotation[0], newRotation[1], newRotation[2]})};
+    const Transform newWorldTransform{{newPosition[0], newPosition[1], newPosition[2]}, newWorldQuat, newScale[0]};
 
     // Factor out parent world transform to get the new relative transform.
     auto& relTransform{registry.get<RelativeTransform>(selectedEntity).Value};
-    const auto* relationship{registry.try_get<Relationship>(selectedEntity)};
-    if (relationship && relationship->Parent != entt::null) {
-        if (const auto* parentWorld{registry.try_get<WorldTransform>(relationship->Parent)}) {
-            relTransform = parentWorld->Value.Invert().Cumulate(newWorld);
-        }
+    const auto* rel{registry.try_get<Relationship>(selectedEntity)};
+    if (rel && rel->Parent != entt::null) {
+        const auto& parentWorld{registry.get<WorldTransform>(rel->Parent).Value};
+        relTransform = parentWorld.Invert().Cumulate(newWorldTransform);
     } else {
-        relTransform = newWorld;
+        relTransform = newWorldTransform;
     }
 
     if (auto* dirty{registry.try_get<TransformDirtyFlag>(selectedEntity)}) {

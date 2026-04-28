@@ -71,22 +71,14 @@ void PickingSystem::_onMouseButtonPressed(const WindowsEvents::MousePressedEvent
 
         _lastRay = {rayOrigin, rayOrigin + camera.FarPlaneZDistance * rayDir};
 
-        const auto hit{_octree->Raycast(ray, _registry)};
-        _lastPickedEntity = hit ? hit->Entity : entt::null;
-
-        if (hit) {
+        if (const auto hit{_octree->Raycast(ray, _registry)}) {
+            // Remove the old selected entities
+            _removeSelectedEntities();
             _registry.get_or_emplace<SelectedTag>(hit->Entity);
-            if (const auto* name{_registry.try_get<Name>(hit->Entity)}) {
-                std::cout << "Picked entity: " << name->Value << " (distance: " << hit->Distance << ")\n";
-            } else {
-                std::cout << "Picked entity id: " << static_cast<std::uint32_t>(hit->Entity) << " (distance: " << hit->Distance << ")\n";
-            }
+            _drawDebug(*hit);
         } else {
             // If no entity was hit remove all the entities from the selection.
-            const auto selectedEntitiesView{_registry.view<SelectedTag>()};
-            for (const auto selectedEntity : selectedEntitiesView) {
-                _registry.remove<SelectedTag>(selectedEntity);
-            }
+            _removeSelectedEntities();
             std::cout << "No entity picked\n";
         }
     }
@@ -97,4 +89,19 @@ void PickingSystem::_onScenePanelResized(const ScenePanelEvents::ScenePanelResiz
 
 void PickingSystem::_onScenePanelMouseMovedEvent(const ScenePanelEvents::ScenePanelMouseMovedEvent scenePanelMouseMovedEvent) {
     _scenePanelMousePosition = scenePanelMouseMovedEvent.ScenePanelMousePosition;
+}
+
+void PickingSystem::_removeSelectedEntities() const {
+    const auto selectedEntitiesView{_registry.view<SelectedTag>()};
+    for (const auto selectedEntity : selectedEntitiesView) {
+        _registry.remove<SelectedTag>(selectedEntity);
+    }
+}
+
+void PickingSystem::_drawDebug(const RaycastHit& raycastHit) const {
+    if (const auto* name{_registry.try_get<Name>(raycastHit.Entity)}) {
+        std::cout << "Picked entity: " << name->Value << " (distance: " << raycastHit.Distance << ")\n";
+    } else {
+        std::cout << "Picked entity id: " << static_cast<std::uint32_t>(raycastHit.Entity) << " (distance: " << raycastHit.Distance << ")\n";
+    }
 }
