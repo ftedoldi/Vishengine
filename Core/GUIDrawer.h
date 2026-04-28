@@ -35,8 +35,6 @@ public:
 
     void Clear();
 
-    EditorLayer& GetEditorLayer() { return _editorLayer; }
-
 private:
     EditorLayer _editorLayer;
 };

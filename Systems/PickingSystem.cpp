@@ -8,6 +8,8 @@
 #include "RenderingComponents/LineDrawer.h"
 
 #include "GLFW/glfw3.h"
+#include "imgui.h"
+#include "ImGuizmo.h"
 #include "glm/glm.hpp"
 
 #include <iostream>
@@ -30,6 +32,11 @@ void PickingSystem::DrawPickingRay() const {
 
 void PickingSystem::_onMouseButtonPressed(const WindowsEvents::MousePressedEvent& mousePressedEvent) {
     if (mousePressedEvent.Button != GLFW_MOUSE_BUTTON_LEFT || mousePressedEvent.Action != GLFW_PRESS) {
+        return;
+    }
+
+    // If im hovering or using a guizmo (that can be placed outside the selected entity) skip the picking otherwise the entity would be deselected.
+    if (ImGuizmo::IsOver() || ImGuizmo::IsUsing()) {
         return;
     }
 
