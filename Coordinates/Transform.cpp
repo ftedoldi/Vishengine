@@ -1,5 +1,8 @@
 #include "Transform.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+
 Transform::Transform(const glm::vec3 position, const glm::quat rotation, const float scale) :
            Position{position}, Rotation{rotation}, Scale{scale} {}
 
@@ -32,4 +35,12 @@ glm::vec3 Transform::TransformPosition(const glm::vec3 position) const {
     const glm::vec3 finalPoint{rotatedPoint + Position};
 
     return finalPoint;
+}
+
+glm::mat4 Transform::ToMatrix() const {
+    const auto translation{glm::translate(glm::mat4{1.f}, Position)};
+    const auto rotation{glm::mat4_cast(Rotation)};
+    const auto scale{glm::scale(glm::mat4{1.f}, glm::vec3{Scale})};
+
+    return translation * rotation * scale;
 }

@@ -5,6 +5,7 @@
 #include "Components/Transforms/TransformDirtyFlag.h"
 #include "Components/Transforms/WorldTransform.h"
 #include "Events/GameEvents.h"
+#include "Coordinates/Transform.h"
 
 namespace {
 

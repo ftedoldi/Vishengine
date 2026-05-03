@@ -7,8 +7,10 @@
 #include "Components/Lights/PointLight.h"
 #include "Components/Mesh.h"
 #include "Components/Relationship.h"
+#include "Components/RenderableTag.h"
 #include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/WorldTransform.h"
+#include "Coordinates/CoordinateUtils.h"
 #include "Math/Math.h"
 
 #include <unordered_map>
@@ -62,6 +64,9 @@ void SceneRenderPass::_render() const {
     // TODO: unordered map is bad for cache locality check if this is source of bottleneck
     std::unordered_map<uint32_t, std::vector<Transform>> transformsByMeshID{};
     for (const auto& [meshEntity, mesh, relationship] : allMeshView.each()) {
+        if (!_registry.all_of<RenderableTag>(relationship.Parent)) {
+            continue;
+        }
         const auto& worldTransform{_registry.get<WorldTransform>(relationship.Parent).Value};
         transformsByMeshID[mesh.meshID].push_back(worldTransform);
     }
@@ -123,7 +128,7 @@ void SceneRenderPass::_drawPointLights(const Transform& cameraTransform, entt::r
 
     view.each([this, &cameraTransform = std::as_const(cameraTransform)](const PointLight& pointLight, const RelativeTransform& relativeTransform) {
         const auto invertedCameraTransform{cameraTransform.Invert()};
-        const auto lightViewPosition{Math::RotateVectorByQuaternion(invertedCameraTransform.Rotation, relativeTransform.Value.Position)};
+        const auto lightViewPosition{CoordUtils::RotateVectorByQuaternion(invertedCameraTransform.Rotation, relativeTransform.Value.Position)};
 
         _shader->SetUniformVec3("pointLight.Position", lightViewPosition + invertedCameraTransform.Position);
         _shader->SetUniformVec3("pointLight.Diffuse",  pointLight.Diffuse);
@@ -142,7 +147,7 @@ void SceneRenderPass::_drawDirectionalLights(const Transform& cameraTransform, e
 
     view.each([this, &cameraTransform = std::as_const(cameraTransform)](const DirectionalLight& dirLight) {
         const auto invertedCameraTransform{cameraTransform.Invert()};
-        const auto viewDirection{Math::RotateVectorByQuaternion(invertedCameraTransform.Rotation, dirLight.Direction)};
+        const auto viewDirection{CoordUtils::RotateVectorByQuaternion(invertedCameraTransform.Rotation, dirLight.Direction)};
 
         _shader->SetUniformVec3("dirLight.Direction", viewDirection);
         _shader->SetUniformVec3("dirLight.Diffuse",   dirLight.Diffuse);

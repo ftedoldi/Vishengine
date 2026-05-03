@@ -2,12 +2,14 @@
 
 #include "Box.h"
 #include "Core/Raycaster.h"
+#include "Frustum.h"
 #include "entt/entity/entity.hpp"
 
 #include <array>
 #include <list>
 #include <memory>
 #include <optional>
+#include <vector>
 
 namespace OC {
 
@@ -26,6 +28,7 @@ struct Node {
     std::array<std::unique_ptr<Node>, 8> Children{};
 
     // The list of objects contained at this node.
+    // TODO: we sure this should be a list?
     std::list<entt::entity> Entities{};
 };
 
@@ -41,6 +44,8 @@ public:
     void Update(entt::entity entity, entt::registry& registry);
 
     [[nodiscard]] std::optional<RaycastHit> Raycast(const Ray& ray, entt::registry& registry) const;
+
+    std::vector<entt::entity> QueryFrustum(const Frustum& frustum) const;
 
     [[nodiscard]] OC::Node* GetRootNode() const;
 

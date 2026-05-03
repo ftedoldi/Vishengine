@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Math/Transform.h"
-#include "entt/entity/registry.hpp"
+#include "entt/entt.hpp"
 
 class TransformSystem {
 public:

@@ -59,7 +59,7 @@ Game::Game() {
     _transformSystem = std::make_unique<TransformSystem>(_dispatcher);
 
     ModelLoader modelLoader{_registry, meshController, materialController};
-    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/testOctree.glb");
+    modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/megaHierarchy.glb");
     _transformSystem->Init(_registry);
 
     _octree = std::make_unique<Octree>();

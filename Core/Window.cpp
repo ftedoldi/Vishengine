@@ -151,7 +151,7 @@ void Window::_setMouseButtonCallback() const {
         if (const auto* const selfWindow{static_cast<Window*>(glfwGetWindowUserPointer(window))}) {
             double xPosition{}, yPosition{};
             glfwGetCursorPos(window, &xPosition, &yPosition);
-            selfWindow->_eventDispatcher.trigger<WindowsEvents::MousePressedEvent>({button, action, xPosition, yPosition});
+            selfWindow->_eventDispatcher.trigger<WindowsEvents::MousePressedEvent>({button, action, static_cast<float>(xPosition), static_cast<float>(yPosition)});
         }
     }};
 

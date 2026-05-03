@@ -1,0 +1,5 @@
+﻿#pragma once
+
+struct RenderableTag {
+
+};

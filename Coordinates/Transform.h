@@ -1,6 +1,5 @@
 #pragma once
 
-#include "glm/detail/type_quat.hpp"
 #include "glm/glm.hpp"
 
 class Transform {
@@ -12,6 +11,8 @@ public:
     Transform Invert() const;
 
     glm::vec3 TransformPosition(glm::vec3 position) const;
+
+    glm::mat4 ToMatrix() const;
 
     glm::vec3 Position{};
     glm::quat Rotation{};

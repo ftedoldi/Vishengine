@@ -19,6 +19,8 @@ private:
 
     void _updateOctree(entt::registry& registry) const;
 
+    void _performFrustumCulling(entt::registry& registry) const;
+
     std::unordered_set<entt::entity> _entities{};
 
     Octree* _octree{};

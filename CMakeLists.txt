@@ -79,6 +79,7 @@ file(GLOB PROJECT_HEADERS
         Events/*.h
         DataStructures/*.h
         RenderingComponents/*.h
+        Coordinates/*.h
 )
 
 file(GLOB PROJECT_SOURCES
@@ -100,6 +101,7 @@ file(GLOB PROJECT_SOURCES
         Events/*.cpp
         DataStructures/*.cpp
         RenderingComponents/*.cpp
+        Coordinates/*.cpp
         ./*.cpp
 )
 
@@ -145,8 +147,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # -----------------------------
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
 
+target_precompile_headers(${PROJECT_NAME} PRIVATE pch.h)
+
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+    target_link_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Debug>:/DEBUG:FASTLINK>)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 endif()
