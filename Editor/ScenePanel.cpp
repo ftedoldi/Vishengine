@@ -1,5 +1,6 @@
 #include "ScenePanel.h"
 #include "Events/ScenePanelEvents.h"
+#include "ScenePanelInputState.h"
 
 #include "Components/Camera/Camera.h"
 #include "Components/Camera/EditorCameraTag.h"
@@ -9,13 +10,14 @@
 #include "Components/Transforms/TransformDirtyFlag.h"
 #include "Components/Transforms/WorldTransform.h"
 
+#include "Components/RenderingComponents.h"
 #include "ImGuizmo.h"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "imgui.h"
 
-ScenePanel::ScenePanel(std::shared_ptr<Framebuffer> framebuffer)
-    : _framebuffer{std::move(framebuffer)} {}
+ScenePanel::ScenePanel(const FramebuffersController* const framebuffersController)
+    : _framebuffersController{framebuffersController} {}
 
 void ScenePanel::OnRender(entt::dispatcher& dispatcher, entt::registry& registry) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0.f, 0.f});
@@ -39,14 +41,22 @@ void ScenePanel::OnRender(entt::dispatcher& dispatcher, entt::registry& registry
         _lastSize = regionSize;
     }
 
-    const auto textureID{_framebuffer->GetColorAttachmentID()};
-    ImGui::Image(
-        textureID,
-        regionSize,
+    const auto mainView{registry.view<MainViewTag, RenderTarget, RenderPass>()};
+
+    mainView.each([this, regionSize, &registry, contentPos](const entt::entity, const RenderTarget renderTarget, const RenderPass renderPass) {
+        const auto framebuffer{_framebuffersController->GetFramebuffer(renderTarget.FramebufferHandle)};
+        ImGui::Image(
+            framebuffer->GetColorAttachmentID(),
+            regionSize,
         ImVec2{0.f, 1.f},
         ImVec2{1.f, 0.f});
 
-    _drawGizmo(contentPos, regionSize, registry);
+        auto& inputState{registry.ctx().emplace<ScenePanelInputState>()};
+        inputState.IsHovered = ImGui::IsItemHovered();
+
+        _drawGizmo(contentPos, regionSize, registry);
+    });
+
 
     ImGui::End();
     ImGui::PopStyleVar();

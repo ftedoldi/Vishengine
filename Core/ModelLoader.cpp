@@ -32,8 +32,8 @@ Transform DecomposeMatrixIntoTransform(const aiMatrix4x4& transformMatrix) {
 }
 
 ModelLoader::ModelLoader(entt::registry& registry,
-                         const std::shared_ptr<MeshController>& meshController,
-                         const std::shared_ptr<MaterialController>& materialController) : _registry{registry}, _meshController(meshController), _materialController(materialController) {}
+                         MeshController* meshController,
+                         MaterialController* materialController) : _registry{registry}, _meshController(meshController), _materialController(materialController) {}
 
 void ModelLoader::ImportModel(const std::string& modelPath) {
     const auto* const scene{_importer.ReadFile(modelPath,aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_FlipUVs | aiProcess_OptimizeMeshes/* | aiProcess_OptimizeGraph*/)};
@@ -49,6 +49,8 @@ void ModelLoader::_processNode(const aiNode* const node,
                                const aiScene* const scene,
                                entt::entity parentEntity,
                                const aiMatrix4x4& accumulatedTransform) {
+    assert(_meshController);
+    assert(_materialController);
     // Accumulate this node's local transform on top of all ancestor transforms.
     aiMatrix4x4 worldTransform{accumulatedTransform * node->mTransformation};
 
@@ -76,7 +78,7 @@ void ModelLoader::_processNode(const aiNode* const node,
             const auto meshIndex{node->mMeshes[i]};
             const auto* const aiMesh{scene->mMeshes[meshIndex]};
             const auto mesh{_processMesh(aiMesh, scene, nodeEntity, meshIndex)};
-            const auto meshVertices{_meshController->GetMeshData(mesh.meshID).RawMeshData.Vertices};
+            const auto& meshVertices{_meshController->GetMeshData(mesh.meshID).RawMeshData.Vertices};
             nodeMeshesVertices.insert(nodeMeshesVertices.cend(), meshVertices.cbegin(), meshVertices.cend());
         }
         // Create the bounding sphere given all the mesh vertices

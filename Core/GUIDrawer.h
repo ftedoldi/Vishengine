@@ -1,13 +1,13 @@
 #pragma once
 
+#include "Controllers/FramebuffersController.h"
 #include "Editor/EditorLayer.h"
-#include "Platform/Framebuffer.h"
+#include "Systems/RenderOutputs.h"
 
 #include "GLFW/glfw3.h"
 #include <entt/entt.hpp>
 
 #include <filesystem>
-#include <memory>
 
 /**
  * @brief Owns the ImGui context and drives the EditorLayer each frame.
@@ -21,7 +21,7 @@
 class GUIDrawer {
 public:
     GUIDrawer(GLFWwindow* window,
-              const std::shared_ptr<Framebuffer>& sceneFramebuffer,
+              const FramebuffersController* framebuffersController,
               const std::filesystem::path& assetsRoot);
 
     /** Step 1: clear the default framebuffer and start a new ImGui frame. */

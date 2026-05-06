@@ -50,9 +50,9 @@ void BuildInitialDockLayout(const ImGuiID dockId, const ImVec2 size) {
 
 }
 
-EditorLayer::EditorLayer(std::shared_ptr<Framebuffer> sceneFramebuffer,
+EditorLayer::EditorLayer(const FramebuffersController* const framebuffersController,
                          const std::filesystem::path& assetsRoot)
-    : _scene{std::move(sceneFramebuffer)}
+    : _scene{framebuffersController}
     , _contentBrowser{assetsRoot} {}
 
 bool EditorLayer::IsPlaying() const {

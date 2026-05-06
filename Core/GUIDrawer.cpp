@@ -10,9 +10,9 @@
 #include <glad/gl.h>
 
 GUIDrawer::GUIDrawer(GLFWwindow* const window,
-                     const std::shared_ptr<Framebuffer>& sceneFramebuffer,
+                     const FramebuffersController* const framebuffersController,
                      const std::filesystem::path& assetsRoot)
-    : _editorLayer{sceneFramebuffer, assetsRoot}
+    : _editorLayer{framebuffersController, assetsRoot}
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();

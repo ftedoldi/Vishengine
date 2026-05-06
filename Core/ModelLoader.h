@@ -1,20 +1,19 @@
 #pragma once
 
+#include "Controllers/MaterialController.h"
+#include "Controllers/MeshController.h"
 #include "Components/Mesh.h"
-#include "Mesh/MeshController.h"
-#include "Material/MaterialController.h"
 
-#include <entt/entt.hpp>
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
+#include <entt/entt.hpp>
 
-#include <optional>
 #include <string>
 #include <unordered_map>
 
 class ModelLoader {
 public:
-    ModelLoader(entt::registry& registry, const std::shared_ptr<MeshController>& meshController, const std::shared_ptr<MaterialController>& materialController);
+    ModelLoader(entt::registry& registry, MeshController* meshController, MaterialController* materialController);
 
     void ImportModel(const std::string& modelPath);
 
@@ -37,9 +36,9 @@ private:
 
     entt::registry& _registry;
 
-    std::shared_ptr<MeshController> _meshController{};
+    MeshController* _meshController{};
 
-    std::shared_ptr<MaterialController> _materialController{};
+    MaterialController* _materialController{};
 
     Assimp::Importer _importer{};
 

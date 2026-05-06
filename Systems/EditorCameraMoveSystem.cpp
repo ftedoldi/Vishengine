@@ -5,6 +5,7 @@
 #include "Components/Camera/EditorCameraTag.h"
 #include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/TransformDirtyFlag.h"
+#include "Editor/ScenePanelInputState.h"
 
 #include "glm/gtc/quaternion.hpp"
 
@@ -12,11 +13,31 @@ EditorCameraMoveSystem::EditorCameraMoveSystem(const std::shared_ptr<InputManage
     : _inputManager{inputManager} {
 }
 
-void EditorCameraMoveSystem::Update(const float deltaTime, entt::registry& registry) const {
+void EditorCameraMoveSystem::Update(const float deltaTime, entt::registry& registry) {
     const glm::vec2 mouseDelta{_inputManager->GetMouseDelta()};
-    const float scrollDelta{_inputManager->GetScrollDelta()};
-    const bool rmb{_inputManager->IsMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)};
-    const bool mmb{_inputManager->IsMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE)};
+    const float rawScrollDelta{_inputManager->GetScrollDelta()};
+    const bool rmbDown{_inputManager->IsMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT)};
+    const bool mmbDown{_inputManager->IsMouseButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE)};
+
+    const auto* const inputState{registry.ctx().find<ScenePanelInputState>()};
+    const bool sceneHovered{inputState != nullptr && inputState->IsHovered};
+
+    // Capture a drag if the button went down while the scene panel was hovered;
+    // keep it captured until the button is released, even if the cursor leaves.
+    if (!rmbDown) {
+        _rmbCapturedByScene = false;
+    } else if (!_rmbCapturedByScene && sceneHovered) {
+        _rmbCapturedByScene = true;
+    }
+    if (!mmbDown) {
+        _mmbCapturedByScene = false;
+    } else if (!_mmbCapturedByScene && sceneHovered) {
+        _mmbCapturedByScene = true;
+    }
+
+    const bool rmb{rmbDown && _rmbCapturedByScene};
+    const bool mmb{mmbDown && _mmbCapturedByScene};
+    const float scrollDelta{sceneHovered ? rawScrollDelta : 0.f};
 
     auto view{registry.view<Camera, EditorCameraTag, ActiveCameraTag, RelativeTransform, TransformDirtyFlag>()};
 

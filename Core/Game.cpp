@@ -3,6 +3,7 @@
 #include "Camera/CameraFactory.h"
 #include "Components/Light.h"
 #include "Components/Lights/PointLight.h"
+#include "Components/RenderingComponents.h"
 #include "ModelLoader.h"
 
 #include "Components/Camera/ActiveCameraTag.h"
@@ -14,7 +15,6 @@
 
 #include "RenderingComponents/LineDrawer.h"
 #include "Systems/DebugRenderPass.h"
-#include "Systems/SceneRenderPass.h"
 
 #include <filesystem>
 
@@ -37,28 +37,40 @@ Game::Game() {
 
     const std::string shadersBasePath{std::string(PROJECT_SOURCE_DIR) + "/Shaders/GlslShaders/"};
 
-    // The scene is rendered into this offscreen framebuffer.
-    const auto sceneFrameBuffer{std::make_shared<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight())};
-    _rendererSystem = std::make_unique<RendererSystem>(sceneFrameBuffer, _dispatcher);
+    // TODO: change with a UUID
+    constexpr uint32_t sceneFramebufferID{1};
+    _framebuffersController = std::make_unique<FramebuffersController>();
+    _framebuffersController->AddFramebuffer(sceneFramebufferID,
+        std::make_unique<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight()));
 
-    const auto meshController{std::make_shared<MeshController>()};
-    const auto materialController{std::make_shared<MaterialController>()};
+    // Register the lit shader.
+    _shadersController = std::make_unique<ShadersController>();
+    // TODO: change with a UUID
+    constexpr uint32_t litShaderID{1};
+    auto litShader{std::make_unique<Shader>(shadersBasePath + "vertex.glsl", shadersBasePath + "fragment.glsl")};
+    _shadersController->AddShader(litShaderID, std::move(litShader));
 
-    auto mainShader{std::make_unique<Shader>(shadersBasePath + "vertex.glsl", shadersBasePath + "fragment.glsl")};
-    _rendererSystem->AddPass(std::make_unique<SceneRenderPass>(std::move(mainShader), _registry, materialController, meshController));
+    // Promote the editor camera into the main view: it now owns the framebuffer
+    // and shader binding for the scene pass.
+    _registry.emplace<MainViewTag>(editorCamera);
+    _registry.emplace<RenderTarget>(editorCamera, sceneFramebufferID);
+    _registry.emplace<RenderPass>(editorCamera, litShaderID);
+    _registry.emplace<LitPassTag>(editorCamera);
+
+    _meshController = std::make_unique<MeshController>();
+    _materialController = std::make_unique<MaterialController>();
+    _rendererSystem = std::make_unique<RendererSystem>(_dispatcher, _materialController.get(), _meshController.get(), _shadersController.get(), _framebuffersController.get());
 
     _inputManager = std::make_shared<InputManager>(_window->GetGLFWWindow());
-
-    // Debug pass
 
     _editorCameraMoveSystem = std::make_unique<EditorCameraMoveSystem>(_inputManager);
 
     const std::filesystem::path assetsRoot{std::string(PROJECT_SOURCE_DIR) + "/Assets"};
-    _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWWindow(), sceneFrameBuffer, assetsRoot);
+    _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWWindow(), _framebuffersController.get(), assetsRoot);
 
     _transformSystem = std::make_unique<TransformSystem>(_dispatcher);
 
-    ModelLoader modelLoader{_registry, meshController, materialController};
+    ModelLoader modelLoader{_registry, _meshController.get(), _materialController.get()};
     modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/megaHierarchy.glb");
     _transformSystem->Init(_registry);
 
@@ -98,7 +110,7 @@ void Game::Update() {
         _guiDrawer->BeginFrame();
 
         // 2. Render the scene into the offscreen framebuffer.
-        _rendererSystem->Update();
+        _rendererSystem->Update(_registry);
         _pickingSystem->DrawPickingRay();
 
         // 3. Build ImGui panel draw-lists (ScenePanel reads the now-populated

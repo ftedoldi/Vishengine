@@ -38,13 +38,13 @@ class MeshController {
 public:
     Mesh CreateMesh(RawMeshData&& rawMeshData);
 
-    const MeshGpuData& GetMeshGpuData(uint32_t meshID) const;
+    [[nodiscard]] const MeshGpuData& GetMeshGpuData(uint32_t meshID) const;
 
-    const RawMeshData& GetRawMeshData(uint32_t meshID) const;
+    [[nodiscard]] const RawMeshData& GetRawMeshData(uint32_t meshID) const;
 
-    const MeshData& GetMeshData(uint32_t meshID) const;
+    [[nodiscard]] const MeshData& GetMeshData(uint32_t meshID) const;
 
-    void DeleteMesh(const uint32_t meshID);
+    void DeleteMesh(uint32_t meshID);
 
 private:
     std::unordered_map<uint32_t, MeshData> _meshIDToMeshData{};
