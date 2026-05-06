@@ -1,20 +1,18 @@
 #include "Game.h"
 
+#include "../Debug/DebugRenderPass.h"
 #include "Camera/CameraFactory.h"
+#include "Components/Camera/ActiveCameraTag.h"
 #include "Components/Light.h"
+#include "Components/Lights/DirectionalLight.h"
 #include "Components/Lights/PointLight.h"
 #include "Components/RenderingComponents.h"
-#include "ModelLoader.h"
-
-#include "Components/Camera/ActiveCameraTag.h"
-#include "Components/Lights/DirectionalLight.h"
 #include "Components/Transforms/RelativeTransform.h"
 #include "DataStructures/Octree.h"
+#include "ModelLoader.h"
 #include "Platform/Framebuffer.h"
 #include "Platform/Time.h"
-
 #include "RenderingComponents/LineDrawer.h"
-#include "Systems/DebugRenderPass.h"
 
 #include <filesystem>
 
@@ -38,24 +36,25 @@ Game::Game() {
     const std::string shadersBasePath{std::string(PROJECT_SOURCE_DIR) + "/Shaders/GlslShaders/"};
 
     // TODO: change with a UUID
-    constexpr uint32_t sceneFramebufferID{1};
     _framebuffersController = std::make_unique<FramebuffersController>();
-    _framebuffersController->AddFramebuffer(sceneFramebufferID,
+    _framebuffersController->AddFramebuffer(FramebufferID::Main,
         std::make_unique<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight()));
 
     // Register the lit shader.
     _shadersController = std::make_unique<ShadersController>();
     // TODO: change with a UUID
-    constexpr uint32_t litShaderID{1};
     auto litShader{std::make_unique<Shader>(shadersBasePath + "vertex.glsl", shadersBasePath + "fragment.glsl")};
-    _shadersController->AddShader(litShaderID, std::move(litShader));
+    _shadersController->AddShader(ShaderID::Standard, std::move(litShader));
 
     // Promote the editor camera into the main view: it now owns the framebuffer
     // and shader binding for the scene pass.
-    _registry.emplace<MainViewTag>(editorCamera);
-    _registry.emplace<RenderTarget>(editorCamera, sceneFramebufferID);
-    _registry.emplace<RenderPass>(editorCamera, litShaderID);
+    _registry.emplace<RenderTarget>(editorCamera, FramebufferID::Main);
+    _registry.emplace<RenderPass>(editorCamera, ShaderID::Standard);
     _registry.emplace<LitPassTag>(editorCamera);
+    // On this framebuffer the meshes are rendered.
+    std::bitset<32> layers{};
+    layers.set(static_cast<size_t>(RenderLayer::SceneMeshes));
+    _registry.emplace<RenderLayers>(editorCamera, layers);
 
     _meshController = std::make_unique<MeshController>();
     _materialController = std::make_unique<MaterialController>();
@@ -81,6 +80,12 @@ Game::Game() {
 
     _spatialSystem = std::make_unique<SpatialSystem>(_octree.get(), _registry, _dispatcher);
     _spatialSystem->Init();
+
+    // Initialize frustum debug view framebuffer and shader.
+    _framebuffersController->AddFramebuffer(FramebufferID::FrustumDebugView, std::make_unique<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight()));
+    auto frustumDebugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
+    _shadersController->AddShader(ShaderID::FrustumDebug, std::move(frustumDebugShader));
+
 
     _pickingSystem = std::make_unique<PickingSystem>(_window.get(), _octree.get(), _dispatcher, _registry);
 

@@ -3,6 +3,7 @@
 #include "ConsolePanel.h"
 #include "ContentBrowserPanel.h"
 #include "Controllers/FramebuffersController.h"
+#include "DebugFramebufferPanel.h"
 #include "HierarchyPanel.h"
 #include "InspectorPanel.h"
 #include "ScenePanel.h"
@@ -33,4 +34,5 @@ private:
     ScenePanel _scene;
     ConsolePanel _console{};
     ContentBrowserPanel _contentBrowser;
+    DebugFramebufferPanel _debugFramebufferPanel;
 };

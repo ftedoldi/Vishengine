@@ -4,7 +4,6 @@
 #include "Controllers/MeshController.h"
 #include "Controllers/ShadersController.h"
 #include "Controllers/FramebuffersController.h"
-#include "Systems/RenderOutputs.h"
 #include "DataStructures/Octree.h"
 #include "GUIDrawer.h"
 #include "InputManager.h"

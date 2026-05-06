@@ -63,6 +63,7 @@ target_link_libraries(imguizmo PUBLIC imgui)
 file(GLOB PROJECT_HEADERS
         Camera/*.h
         Core/*.h
+        Debug/*.h
         Editor/*.h
         Utils/*.h
         Math/*.h
@@ -72,6 +73,7 @@ file(GLOB PROJECT_HEADERS
         Controllers/*.h
         Components/*.h
         Components/Camera/*.h
+        Components/Debug/*.h
         Components/Lights/*.h
         Components/Transforms/*.h
         Systems/*.h
@@ -85,6 +87,7 @@ file(GLOB PROJECT_HEADERS
 file(GLOB PROJECT_SOURCES
         Camera/*.cpp
         Core/*.cpp
+        Debug/*.cpp
         Editor/*.cpp
         Utils/*.cpp
         Math/*.cpp
@@ -94,6 +97,7 @@ file(GLOB PROJECT_SOURCES
         Controllers/*.cpp
         Components/*.cpp
         Components/Camera/*.cpp
+        Components/Debug/*.cpp
         Components/Lights/*.cpp
         Components/Transforms/*.cpp
         Systems/*.cpp

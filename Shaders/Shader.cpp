@@ -41,6 +41,10 @@ Shader::Shader(const std::string& vertexShaderRelativePath, const std::string& f
     _compileShaders(vertexCode, fragmentCode);
 }
 
+Shader::~Shader() {
+    DeleteProgram();
+}
+
 void Shader::DeleteProgram() const {
     glDeleteProgram(_programID);
 }

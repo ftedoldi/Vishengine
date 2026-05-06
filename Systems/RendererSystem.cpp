@@ -1,8 +1,10 @@
 #include "RendererSystem.h"
 
+#include "Components/BoundingBox.h"
 #include "Platform/Framebuffer.h"
 
 #include "Components/Camera/Camera.h"
+#include "Components/Camera/EditorCameraTag.h"
 #include "Components/InstancedMeshTag.h"
 #include "Components/Lights/DirectionalLight.h"
 #include "Components/Lights/PointLight.h"
@@ -13,6 +15,7 @@
 #include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/WorldTransform.h"
 #include "Coordinates/CoordinateUtils.h"
+#include "RenderingComponents/LineDrawer.h"
 #include "Shaders/Shader.h"
 
 #include <glad/gl.h>
@@ -74,9 +77,17 @@ void RendererSystem::Update(entt::registry& registry) const {
         transformsByMeshID[mesh.meshID].push_back(worldTransform);
     }
 
-    const auto viewEntities{registry.view<Camera, RenderTarget, RenderPass>()};
-    for (const auto viewEntity : viewEntities) {
-        _executeView(viewEntity, registry, transformsByMeshID);
+    const auto viewEntities{registry.view<Camera, RenderTarget, RenderPass, RenderLayers>()};
+    for (const auto viewEntity : viewEntities){
+        const auto renderLayers{registry.get<RenderLayers>(viewEntity).Layers};
+        if (renderLayers.test(static_cast<size_t>(RenderLayer::SceneMeshes))) {
+            _drawSceneMeshes(viewEntity, registry, transformsByMeshID);
+        }
+
+        if (renderLayers.test(static_cast<size_t>(RenderLayer::DebugFrustumIntersections))) {
+            _drawDebugFrustumIntersections(registry, viewEntity);
+        }
+
     }
 
     for (const auto& pass : _passes) {
@@ -84,17 +95,19 @@ void RendererSystem::Update(entt::registry& registry) const {
     }
 }
 
-void RendererSystem::_executeView(const entt::entity viewEntity,
-                                  entt::registry& registry,
-                                  const std::unordered_map<uint32_t, std::vector<Transform>>& transformsByMeshID) const {
+void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
+                                    entt::registry& registry,
+                                    const std::unordered_map<uint32_t, std::vector<Transform>>& transformsByMeshID) const {
     const auto& target{registry.get<RenderTarget>(viewEntity)};
     const auto& pass{registry.get<RenderPass>(viewEntity)};
     const auto& camera{registry.get<Camera>(viewEntity)};
 
     const auto* const framebuffer{_framebuffersController->GetFramebuffer(target.FramebufferHandle)};
-    Shader* const shader{_shadersController->GetShader(pass.ShaderHandle)};
-
+    assert(framebuffer);
     framebuffer->Bind();
+
+    const auto* const shader{_shadersController->GetShader(pass.ShaderHandle)};
+    assert(shader);
     shader->UseProgram();
     shader->SetUniformMat4("Perspective", camera.ProjectionMatrix);
 
@@ -126,6 +139,29 @@ void RendererSystem::_executeView(const entt::entity viewEntity,
         const auto& meshData{_meshController->GetMeshData(mesh.meshID)};
         DrawMesh(viewTransforms, meshData.MeshGpuData, meshData.RawMeshData.Indices);
     }
+}
+
+void RendererSystem::_drawDebugFrustumIntersections(entt::registry& registry, const entt::entity viewEntity) const {
+    const auto& debugFrustumCamera{registry.get<Camera>(viewEntity)};
+
+    _framebuffersController->GetFramebuffer(FramebufferID::FrustumDebugView)->Bind();
+    const auto* const shader{_shadersController->GetShader(ShaderID::FrustumDebug)};
+    shader->UseProgram();
+    shader->SetUniformMat4("Perspective", debugFrustumCamera.ProjectionMatrix);
+
+    const auto editorCamView{registry.view<Camera, EditorCameraTag>()};
+
+    editorCamView.each([&debugFrustumCamera, &registry](entt::entity, const Camera& editorCamera) {
+        auto insideBatch{LineDrawer::Get().BeginBatch(debugFrustumCamera, {1.f, 0.f, 0.f})};
+        auto outsideBatch{LineDrawer::Get().BeginBatch(debugFrustumCamera, {0.f, 1.f, 0.f})};
+
+        for (auto entity : registry.view<BoundingBox, WorldTransform>()) {
+            const auto worldBox = CoordUtils::ComputeWorldSpaceBox(entity, registry);
+            auto& target{FrustumUtils::IsAABBInsideFrustum(worldBox, editorCamera.ViewFrustum)
+                           ? insideBatch : outsideBatch};
+            target.AddBox(worldBox.Min, worldBox.Max);
+        }
+    });
 }
 
 void RendererSystem::_bindTextures(const Shader* const shader,
@@ -182,6 +218,7 @@ void RendererSystem::_setupLighting(const Shader* const shader,
 
 void RendererSystem::_onFramebufferSizeChanged(const WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const {
     // TODO: is this what should really happens as if I have many different framebuffers, do I want to do this?
+    // probably not correct because I can have framebuffers in panels that are not docked with the main window.
     _framebuffersController->ResizeAll(static_cast<int32_t>(frameBufferSizeChangedEvent.Width),
                                        static_cast<int32_t>(frameBufferSizeChangedEvent.Height));
 }

@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../Systems/IRenderPass.h"
 #include "Core/InputManager.h"
 #include "DataStructures/Octree.h"
-#include "IRenderPass.h"
 #include "Platform/Framebuffer.h"
 #include "Shaders/Shader.h"
 

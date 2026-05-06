@@ -20,10 +20,10 @@
 //   out      – destination buffer
 namespace {
 
-void AppendCircle(const glm::vec3& center,
+void AppendCircle(const glm::vec3 center,
                      const float radius,
-                     const glm::vec3& axis0,
-                     const glm::vec3& axis1,
+                     const glm::vec3 axis0,
+                     const glm::vec3 axis1,
                      const int segments,
                      std::vector<glm::vec3>& out) {
     const float step{glm::two_pi<float>() / static_cast<float>(segments)};

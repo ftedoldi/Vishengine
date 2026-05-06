@@ -11,16 +11,16 @@ enum class CameraType {
 
 class CameraFactory {
 public:
-    static auto CreateEditorCamera(entt::registry& registry,
-                                   const glm::vec3& worldPosition,
+    static entt::entity CreateEditorCamera(entt::registry& registry,
+                                   glm::vec3 worldPosition,
                                    float fov,
                                    float aspectRatio,
                                    float nearPlaneZDistance,
                                    float farPlaneZDistance,
-                                   CameraType cameraType) -> entt::entity;
+                                   CameraType cameraType);
 
     static entt::entity CreateGameCamera(entt::registry& registry,
-                                         const glm::vec3& worldPosition,
+                                         glm::vec3 worldPosition,
                                          float fov,
                                          float aspectRatio,
                                          float nearPlaneZDistance,
@@ -29,7 +29,7 @@ public:
 
 private:
     static entt::entity _createCamera(entt::registry& registry,
-                                      const glm::vec3& worldPosition,
+                                      glm::vec3 worldPosition,
                                       float fov,
                                       float aspectRatio,
                                       float nearPlaneZDistance,

@@ -1,15 +1,13 @@
 #pragma once
 
-#include <glad/gl.h>
-
 #include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
-
 #include <string>
 
 class Shader {
 public:
-    Shader(const std::string&vertexShaderRelativePath, const std::string&fragmentShaderRelativePath);
+    Shader(const std::string& vertexShaderRelativePath, const std::string& fragmentShaderRelativePath);
+
+    ~Shader();
 
 	void UseProgram() const;
 
@@ -34,7 +32,7 @@ public:
     void SetBool(const std::string& uniformName, bool value) const;
 
 private:
-	unsigned int _programID = 0;
+	unsigned int _programID{0};
 
 	void _compileShaders(const std::string& vertexShaderCode, const std::string& fragmentShaderCode);
 };

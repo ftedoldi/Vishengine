@@ -2,11 +2,11 @@
 
 #include <ranges>
 
-void FramebuffersController::AddFramebuffer(const uint32_t framebufferID, std::unique_ptr<Framebuffer> framebuffer) {
+void FramebuffersController::AddFramebuffer(const FramebufferID framebufferID, std::unique_ptr<Framebuffer> framebuffer) {
     _framebufferIDToFramebuffer.emplace(framebufferID, std::move(framebuffer));
 }
 
-const Framebuffer* FramebuffersController::GetFramebuffer(const uint32_t framebufferID) const {
+const Framebuffer* FramebuffersController::GetFramebuffer(const FramebufferID framebufferID) const {
     assert(_framebufferIDToFramebuffer.contains(framebufferID));
     return _framebufferIDToFramebuffer.find(framebufferID)->second.get();
 }

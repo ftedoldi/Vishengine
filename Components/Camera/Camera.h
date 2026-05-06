@@ -1,8 +1,9 @@
 #pragma once
 
-#include "glm/mat4x4.hpp"
-
 #include "Coordinates/Transform.h"
+#include "DataStructures/Frustum.h"
+
+#include "glm/mat4x4.hpp"
 
 class Camera {
 public:
@@ -25,4 +26,6 @@ public:
     glm::mat4 ProjectionMatrix{};
 
     Transform ViewTransform{};
+
+    Frustum ViewFrustum{};
 };

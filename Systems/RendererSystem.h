@@ -7,7 +7,6 @@
 #include "Coordinates/Transform.h"
 #include "Events/WindowEvents.h"
 #include "IRenderPass.h"
-#include "RenderOutputs.h"
 
 #include <entt/entt.hpp>
 
@@ -32,9 +31,11 @@ public:
 private:
     void _onFramebufferSizeChanged(WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const;
 
-    void _executeView(entt::entity viewEntity,
-                      entt::registry& registry,
-                      const std::unordered_map<uint32_t, std::vector<Transform>>& transformsByMeshID) const;
+    void _drawSceneMeshes(entt::entity viewEntity,
+                        entt::registry& registry,
+                        const std::unordered_map<uint32_t, std::vector<Transform>>& transformsByMeshID) const;
+
+    void _drawDebugFrustumIntersections(entt::registry& registry, entt::entity viewEntity) const;
 
     void _bindTextures(const Shader* shader,
                        const std::vector<Texture>& diffuseTextures,

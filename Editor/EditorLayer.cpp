@@ -53,7 +53,8 @@ void BuildInitialDockLayout(const ImGuiID dockId, const ImVec2 size) {
 EditorLayer::EditorLayer(const FramebuffersController* const framebuffersController,
                          const std::filesystem::path& assetsRoot)
     : _scene{framebuffersController}
-    , _contentBrowser{assetsRoot} {}
+    , _contentBrowser{assetsRoot}
+    , _debugFramebufferPanel{framebuffersController} {}
 
 bool EditorLayer::IsPlaying() const {
     return _toolbar.IsPlaying();
@@ -95,6 +96,11 @@ void EditorLayer::_renderMenuBar() {
         ImGui::MenuItem("Scene",           nullptr, &_scene.IsVisible);
         ImGui::MenuItem("Console",         nullptr, &_console.IsVisible);
         ImGui::MenuItem("Content Browser", nullptr, &_contentBrowser.IsVisible);
+        ImGui::EndMenu();
+    }
+
+    if (ImGui::BeginMenu("Debug")) {
+        ImGui::MenuItem("Debug Framebuffer", nullptr, &_debugFramebufferPanel.IsVisible);
         ImGui::EndMenu();
     }
 
@@ -155,5 +161,9 @@ void EditorLayer::_layoutPanels(entt::dispatcher& dispatcher, entt::registry& re
 
     if (_contentBrowser.IsVisible) {
         _contentBrowser.OnRender(dispatcher, registry);
+    }
+
+    if (_debugFramebufferPanel.IsVisible) {
+        _debugFramebufferPanel.OnRender(dispatcher, registry);
     }
 }

@@ -10,7 +10,7 @@
 #include "glm/gtc/quaternion.hpp"
 
 entt::entity CameraFactory::CreateEditorCamera(entt::registry& registry,
-                                               const glm::vec3& worldPosition,
+                                               const glm::vec3 worldPosition,
                                                const float fov,
                                                const float aspectRatio,
                                                const float nearPlaneZDistance,
@@ -22,7 +22,7 @@ entt::entity CameraFactory::CreateEditorCamera(entt::registry& registry,
 }
 
 entt::entity CameraFactory::CreateGameCamera(entt::registry& registry,
-                                               const glm::vec3& worldPosition,
+                                               const glm::vec3 worldPosition,
                                                const float fov,
                                                const float aspectRatio,
                                                const float nearPlaneZDistance,
@@ -34,13 +34,13 @@ entt::entity CameraFactory::CreateGameCamera(entt::registry& registry,
 }
 
 entt::entity CameraFactory::_createCamera(entt::registry& registry,
-                                          const glm::vec3& worldPosition,
+                                          const glm::vec3 worldPosition,
                                           const float fov,
                                           const float aspectRatio,
                                           const float nearPlaneZDistance,
                                           const float farPlaneZDistance,
                                           const CameraType cameraType) {
-    auto cameraEntity{registry.create()};
+    const auto cameraEntity{registry.create()};
 
     registry.emplace<TransformDirtyFlag>(cameraEntity);
     auto& camera{registry.emplace<Camera>(cameraEntity)};

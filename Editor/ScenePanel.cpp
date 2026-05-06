@@ -41,21 +41,17 @@ void ScenePanel::OnRender(entt::dispatcher& dispatcher, entt::registry& registry
         _lastSize = regionSize;
     }
 
-    const auto mainView{registry.view<MainViewTag, RenderTarget, RenderPass>()};
+    const auto framebuffer{_framebuffersController->GetFramebuffer(FramebufferID::Main)};
+    ImGui::Image(
+        framebuffer->GetColorAttachmentID(),
+        regionSize,
+    ImVec2{0.f, 1.f},
+    ImVec2{1.f, 0.f});
 
-    mainView.each([this, regionSize, &registry, contentPos](const entt::entity, const RenderTarget renderTarget, const RenderPass renderPass) {
-        const auto framebuffer{_framebuffersController->GetFramebuffer(renderTarget.FramebufferHandle)};
-        ImGui::Image(
-            framebuffer->GetColorAttachmentID(),
-            regionSize,
-        ImVec2{0.f, 1.f},
-        ImVec2{1.f, 0.f});
+    auto& inputState{registry.ctx().emplace<ScenePanelInputState>()};
+    inputState.IsHovered = ImGui::IsItemHovered();
 
-        auto& inputState{registry.ctx().emplace<ScenePanelInputState>()};
-        inputState.IsHovered = ImGui::IsItemHovered();
-
-        _drawGizmo(contentPos, regionSize, registry);
-    });
+    _drawGizmo(contentPos, regionSize, registry);
 
 
     ImGui::End();
