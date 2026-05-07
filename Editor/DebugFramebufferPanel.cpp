@@ -19,7 +19,7 @@ void DebugFramebufferPanel::OnRender(entt::dispatcher& dispatcher, entt::registr
         // Also on these framebuffer both the colliders and the meshes need to be drawn.
         _debugViewEntity = CameraFactory::CreateGameCamera(
             registry,
-            glm::vec3{0.f, 20.f, 30.f},
+            glm::vec3{0., 0., 30.},
             45.,
             1.f,
             0.1,
@@ -45,6 +45,7 @@ void DebugFramebufferPanel::OnRender(entt::dispatcher& dispatcher, entt::registr
     _wasVisible = IsVisible;
 
     if (!IsVisible) {
+        ImGui::PopStyleVar();
         return;
     }
 

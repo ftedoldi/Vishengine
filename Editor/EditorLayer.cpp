@@ -163,7 +163,5 @@ void EditorLayer::_layoutPanels(entt::dispatcher& dispatcher, entt::registry& re
         _contentBrowser.OnRender(dispatcher, registry);
     }
 
-    if (_debugFramebufferPanel.IsVisible) {
-        _debugFramebufferPanel.OnRender(dispatcher, registry);
-    }
+    _debugFramebufferPanel.OnRender(dispatcher, registry);
 }

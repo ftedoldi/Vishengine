@@ -78,7 +78,11 @@ void RendererSystem::Update(entt::registry& registry) const {
     }
 
     const auto viewEntities{registry.view<Camera, RenderTarget, RenderPass, RenderLayers>()};
-    for (const auto viewEntity : viewEntities){
+    for (const auto viewEntity : viewEntities) {
+        const auto renderTarget{registry.get<RenderTarget>(viewEntity)};
+        const auto* const framebuffer{_framebuffersController->GetFramebuffer(renderTarget.FramebufferHandle)};
+        assert(framebuffer);
+        framebuffer->Bind();
         const auto renderLayers{registry.get<RenderLayers>(viewEntity).Layers};
         if (renderLayers.test(static_cast<size_t>(RenderLayer::SceneMeshes))) {
             _drawSceneMeshes(viewEntity, registry, transformsByMeshID);
@@ -98,13 +102,8 @@ void RendererSystem::Update(entt::registry& registry) const {
 void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
                                     entt::registry& registry,
                                     const std::unordered_map<uint32_t, std::vector<Transform>>& transformsByMeshID) const {
-    const auto& target{registry.get<RenderTarget>(viewEntity)};
     const auto& pass{registry.get<RenderPass>(viewEntity)};
     const auto& camera{registry.get<Camera>(viewEntity)};
-
-    const auto* const framebuffer{_framebuffersController->GetFramebuffer(target.FramebufferHandle)};
-    assert(framebuffer);
-    framebuffer->Bind();
 
     const auto* const shader{_shadersController->GetShader(pass.ShaderHandle)};
     assert(shader);
@@ -144,7 +143,6 @@ void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
 void RendererSystem::_drawDebugFrustumIntersections(entt::registry& registry, const entt::entity viewEntity) const {
     const auto& debugFrustumCamera{registry.get<Camera>(viewEntity)};
 
-    _framebuffersController->GetFramebuffer(FramebufferID::FrustumDebugView)->Bind();
     const auto* const shader{_shadersController->GetShader(ShaderID::FrustumDebug)};
     shader->UseProgram();
     shader->SetUniformMat4("Perspective", debugFrustumCamera.ProjectionMatrix);
