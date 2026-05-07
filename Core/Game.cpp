@@ -48,13 +48,16 @@ Game::Game() {
 
     // Promote the editor camera into the main view: it now owns the framebuffer
     // and shader binding for the scene pass.
-    _registry.emplace<RenderTarget>(editorCamera, FramebufferID::Main);
-    _registry.emplace<RenderPass>(editorCamera, ShaderID::Standard);
-    _registry.emplace<LitPassTag>(editorCamera);
-    // On this framebuffer the meshes are rendered.
+    auto& editorCameraRenderTarget{_registry.emplace<RenderTarget>(editorCamera)};
+    editorCameraRenderTarget.FramebufferHandle = FramebufferID::Main;
+
     std::bitset<32> layers{};
     layers.set(static_cast<size_t>(RenderLayer::SceneMeshes));
-    _registry.emplace<RenderLayers>(editorCamera, layers);
+
+    const RenderPass editorCameraRenderPass{.ShaderHandle = ShaderID::Standard, .RenderLayers = {layers}};
+    editorCameraRenderTarget.Passes.push_back(editorCameraRenderPass);
+
+    _registry.emplace<LitPassTag>(editorCamera);
 
     _meshController = std::make_unique<MeshController>();
     _materialController = std::make_unique<MaterialController>();

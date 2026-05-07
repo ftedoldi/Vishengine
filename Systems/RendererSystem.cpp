@@ -77,21 +77,22 @@ void RendererSystem::Update(entt::registry& registry) const {
         transformsByMeshID[mesh.meshID].push_back(worldTransform);
     }
 
-    const auto viewEntities{registry.view<Camera, RenderTarget, RenderPass, RenderLayers>()};
+    const auto viewEntities{registry.view<Camera, RenderTarget>()};
     for (const auto viewEntity : viewEntities) {
         const auto renderTarget{registry.get<RenderTarget>(viewEntity)};
         const auto* const framebuffer{_framebuffersController->GetFramebuffer(renderTarget.FramebufferHandle)};
         assert(framebuffer);
         framebuffer->Bind();
-        const auto renderLayers{registry.get<RenderLayers>(viewEntity).Layers};
-        if (renderLayers.test(static_cast<size_t>(RenderLayer::SceneMeshes))) {
-            _drawSceneMeshes(viewEntity, registry, transformsByMeshID);
-        }
 
-        if (renderLayers.test(static_cast<size_t>(RenderLayer::DebugFrustumIntersections))) {
-            _drawDebugFrustumIntersections(registry, viewEntity);
-        }
+        for (const auto pass : renderTarget.Passes) {
+            if (pass.RenderLayers.Layers.test(static_cast<size_t>(RenderLayer::SceneMeshes))) {
+                _drawSceneMeshes(viewEntity, pass.ShaderHandle, registry, transformsByMeshID);
+            }
 
+            if (pass.RenderLayers.Layers.test(static_cast<size_t>(RenderLayer::DebugFrustumIntersections))) {
+                _drawDebugFrustumIntersections(viewEntity, pass.ShaderHandle, registry);
+            }
+        }
     }
 
     for (const auto& pass : _passes) {
@@ -100,12 +101,12 @@ void RendererSystem::Update(entt::registry& registry) const {
 }
 
 void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
+                                    const ShaderID shaderId,
                                     entt::registry& registry,
                                     const std::unordered_map<uint32_t, std::vector<Transform>>& transformsByMeshID) const {
-    const auto& pass{registry.get<RenderPass>(viewEntity)};
     const auto& camera{registry.get<Camera>(viewEntity)};
 
-    const auto* const shader{_shadersController->GetShader(pass.ShaderHandle)};
+    const auto* const shader{_shadersController->GetShader(shaderId)};
     assert(shader);
     shader->UseProgram();
     shader->SetUniformMat4("Perspective", camera.ProjectionMatrix);
@@ -140,10 +141,10 @@ void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
     }
 }
 
-void RendererSystem::_drawDebugFrustumIntersections(entt::registry& registry, const entt::entity viewEntity) const {
+void RendererSystem::_drawDebugFrustumIntersections(const entt::entity viewEntity, const ShaderID shaderId, entt::registry& registry) const {
     const auto& debugFrustumCamera{registry.get<Camera>(viewEntity)};
 
-    const auto* const shader{_shadersController->GetShader(ShaderID::FrustumDebug)};
+    const auto* const shader{_shadersController->GetShader(shaderId)};
     shader->UseProgram();
     shader->SetUniformMat4("Perspective", debugFrustumCamera.ProjectionMatrix);
 

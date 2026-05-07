@@ -26,12 +26,18 @@ void DebugFramebufferPanel::OnRender(entt::dispatcher& dispatcher, entt::registr
             300.,
             CameraType::Perspective);
 
-        registry.emplace<RenderTarget>(_debugViewEntity, FramebufferID::FrustumDebugView);
-        registry.emplace<RenderPass>(_debugViewEntity, ShaderID::FrustumDebug);
-        std::bitset<32> layers{};
-        layers.set(static_cast<size_t>(RenderLayer::SceneMeshes));
-        layers.set(static_cast<size_t>(RenderLayer::DebugFrustumIntersections));
-        registry.emplace<RenderLayers>(_debugViewEntity, layers);
+        // TODO: add documentation
+        auto& cameraRenderTarget{registry.emplace<RenderTarget>(_debugViewEntity, FramebufferID::FrustumDebugView)};
+        std::bitset<32> sceneMeshLayer{};
+        sceneMeshLayer.set(static_cast<size_t>(RenderLayer::SceneMeshes));
+        const RenderPass sceneMeshRenderPass{.ShaderHandle = ShaderID::Standard, .RenderLayers = {sceneMeshLayer}};
+        cameraRenderTarget.Passes.push_back(sceneMeshRenderPass);
+
+
+        std::bitset<32> debugLayer{};
+        debugLayer.set(static_cast<size_t>(RenderLayer::DebugFrustumIntersections));
+        const RenderPass debugRenderPass{.ShaderHandle = ShaderID::FrustumDebug, .RenderLayers = {debugLayer}};
+        cameraRenderTarget.Passes.push_back(debugRenderPass);
     }
 
     // The panel was just closed.

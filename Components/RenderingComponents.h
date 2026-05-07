@@ -26,12 +26,15 @@ struct RenderLayers {
     std::bitset<32> Layers{};
 };
 
-struct RenderTarget {
-    FramebufferID FramebufferHandle{};
-};
-
 struct RenderPass {
     ShaderID ShaderHandle{};
+    RenderLayers RenderLayers{};
+    //RenderState State{};     // depth/blend/cull/clear (optional)
+};
+
+struct RenderTarget {
+    FramebufferID FramebufferHandle{};
+    std::vector<RenderPass> Passes{};
 };
 
 struct LitPassTag {

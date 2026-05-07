@@ -32,10 +32,11 @@ private:
     void _onFramebufferSizeChanged(WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const;
 
     void _drawSceneMeshes(entt::entity viewEntity,
+                        ShaderID shaderId,
                         entt::registry& registry,
                         const std::unordered_map<uint32_t, std::vector<Transform>>& transformsByMeshID) const;
 
-    void _drawDebugFrustumIntersections(entt::registry& registry, entt::entity viewEntity) const;
+    void _drawDebugFrustumIntersections(entt::entity viewEntity, ShaderID shaderId, entt::registry& registry) const;
 
     void _bindTextures(const Shader* shader,
                        const std::vector<Texture>& diffuseTextures,
