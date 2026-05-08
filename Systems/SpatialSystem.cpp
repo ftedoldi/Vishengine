@@ -23,9 +23,21 @@ void SpatialSystem::Init() const {
 }
 
 void SpatialSystem::Update(entt::registry& registry) {
+    _insertNewEntities(registry);
     _updateOctree(registry);
     _entities.clear();
     _performFrustumCulling(registry);
+}
+
+void SpatialSystem::_insertNewEntities(entt::registry& registry) const {
+    if (!_octree->GetRootNode()) {
+        return;
+    }
+    const auto newEntitiesView{registry.view<BoundingBox, WorldTransform>(entt::exclude<OctreeLocation>)};
+    for (const auto entity : newEntitiesView) {
+        registry.emplace<OctreeLocation>(entity);
+        _octree->InsertEntity(_octree->GetRootNode(), entity, registry);
+    }
 }
 
 void SpatialSystem::_onTransformUpdated(const GameEvents::TransformUpdated transformUpdatedEvent) {
@@ -42,7 +54,7 @@ void SpatialSystem::_updateOctree(entt::registry& registry) const {
 }
 
 void SpatialSystem::_performFrustumCulling(entt::registry& registry) const {
-    auto activeCameraView{registry.view<Camera, ActiveCameraTag>()};
+    const auto activeCameraView{registry.view<Camera, ActiveCameraTag>()};
 
     activeCameraView.each([this, &registry](const entt::entity, const Camera& camera) {
         const auto& viewFrustum{camera.ViewFrustum};

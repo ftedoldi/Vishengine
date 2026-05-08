@@ -2,7 +2,6 @@
 
 #include "Box.h"
 #include "Components/BoundingBox.h"
-#include "Components/MeshNodeTag.h"
 #include "Components/OctreeLocation.h"
 #include "Components/Transforms/WorldTransform.h"
 #include "Coordinates/CoordinateUtils.h"
@@ -136,11 +135,10 @@ void Octree::Init(entt::registry& registry, const int32_t maxDepth) {
 
     _rootNode = std::make_unique<OC::Node>(sceneBoundingBox.GetCenter(), sceneBoundingBox.GetExtent()/* * LOOSE_FACTOR*/);
 
-    const auto meshNodeView{registry.view<MeshNodeTag>()};
-    for (const auto meshEntity : meshNodeView) {
-        // Each mesh that participates in the octree should save the pointer to the nodes it is contained.
-        registry.emplace<OctreeLocation>(meshEntity);
-        InsertEntity(_rootNode.get(), meshEntity, registry);
+    const auto pickableEntitiesView{registry.view<BoundingBox, WorldTransform>()};
+    for (const auto pickableEntity : pickableEntitiesView) {
+        registry.emplace<OctreeLocation>(pickableEntity);
+        InsertEntity(_rootNode.get(), pickableEntity, registry);
     }
 }
 

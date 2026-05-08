@@ -1,12 +1,16 @@
 #include "Game.h"
 
 #include "Camera/CameraFactory.h"
+#include "Components/BoundingBox.h"
 #include "Components/Camera/ActiveCameraTag.h"
 #include "Components/Light.h"
 #include "Components/Lights/DirectionalLight.h"
 #include "Components/Lights/PointLight.h"
+#include "Components/Relationship.h"
 #include "Components/RenderingComponents.h"
 #include "Components/Transforms/RelativeTransform.h"
+#include "Components/Transforms/TransformDirtyFlag.h"
+#include "Components/Transforms/WorldTransform.h"
 #include "DataStructures/Octree.h"
 #include "ModelLoader.h"
 #include "Platform/Framebuffer.h"
@@ -134,7 +138,11 @@ void Game::_addLight() {
     light.Ambient  = {0.2, 0.2, 0.2};
     light.Specular = {1.f, 1.f, 1.f};
 
+    _registry.emplace<BoundingBox>(pointLightEntity, Box{glm::vec3{-0.15f}, glm::vec3{0.15f}});
     auto& relativeTransform{_registry.emplace<RelativeTransform>(pointLightEntity)};
+    _registry.emplace<WorldTransform>(pointLightEntity);
+    _registry.emplace<TransformDirtyFlag>(pointLightEntity);
+    _registry.emplace<Relationship>(pointLightEntity);
     relativeTransform.Value.Position = {0.f, 6.f, 0.f};
 
     const auto dirLightEntity{_registry.create()};

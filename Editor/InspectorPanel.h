@@ -26,4 +26,6 @@ private:
     void _drawDirectionalLightComponent(entt::entity selectedEntity, entt::registry& registry) const;
 
     void _drawCameraComponent(entt::entity selectedEntity, entt::registry& registry) const;
+
+    void _drawAddComponentMenu(entt::entity selectedEntity, entt::registry& registry) const;
 };

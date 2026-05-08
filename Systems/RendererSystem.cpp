@@ -105,9 +105,7 @@ void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
     shader->SetUniformMat4("Perspective", camera.ProjectionMatrix);
 
     if (registry.all_of<LitPassTag>(viewEntity)) {
-        if (const auto* const cameraWorld{registry.try_get<WorldTransform>(viewEntity)}) {
-            _setupLighting(shader, cameraWorld->Value, registry);
-        }
+        _setupLighting(shader, camera.ViewTransform, registry);
     }
 
     std::vector<Transform> viewTransforms{};
@@ -183,37 +181,43 @@ void RendererSystem::_bindTextures(const Shader* const shader,
 }
 
 void RendererSystem::_setupLighting(const Shader* const shader,
-                                    const Transform& cameraWorldTransform,
+                                    const Transform& cameraViewTransform,
                                     entt::registry& registry) const {
-    const auto pointView{registry.view<PointLight, RelativeTransform>()};
-    pointView.each([shader, &cameraWorldTransform = std::as_const(cameraWorldTransform)]
-                   (const PointLight& pointLight, const RelativeTransform& relativeTransform) {
-        const auto invertedCameraTransform{cameraWorldTransform.Invert()};
-        const auto lightViewPosition{CoordUtils::RotateVectorByQuaternion(
-            invertedCameraTransform.Rotation, relativeTransform.Value.Position)};
-
-        shader->SetUniformVec3("pointLight.Position", lightViewPosition + invertedCameraTransform.Position);
-        shader->SetUniformVec3("pointLight.Diffuse",  pointLight.Diffuse);
-        shader->SetUniformVec3("pointLight.Ambient",  pointLight.Ambient);
-        shader->SetUniformVec3("pointLight.Specular", pointLight.Specular);
-
-        shader->SetUniformFloat("pointLight.Constant",  pointLight.Constant);
-        shader->SetUniformFloat("pointLight.Linear",    pointLight.Linear);
-        shader->SetUniformFloat("pointLight.Quadratic", pointLight.Quadratic);
+    constexpr int maxPointLights{16};
+    int pointLightCount{0};
+    const auto pointView{registry.view<PointLight, WorldTransform>()};
+    pointView.each([shader, &pointLightCount, &cameraViewTransform](const PointLight& pointLight, const WorldTransform& lightWorldTransform) {
+        if (pointLightCount >= maxPointLights) {
+            return;
+        }
+        const std::string p{"pointLights[" + std::to_string(pointLightCount) + "]."};
+        shader->SetUniformVec3(p + "Position", lightWorldTransform.Value.Cumulate(cameraViewTransform).Position);
+        shader->SetUniformVec3(p + "Diffuse",  pointLight.Diffuse);
+        shader->SetUniformVec3(p + "Ambient",  pointLight.Ambient);
+        shader->SetUniformVec3(p + "Specular", pointLight.Specular);
+        shader->SetUniformFloat(p + "Constant",  pointLight.Constant);
+        shader->SetUniformFloat(p + "Linear",    pointLight.Linear);
+        shader->SetUniformFloat(p + "Quadratic", pointLight.Quadratic);
+        ++pointLightCount;
     });
+    shader->SetUniformInt("NumPointLights", pointLightCount);
 
+    constexpr int maxDirLights{4};
+    int dirLightCount{0};
     const auto dirView{registry.view<DirectionalLight>()};
-    dirView.each([shader, &cameraWorldTransform = std::as_const(cameraWorldTransform)]
-                 (const DirectionalLight& dirLight) {
-        const auto invertedCameraTransform{cameraWorldTransform.Invert()};
-        const auto viewDirection{CoordUtils::RotateVectorByQuaternion(
-            invertedCameraTransform.Rotation, dirLight.Direction)};
-
-        shader->SetUniformVec3("dirLight.Direction", viewDirection);
-        shader->SetUniformVec3("dirLight.Diffuse",   dirLight.Diffuse);
-        shader->SetUniformVec3("dirLight.Ambient",   dirLight.Ambient);
-        shader->SetUniformVec3("dirLight.Specular",  dirLight.Specular);
+    dirView.each([shader, &dirLightCount, &cameraViewTransform](const DirectionalLight& dirLight) {
+        if (dirLightCount >= maxDirLights) {
+            return;
+        }
+        const std::string p{"dirLights[" + std::to_string(dirLightCount) + "]."};
+        const auto viewDir{CoordUtils::RotateVectorByQuaternion(cameraViewTransform.Rotation, dirLight.Direction)};
+        shader->SetUniformVec3(p + "Direction", viewDir);
+        shader->SetUniformVec3(p + "Diffuse",   dirLight.Diffuse);
+        shader->SetUniformVec3(p + "Ambient",   dirLight.Ambient);
+        shader->SetUniformVec3(p + "Specular",  dirLight.Specular);
+        ++dirLightCount;
     });
+    shader->SetUniformInt("NumDirLights", dirLightCount);
 }
 
 void RendererSystem::_onFramebufferSizeChanged(const WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const {

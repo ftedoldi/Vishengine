@@ -109,8 +109,7 @@ void ScenePanel::_drawGizmo(const ImVec2 panelPos, const ImVec2 panelSize, entt:
 
     // Factor out parent world transform to get the new relative transform.
     auto& relTransform{registry.get<RelativeTransform>(selectedEntity).Value};
-    const auto* rel{registry.try_get<Relationship>(selectedEntity)};
-    if (rel && rel->Parent != entt::null) {
+    if (const auto *const rel{registry.try_get<Relationship>(selectedEntity)}; rel && rel->Parent != entt::null) {
         const auto& parentWorld{registry.get<WorldTransform>(rel->Parent).Value};
         relTransform = parentWorld.Invert().Cumulate(newWorldTransform);
     } else {

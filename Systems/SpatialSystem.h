@@ -17,6 +17,8 @@ public:
 private:
     void _onTransformUpdated(GameEvents::TransformUpdated transformUpdatedEvent);
 
+    void _insertNewEntities(entt::registry& registry) const;
+
     void _updateOctree(entt::registry& registry) const;
 
     void _performFrustumCulling(entt::registry& registry) const;

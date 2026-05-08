@@ -44,7 +44,7 @@ private:
                        const std::vector<Texture>& specularTextures) const;
 
     void _setupLighting(const Shader* shader,
-                        const Transform& cameraWorldTransform,
+                        const Transform& cameraViewTransform,
                         entt::registry& registry) const;
 
     mutable std::vector<MeshInstance> _meshInstances;

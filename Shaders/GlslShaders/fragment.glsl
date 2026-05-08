@@ -1,5 +1,8 @@
 #version 460 core
 
+#define MAX_DIR_LIGHTS 4
+#define MAX_POINT_LIGHTS 16
+
 struct DirectionalLight {
     vec3 Direction;
 
@@ -30,8 +33,11 @@ struct PointLight {
     float SpotExponent;
 };*/
 
-uniform DirectionalLight dirLight;
-uniform PointLight pointLight;
+uniform int NumDirLights;
+uniform int NumPointLights;
+
+uniform DirectionalLight dirLights[MAX_DIR_LIGHTS];
+uniform PointLight pointLights[MAX_POINT_LIGHTS];
 //uniform SpotLight spotLight;
 
 in vec2 TexCoord;
@@ -49,12 +55,8 @@ uniform bool HasTextureSpecular;
 uniform vec4 DiffuseColor;
 uniform vec3 SpecularColor;
 
-uniform vec3 LightColor;
-
-uniform vec3 LightPosition;
-
-vec4 CalculateDirectionalLight(vec4 diffuse, vec3 specular, float shininess, vec3 normal, DirectionalLight dirLight, vec3 viewDirection);
-vec3 CalculatePointLight(vec3 diffuse, vec3 specular, float shininess, vec3 normal, PointLight pointLight, vec3 viewDirection);
+vec3 CalculateDirectionalLight(vec4 diffuse, vec3 specular, float shininess, vec3 normal, DirectionalLight light, vec3 viewDirection);
+vec3 CalculatePointLight(vec3 diffuse, vec3 specular, float shininess, vec3 normal, PointLight light, vec3 viewDirection);
 
 void main() {
     vec4 diffuseStrength = HasTextureDiffuse ? texture(TextureDiffuse0, TexCoord).rgba : DiffuseColor;
@@ -63,62 +65,65 @@ void main() {
     }
 
     vec3 specularStrength = HasTextureSpecular ? texture(TextureSpecular0, TexCoord).rgb : SpecularColor;
-
+    vec3 normal = normalize(NormalViewPosition);
     vec3 viewDirection = normalize(-FragViewPosition);
 
-    vec4 dirLightContribution = CalculateDirectionalLight(diffuseStrength, specularStrength, 256.f, normalize(NormalViewPosition), dirLight, viewDirection);
-    vec3 pointLightContribution = CalculatePointLight(diffuseStrength.rgb, specularStrength, 256.f, normalize(NormalViewPosition), pointLight, viewDirection);
+    vec3 result = vec3(0.0);
 
-    FragColor = dirLightContribution;
+    for (int i = 0; i < NumDirLights; i++) {
+        result += CalculateDirectionalLight(diffuseStrength, specularStrength, 256.0, normal, dirLights[i], viewDirection);
+    }
+
+    for (int i = 0; i < NumPointLights; i++) {
+        result += CalculatePointLight(diffuseStrength.rgb, specularStrength, 256.0, normal, pointLights[i], viewDirection);
+    }
+
+    FragColor = vec4(result, diffuseStrength.a);
 }
 
-vec4 CalculateDirectionalLight(vec4 diffuse, vec3 specular, float shininess, vec3 normal, DirectionalLight dirLight, vec3 viewDirection) {
+vec3 CalculateDirectionalLight(vec4 diffuse, vec3 specular, float shininess, vec3 normal, DirectionalLight light, vec3 viewDirection) {
     // Since the input light direction is the vector from the light source to the objects
-    // we need to get it's inverse.
-    vec3 lightDir = normalize(-dirLight.Direction);
+    // we need to get its inverse.
+    vec3 lightDir = normalize(-light.Direction);
 
-    float diff = max(dot(normal, lightDir), 0.f);
+    float diff = max(dot(normal, lightDir), 0.0);
 
     // Specular with halfway direction by Blinn
     vec3 halfwayDir = normalize(lightDir + viewDirection);
-    float spec = pow(max(dot(normal, halfwayDir), 0.f), shininess);
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
 
-    if(diff == 0.f) {
-        spec = 0.f;
+    if (diff == 0.0) {
+        spec = 0.0;
     }
 
-    vec3 totalDiffuse = dirLight.Diffuse * diff * diffuse.rgb;
-    vec3 totalSpecular = dirLight.Specular * spec * specular;
-    vec3 totalAmbient = dirLight.Ambient * diffuse.rgb;
+    vec3 totalAmbient  = light.Ambient  * diffuse.rgb;
+    vec3 totalDiffuse  = light.Diffuse  * diff * diffuse.rgb;
+    vec3 totalSpecular = light.Specular * spec * specular;
 
-    return vec4(totalAmbient + totalDiffuse + totalSpecular, diffuse.a);
+    return totalAmbient + totalDiffuse + totalSpecular;
 }
 
-vec3 CalculatePointLight(vec3 diffuse, vec3 specular, float shininess, vec3 normal, PointLight pointLight, vec3 viewDirection) {
-    vec3 lightDir = normalize(pointLight.Position - FragViewPosition);
+vec3 CalculatePointLight(vec3 diffuse, vec3 specular, float shininess, vec3 normal, PointLight light, vec3 viewDirection) {
+    vec3 lightDir = normalize(light.Position - FragViewPosition);
 
-    // We use max between the dot product and 0 to make sure the value of diff is not negative (if we got 0, we get a black object with no light)
-    float diff = max(dot(lightDir, normal), 0.f);
+    float diff = max(dot(lightDir, normal), 0.0);
 
     // Specular with halfway direction by Blinn
     vec3 halfwayDir = normalize(lightDir + viewDirection);
-    float spec = pow(max(dot(normal, halfwayDir), 0.f), shininess);
+    float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
 
-    // Revomes the specular contribuition if the diffuse contribution is 0.
-    if(diff == 0.f) {
-        spec = 0.f;
+    // Removes the specular contribution if the diffuse contribution is 0.
+    if (diff == 0.0) {
+        spec = 0.0;
     }
 
-    // Attenuation is used to obtain smoother edges simulating real lights.
-    float distance = length(pointLight.Position - FragViewPosition);
-    float attenuation = 1.f / (pointLight.Constant + pointLight.Linear * distance + pointLight.Quadratic * (distance * distance));
+    // Attenuation simulates real light falloff.
+    float distance    = length(light.Position - FragViewPosition);
+    float attenuation = 1.0 / (light.Constant + light.Linear * distance + light.Quadratic * (distance * distance));
 
-    vec3 totalAmbient = pointLight.Ambient * diffuse;
-    vec3 totalDiffuse = pointLight.Diffuse * diff * diffuse;
-    vec3 totalSpecular = pointLight.Specular * spec * specular;
+    vec3 totalAmbient  = light.Ambient  * diffuse;
+    vec3 totalDiffuse  = light.Diffuse  * diff * diffuse;
+    vec3 totalSpecular = light.Specular * spec * specular;
 
-    totalAmbient *= attenuation;
-    totalDiffuse *= attenuation;
-    totalSpecular *= attenuation;
-    return totalAmbient + totalDiffuse + totalSpecular;
+    return (totalAmbient + totalDiffuse + totalSpecular) * attenuation;
 }

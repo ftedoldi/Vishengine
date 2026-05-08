@@ -1,5 +1,6 @@
 #include "InspectorPanel.h"
 
+#include "Components/BoundingBox.h"
 #include "Components/Lights/PointLight.h"
 #include "Components/Lights/DirectionalLight.h"
 
@@ -9,6 +10,7 @@
 #include "Components/SelectedTag.h"
 #include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/TransformDirtyFlag.h"
+#include "Components/Transforms/WorldTransform.h"
 #include "imgui.h"
 
 #include <glm/gtc/quaternion.hpp>
@@ -109,9 +111,12 @@ void InspectorPanel::OnRender(entt::dispatcher&, entt::registry& registry) {
         ImGui::Separator();
 
         _drawMeshComponent(selectedEntity, registry);
+        _drawTransformComponent(selectedEntity, registry);
         _drawPointLightComponent(selectedEntity, registry);
         _drawDirectionalLightComponent(selectedEntity, registry);
         _drawCameraComponent(selectedEntity, registry);
+
+        _drawAddComponentMenu(selectedEntity, registry);
 
         ImGui::Spacing();
         ImGui::Separator();
@@ -175,8 +180,6 @@ void InspectorPanel::_drawMeshComponent(const entt::entity selectedEntity, entt:
 
         ImGui::TreePop();
     }
-
-    _drawTransformComponent(selectedEntity, registry);
 }
 
 void InspectorPanel::_drawPointLightComponent(const entt::entity selectedEntity, entt::registry& registry) const {
@@ -194,8 +197,6 @@ void InspectorPanel::_drawPointLightComponent(const entt::entity selectedEntity,
         ImGui::ColorEdit3("Specular", &pointLight.Specular.x);
         ImGui::TreePop();
     }
-
-    _drawTransformComponent(selectedEntity, registry);
 }
 
 void InspectorPanel::_drawDirectionalLightComponent(const entt::entity selectedEntity, entt::registry& registry) const {
@@ -229,7 +230,33 @@ void InspectorPanel::_drawCameraComponent(const entt::entity selectedEntity, ent
         ImGui::Text("Camera");
         ImGui::TreePop();
     }
+}
 
-    _drawTransformComponent(selectedEntity, registry);
+void InspectorPanel::_drawAddComponentMenu(const entt::entity selectedEntity, entt::registry& registry) const {
+    ImGui::Spacing();
+    if (ImGui::Button("Add Component", ImVec2{ImGui::GetContentRegionAvail().x, 0.f})) {
+        ImGui::OpenPopup("add_component_popup");
+    }
+    if (ImGui::BeginPopup("add_component_popup")) {
+        if (!registry.all_of<RelativeTransform>(selectedEntity)) {
+            if (ImGui::Selectable("Transform")) {
+                registry.emplace<RelativeTransform>(selectedEntity);
+                registry.get_or_emplace<WorldTransform>(selectedEntity);
+                registry.get_or_emplace<TransformDirtyFlag>(selectedEntity);
+            }
+        }
+        if (!registry.all_of<PointLight>(selectedEntity)) {
+            if (ImGui::Selectable("Point Light")) {
+                registry.emplace<PointLight>(selectedEntity);
+                registry.get_or_emplace<BoundingBox>(selectedEntity, Box{glm::vec3{-0.15f}, glm::vec3{0.15f}});
+            }
+        }
+        if (!registry.all_of<DirectionalLight>(selectedEntity)) {
+            if (ImGui::Selectable("Directional Light")) {
+                registry.emplace<DirectionalLight>(selectedEntity);
+            }
+        }
+        ImGui::EndPopup();
+    }
 }
 
