@@ -26,8 +26,6 @@ public:
 
     void Update();
 
-    void Clear() const;
-
 private:
     void _addLight();
 

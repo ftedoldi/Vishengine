@@ -28,6 +28,12 @@ GUIDrawer::GUIDrawer(GLFWwindow* const window,
     ImGui_ImplOpenGL3_Init();
 }
 
+GUIDrawer::~GUIDrawer() {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+}
+
 void GUIDrawer::BeginFrame() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -50,10 +56,4 @@ void GUIDrawer::Render() {
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-}
-
-void GUIDrawer::Clear() {
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
 }

@@ -5,7 +5,5 @@ int main() {
 
     game.Update();
 
-    game.Clear();
-
     return 0;
 }

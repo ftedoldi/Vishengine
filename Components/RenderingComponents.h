@@ -2,6 +2,7 @@
 
 #include <bitset>
 #include <cstdint>
+#include <vector>
 
 enum class RenderLayer {
     SceneMeshes,
@@ -26,9 +27,14 @@ struct RenderLayers {
     std::bitset<32> Layers{};
 };
 
+enum class MeshSet {
+    All, Visible
+};
+
 struct RenderPass {
     ShaderID ShaderHandle{};
     RenderLayers RenderLayers{};
+    MeshSet Meshes{};
     //RenderState State{};     // depth/blend/cull/clear (optional)
 };
 

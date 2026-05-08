@@ -1,6 +1,5 @@
 #include "Game.h"
 
-#include "../Debug/DebugRenderPass.h"
 #include "Camera/CameraFactory.h"
 #include "Components/Camera/ActiveCameraTag.h"
 #include "Components/Light.h"
@@ -54,7 +53,7 @@ Game::Game() {
     std::bitset<32> layers{};
     layers.set(static_cast<size_t>(RenderLayer::SceneMeshes));
 
-    const RenderPass editorCameraRenderPass{.ShaderHandle = ShaderID::Standard, .RenderLayers = {layers}};
+    const RenderPass editorCameraRenderPass{.ShaderHandle = ShaderID::Standard, .RenderLayers = {layers}, .Meshes = MeshSet::Visible};
     editorCameraRenderTarget.Passes.push_back(editorCameraRenderPass);
 
     _registry.emplace<LitPassTag>(editorCamera);
@@ -77,9 +76,6 @@ Game::Game() {
     _transformSystem->Init(_registry);
 
     _octree = std::make_unique<Octree>();
-    auto debugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
-    auto debugRenderPass{std::make_unique<DebugRenderPass>(_octree.get(), _inputManager.get(), std::move(debugShader), _registry)};
-    _rendererSystem->AddPass(std::move(debugRenderPass));
 
     _spatialSystem = std::make_unique<SpatialSystem>(_octree.get(), _registry, _dispatcher);
     _spatialSystem->Init();
@@ -88,7 +84,6 @@ Game::Game() {
     _framebuffersController->AddFramebuffer(FramebufferID::FrustumDebugView, std::make_unique<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight()));
     auto frustumDebugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
     _shadersController->AddShader(ShaderID::FrustumDebug, std::move(frustumDebugShader));
-
 
     _pickingSystem = std::make_unique<PickingSystem>(_window.get(), _octree.get(), _dispatcher, _registry);
 
@@ -130,10 +125,6 @@ void Game::Update() {
 
         _window->Update();
     }
-}
-
-void Game::Clear() const {
-    _guiDrawer->Clear();
 }
 
 void Game::_addLight() {

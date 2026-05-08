@@ -18,6 +18,7 @@
 #include "RenderingComponents/LineDrawer.h"
 #include "Shaders/Shader.h"
 
+#include <algorithm>
 #include <glad/gl.h>
 
 namespace {
@@ -61,21 +62,18 @@ RendererSystem::RendererSystem(entt::dispatcher& windowDispatcher,
     windowDispatcher.sink<WindowsEvents::FrameBufferSizeChangedEvent>().connect<&RendererSystem::_onFramebufferSizeChanged>(this);
 }
 
-void RendererSystem::AddPass(std::unique_ptr<IRenderPass> pass) {
-    _passes.push_back(std::move(pass));
-}
-
 void RendererSystem::Update(entt::registry& registry) const {
-    std::unordered_map<uint32_t, std::vector<Transform>> transformsByMeshID{};
-    const auto allMeshView{registry.view<Mesh, Relationship>()};
+    _meshInstances.clear();
+    const auto allMeshView{registry.view<Mesh, Relationship>(entt::exclude<InstancedMeshTag>)};
     for (const auto& [meshEntity, mesh, relationship] : allMeshView.each()) {
-        // The parent of the mesh in the abstract mesh object that contains the transform.
-        if (!registry.all_of<RenderableTag>(relationship.Parent)) {
-            continue;
-        }
-        const auto& worldTransform{registry.get<WorldTransform>(relationship.Parent).Value};
-        transformsByMeshID[mesh.meshID].push_back(worldTransform);
+        _meshInstances.push_back({
+            mesh.meshID,
+            registry.get<WorldTransform>(relationship.Parent).Value,
+            registry.all_of<RenderableTag>(relationship.Parent),
+        });
     }
+    std::ranges::sort(_meshInstances,
+              [](const MeshInstance& a, const MeshInstance& b){ return a.meshID < b.meshID; });
 
     const auto viewEntities{registry.view<Camera, RenderTarget>()};
     for (const auto viewEntity : viewEntities) {
@@ -86,24 +84,19 @@ void RendererSystem::Update(entt::registry& registry) const {
 
         for (const auto pass : renderTarget.Passes) {
             if (pass.RenderLayers.Layers.test(static_cast<size_t>(RenderLayer::SceneMeshes))) {
-                _drawSceneMeshes(viewEntity, pass.ShaderHandle, registry, transformsByMeshID);
+                _drawSceneMeshes(viewEntity, pass.ShaderHandle, registry, pass.Meshes);
             }
-
             if (pass.RenderLayers.Layers.test(static_cast<size_t>(RenderLayer::DebugFrustumIntersections))) {
                 _drawDebugFrustumIntersections(viewEntity, pass.ShaderHandle, registry);
             }
         }
-    }
-
-    for (const auto& pass : _passes) {
-        pass->Execute();
     }
 }
 
 void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
                                     const ShaderID shaderId,
                                     entt::registry& registry,
-                                    const std::unordered_map<uint32_t, std::vector<Transform>>& transformsByMeshID) const {
+                                    const MeshSet meshSet) const {
     const auto& camera{registry.get<Camera>(viewEntity)};
 
     const auto* const shader{_shadersController->GetShader(shaderId)};
@@ -117,27 +110,35 @@ void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
         }
     }
 
-    const auto actualMeshView{registry.view<Mesh, Relationship>(entt::exclude<InstancedMeshTag>)};
-    for (const auto& [meshEntity, mesh, relationship] : actualMeshView.each()) {
-        const auto it{transformsByMeshID.find(mesh.meshID)};
-        if (it == transformsByMeshID.end()) {
-            continue;
-        }
-        const auto& instanceWorldTransforms{it->second};
+    std::vector<Transform> viewTransforms{};
+    auto it{_meshInstances.cbegin()};
+    while (it != _meshInstances.cend()) {
+        const uint32_t currentMeshID{it->meshID};
 
-        const auto& materialData{_materialController->GetMaterialData(mesh.meshID)};
-        shader->SetUniformVec4("DiffuseColor", materialData.ColorDiffuse);
-        shader->SetUniformVec3("SpecularColor", materialData.ColorSpecular);
-        _bindTextures(shader, materialData.TexturesDiffuse, materialData.TexturesSpecular);
-
-        std::vector<Transform> viewTransforms{};
-        viewTransforms.reserve(instanceWorldTransforms.size());
-        for (const auto& wt : instanceWorldTransforms) {
-            viewTransforms.push_back(camera.ViewTransform.Cumulate(wt));
+        auto groupEnd{it};
+        while (groupEnd != _meshInstances.cend() && groupEnd->meshID == currentMeshID) {
+            ++groupEnd;
         }
 
-        const auto& meshData{_meshController->GetMeshData(mesh.meshID)};
-        DrawMesh(viewTransforms, meshData.MeshGpuData, meshData.RawMeshData.Indices);
+        viewTransforms.clear();
+        for (auto cur{it}; cur != groupEnd; ++cur) {
+            if (meshSet == MeshSet::Visible && !cur->renderable) {
+                continue;
+            }
+            viewTransforms.push_back(camera.ViewTransform.Cumulate(cur->transform));
+        }
+
+        if (!viewTransforms.empty()) {
+            const auto& materialData{_materialController->GetMaterialData(currentMeshID)};
+            shader->SetUniformVec4("DiffuseColor", materialData.ColorDiffuse);
+            shader->SetUniformVec3("SpecularColor", materialData.ColorSpecular);
+            _bindTextures(shader, materialData.TexturesDiffuse, materialData.TexturesSpecular);
+
+            const auto& meshData{_meshController->GetMeshData(currentMeshID)};
+            DrawMesh(viewTransforms, meshData.MeshGpuData, meshData.RawMeshData.Indices);
+        }
+
+        it = groupEnd;
     }
 }
 

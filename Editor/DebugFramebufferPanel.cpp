@@ -12,7 +12,6 @@ DebugFramebufferPanel::DebugFramebufferPanel(const FramebuffersController* const
 void DebugFramebufferPanel::OnRender(entt::dispatcher& dispatcher, entt::registry& registry) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0.f, 0.f});
 
-
     // The panel was just opened.
     if (IsVisible && !_wasVisible) {
         // Create an entity with a shader and a framebuffer used to debug the frustum.
@@ -26,11 +25,12 @@ void DebugFramebufferPanel::OnRender(entt::dispatcher& dispatcher, entt::registr
             300.,
             CameraType::Perspective);
 
-        // TODO: add documentation
+        // The framebuffer debug view needs two passes: one that renders the meshes and one that renders the debug.
+        // We need two different shaders for the same framebuffer.
         auto& cameraRenderTarget{registry.emplace<RenderTarget>(_debugViewEntity, FramebufferID::FrustumDebugView)};
         std::bitset<32> sceneMeshLayer{};
         sceneMeshLayer.set(static_cast<size_t>(RenderLayer::SceneMeshes));
-        const RenderPass sceneMeshRenderPass{.ShaderHandle = ShaderID::Standard, .RenderLayers = {sceneMeshLayer}};
+        const RenderPass sceneMeshRenderPass{.ShaderHandle = ShaderID::Standard, .RenderLayers = {sceneMeshLayer}, .Meshes = MeshSet::All};
         cameraRenderTarget.Passes.push_back(sceneMeshRenderPass);
 
 

@@ -23,6 +23,8 @@ public:
               const FramebuffersController* framebuffersController,
               const std::filesystem::path& assetsRoot);
 
+    ~GUIDrawer();
+
     /** Step 1: clear the default framebuffer and start a new ImGui frame. */
     void BeginFrame();
 
@@ -31,8 +33,6 @@ public:
 
     /** Step 4: submit ImGui draw-lists to OpenGL. */
     void Render();
-
-    void Clear();
 
 private:
     EditorLayer _editorLayer;

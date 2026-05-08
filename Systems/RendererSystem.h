@@ -1,20 +1,17 @@
 #pragma once
 
+#include "Components/RenderingComponents.h"
 #include "Controllers/FramebuffersController.h"
 #include "Controllers/MaterialController.h"
 #include "Controllers/MeshController.h"
 #include "Controllers/ShadersController.h"
 #include "Coordinates/Transform.h"
 #include "Events/WindowEvents.h"
-#include "IRenderPass.h"
+#include "Shaders/Shader.h"
 
 #include <entt/entt.hpp>
 
-#include <memory>
-#include <unordered_map>
 #include <vector>
-
-class Shader;
 
 class RendererSystem {
 public:
@@ -24,17 +21,21 @@ public:
                    ShadersController* shadersController,
                    FramebuffersController* framebuffersController);
 
-    void AddPass(std::unique_ptr<IRenderPass> pass);
-
     void Update(entt::registry& registry) const;
 
 private:
+    struct MeshInstance {
+        uint32_t meshID{};
+        Transform transform{};
+        bool renderable{};
+    };
+
     void _onFramebufferSizeChanged(WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const;
 
     void _drawSceneMeshes(entt::entity viewEntity,
                         ShaderID shaderId,
                         entt::registry& registry,
-                        const std::unordered_map<uint32_t, std::vector<Transform>>& transformsByMeshID) const;
+                        MeshSet meshSet) const;
 
     void _drawDebugFrustumIntersections(entt::entity viewEntity, ShaderID shaderId, entt::registry& registry) const;
 
@@ -46,7 +47,7 @@ private:
                         const Transform& cameraWorldTransform,
                         entt::registry& registry) const;
 
-    std::vector<std::unique_ptr<IRenderPass>> _passes{};
+    mutable std::vector<MeshInstance> _meshInstances;
 
     MaterialController* _materialController{};
 
