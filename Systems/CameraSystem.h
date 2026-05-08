@@ -1,5 +1,6 @@
 #pragma once
-#include "entt/entity/registry.hpp"
+
+#include "entt/entt.hpp"
 
 class CameraSystem {
 public:

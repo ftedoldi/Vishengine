@@ -3,6 +3,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+Texture::~Texture() {
+    glDeleteTextures(1, &_id);
+}
+
 void Texture::CreateTexture(const std::string& path) {
 	int textureWidth{}, textureHeight{}, nrChannels{};
 
@@ -25,6 +29,11 @@ void Texture::CreateEmbeddedTexture(const aiTexture* const texture) {
         textureData = stbi_load_from_memory(reinterpret_cast<uint8_t*>(texture->pcData), texture->mWidth, &textureWidth, &textureHeight, &nrChannels, 0);
     } else {
         textureData = stbi_load_from_memory(reinterpret_cast<uint8_t*>(texture->pcData), texture->mWidth * texture->mHeight, &textureWidth, &textureHeight, &nrChannels, 0);
+    }
+
+    if (!textureData) {
+        std::cerr << "Failed to load texture: " << " (" << stbi_failure_reason() << ")\n";
+        return;
     }
 
     _createTexture(textureWidth, textureHeight, nrChannels, textureData);

@@ -27,6 +27,16 @@ public:
     void Update();
 
 private:
+    void _initWindow();
+
+    void _initRenderer();
+
+    void _initSystems();
+
+    void _loadDefaultScene();
+
+    void _initEditor();
+
     void _addLight();
 
     entt::registry _registry{};
@@ -59,7 +69,7 @@ private:
 
     std::unique_ptr<PickingSystem> _pickingSystem{};
 
-    CameraSystem _cameraSystem{};
+    std::unique_ptr<CameraSystem> _cameraSystem{};
 
     entt::dispatcher _dispatcher{};
 

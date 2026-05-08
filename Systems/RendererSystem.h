@@ -21,7 +21,7 @@ public:
                    ShadersController* shadersController,
                    FramebuffersController* framebuffersController);
 
-    void Update(entt::registry& registry) const;
+    void Update(entt::registry& registry);
 
 private:
     struct MeshInstance {
@@ -30,24 +30,24 @@ private:
         bool renderable{};
     };
 
-    void _onFramebufferSizeChanged(WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const;
-
     void _drawSceneMeshes(entt::entity viewEntity,
                         ShaderID shaderId,
                         entt::registry& registry,
-                        MeshSet meshSet) const;
+                        MeshSet meshSet);
 
-    void _drawDebugFrustumIntersections(entt::entity viewEntity, ShaderID shaderId, entt::registry& registry) const;
+    void _drawDebugFrustumIntersections(entt::entity viewEntity, ShaderID shaderId, entt::registry& registry);
 
     void _bindTextures(const Shader* shader,
                        const std::vector<Texture>& diffuseTextures,
-                       const std::vector<Texture>& specularTextures) const;
+                       const std::vector<Texture>& specularTextures);
 
     void _setupLighting(const Shader* shader,
                         const Transform& cameraViewTransform,
-                        entt::registry& registry) const;
+                        entt::registry& registry);
 
-    mutable std::vector<MeshInstance> _meshInstances;
+    void _onFramebufferSizeChanged(WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const;
+
+    std::vector<MeshInstance> _meshInstances;
 
     MaterialController* _materialController{};
 

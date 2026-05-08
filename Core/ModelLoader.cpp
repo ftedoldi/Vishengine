@@ -64,6 +64,7 @@ void ModelLoader::_processNode(const aiNode* const node,
         if (parentEntity != entt::null) {
             auto& [_, currentNumberOfChildren, children]{_registry.get<Relationship>(parentEntity)};
             children[currentNumberOfChildren++] = nodeEntity;
+            assert(currentNumberOfChildren < Relationship::MAX_NUM_OF_CHILDREN);
         }
 
         uint32_t allocationSize{};

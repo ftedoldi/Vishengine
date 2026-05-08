@@ -62,7 +62,7 @@ RendererSystem::RendererSystem(entt::dispatcher& windowDispatcher,
     windowDispatcher.sink<WindowsEvents::FrameBufferSizeChangedEvent>().connect<&RendererSystem::_onFramebufferSizeChanged>(this);
 }
 
-void RendererSystem::Update(entt::registry& registry) const {
+void RendererSystem::Update(entt::registry& registry) {
     _meshInstances.clear();
     const auto allMeshView{registry.view<Mesh, Relationship>(entt::exclude<InstancedMeshTag>)};
     for (const auto& [meshEntity, mesh, relationship] : allMeshView.each()) {
@@ -96,7 +96,7 @@ void RendererSystem::Update(entt::registry& registry) const {
 void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
                                     const ShaderID shaderId,
                                     entt::registry& registry,
-                                    const MeshSet meshSet) const {
+                                    const MeshSet meshSet) {
     const auto& camera{registry.get<Camera>(viewEntity)};
 
     const auto* const shader{_shadersController->GetShader(shaderId)};
@@ -140,7 +140,7 @@ void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
     }
 }
 
-void RendererSystem::_drawDebugFrustumIntersections(const entt::entity viewEntity, const ShaderID shaderId, entt::registry& registry) const {
+void RendererSystem::_drawDebugFrustumIntersections(const entt::entity viewEntity, const ShaderID shaderId, entt::registry& registry) {
     const auto& debugFrustumCamera{registry.get<Camera>(viewEntity)};
 
     const auto* const shader{_shadersController->GetShader(shaderId)};
@@ -164,7 +164,7 @@ void RendererSystem::_drawDebugFrustumIntersections(const entt::entity viewEntit
 
 void RendererSystem::_bindTextures(const Shader* const shader,
                                    const std::vector<Texture>& diffuseTextures,
-                                   const std::vector<Texture>& specularTextures) const {
+                                   const std::vector<Texture>& specularTextures) {
     int currentTextureIndex{0};
 
     shader->SetBool("HasTextureDiffuse", !diffuseTextures.empty());
@@ -182,7 +182,7 @@ void RendererSystem::_bindTextures(const Shader* const shader,
 
 void RendererSystem::_setupLighting(const Shader* const shader,
                                     const Transform& cameraViewTransform,
-                                    entt::registry& registry) const {
+                                    entt::registry& registry) {
     constexpr int maxPointLights{16};
     int pointLightCount{0};
     const auto pointView{registry.view<PointLight, WorldTransform>()};

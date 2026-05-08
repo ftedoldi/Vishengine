@@ -28,6 +28,9 @@ void HierarchyPanel::OnRender(entt::dispatcher&, entt::registry& registry) {
         }
     }
 
+    // TODO: currently I can only create entities that have no parent (so they don't need any hierarchy information)
+    // Once also child entities can be created, this will need to be reviewed as also the relationship components
+    // need to be updated.
     if (ImGui::BeginPopupContextWindow("hierarchy_context",
             ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems)) {
         if (ImGui::MenuItem("Create Empty Entity")) {

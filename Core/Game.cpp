@@ -20,9 +20,41 @@
 #include <filesystem>
 
 Game::Game() {
+    _initWindow();
+    _initRenderer();
+    _initSystems();
+    _loadDefaultScene();
+    _initEditor();
+}
+
+void Game::_initWindow() {
     _window = std::make_unique<Window>(_dispatcher);
     _window->Initialize();
+}
 
+void Game::_initRenderer() {
+    const std::string shadersBasePath{std::string(PROJECT_SOURCE_DIR) + "/Shaders/GlslShaders/"};
+
+    // TODO: change with a UUID
+    _framebuffersController = std::make_unique<FramebuffersController>();
+    _framebuffersController->AddFramebuffer(FramebufferID::Main,
+        std::make_unique<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight()));
+    _framebuffersController->AddFramebuffer(FramebufferID::FrustumDebugView,
+        std::make_unique<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight()));
+
+    // TODO: change with a UUID
+    _shadersController = std::make_unique<ShadersController>();
+    auto litShader{std::make_unique<Shader>(shadersBasePath + "vertex.glsl", shadersBasePath + "fragment.glsl")};
+    _shadersController->AddShader(ShaderID::Standard, std::move(litShader));
+    auto frustumDebugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
+    _shadersController->AddShader(ShaderID::FrustumDebug, std::move(frustumDebugShader));
+
+    _meshController = std::make_unique<MeshController>();
+    _materialController = std::make_unique<MaterialController>();
+    _rendererSystem = std::make_unique<RendererSystem>(_dispatcher, _materialController.get(), _meshController.get(), _shadersController.get(), _framebuffersController.get());
+}
+
+void Game::_initSystems() {
     const auto editorCamera{CameraFactory::CreateEditorCamera(
         _registry,
         glm::vec3{0., 0., 0.},
@@ -31,69 +63,41 @@ Game::Game() {
         0.1,
         100.,
         CameraType::Perspective)};
-
     _registry.emplace<ActiveCameraTag>(editorCamera);
-
     _cameraProjectionUpdaterSystem = std::make_unique<CameraProjectionUpdaterSystem>(_registry, _dispatcher);
 
-    const std::string shadersBasePath{std::string(PROJECT_SOURCE_DIR) + "/Shaders/GlslShaders/"};
-
-    // TODO: change with a UUID
-    _framebuffersController = std::make_unique<FramebuffersController>();
-    _framebuffersController->AddFramebuffer(FramebufferID::Main,
-        std::make_unique<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight()));
-
-    // Register the lit shader.
-    _shadersController = std::make_unique<ShadersController>();
-    // TODO: change with a UUID
-    auto litShader{std::make_unique<Shader>(shadersBasePath + "vertex.glsl", shadersBasePath + "fragment.glsl")};
-    _shadersController->AddShader(ShaderID::Standard, std::move(litShader));
+    _cameraSystem = std::make_unique<CameraSystem>();
 
     // Promote the editor camera into the main view: it now owns the framebuffer
     // and shader binding for the scene pass.
     auto& editorCameraRenderTarget{_registry.emplace<RenderTarget>(editorCamera)};
     editorCameraRenderTarget.FramebufferHandle = FramebufferID::Main;
-
     std::bitset<32> layers{};
     layers.set(static_cast<size_t>(RenderLayer::SceneMeshes));
-
     const RenderPass editorCameraRenderPass{.ShaderHandle = ShaderID::Standard, .RenderLayers = {layers}, .Meshes = MeshSet::Visible};
     editorCameraRenderTarget.Passes.push_back(editorCameraRenderPass);
-
     _registry.emplace<LitPassTag>(editorCamera);
 
-    _meshController = std::make_unique<MeshController>();
-    _materialController = std::make_unique<MaterialController>();
-    _rendererSystem = std::make_unique<RendererSystem>(_dispatcher, _materialController.get(), _meshController.get(), _shadersController.get(), _framebuffersController.get());
-
-    _inputManager = std::make_shared<InputManager>(_window->GetGLFWWindow());
-
-    _editorCameraMoveSystem = std::make_unique<EditorCameraMoveSystem>(_inputManager);
-
-    const std::filesystem::path assetsRoot{std::string(PROJECT_SOURCE_DIR) + "/Assets"};
-    _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWWindow(), _framebuffersController.get(), assetsRoot);
-
     _transformSystem = std::make_unique<TransformSystem>(_dispatcher);
+    _octree = std::make_unique<Octree>();
+    _spatialSystem = std::make_unique<SpatialSystem>(_octree.get(), _registry, _dispatcher);
+    _pickingSystem = std::make_unique<PickingSystem>(_window.get(), _octree.get(), _dispatcher, _registry);
+    LineDrawer::Initialize(_registry);
+}
 
+void Game::_loadDefaultScene() {
     ModelLoader modelLoader{_registry, _meshController.get(), _materialController.get()};
     modelLoader.ImportModel(std::string(PROJECT_SOURCE_DIR) + "/Assets/megaHierarchy.glb");
     _transformSystem->Init(_registry);
-
-    _octree = std::make_unique<Octree>();
-
-    _spatialSystem = std::make_unique<SpatialSystem>(_octree.get(), _registry, _dispatcher);
     _spatialSystem->Init();
-
-    // Initialize frustum debug view framebuffer and shader.
-    _framebuffersController->AddFramebuffer(FramebufferID::FrustumDebugView, std::make_unique<Framebuffer>(0, 0, _window->GetWidth(), _window->GetHeight()));
-    auto frustumDebugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
-    _shadersController->AddShader(ShaderID::FrustumDebug, std::move(frustumDebugShader));
-
-    _pickingSystem = std::make_unique<PickingSystem>(_window.get(), _octree.get(), _dispatcher, _registry);
-
-    LineDrawer::Initialize(_registry);
-
     _addLight();
+}
+
+void Game::_initEditor() {
+    _inputManager = std::make_shared<InputManager>(_window->GetGLFWWindow());
+    _editorCameraMoveSystem = std::make_unique<EditorCameraMoveSystem>(_inputManager);
+    const std::filesystem::path assetsRoot{std::string(PROJECT_SOURCE_DIR) + "/Assets"};
+    _guiDrawer = std::make_unique<GUIDrawer>(_window->GetGLFWWindow(), _framebuffersController.get(), assetsRoot);
 }
 
 void Game::Update() {
@@ -106,7 +110,7 @@ void Game::Update() {
         // Update entity transforms and camera view matrix.
         _transformSystem->Update(_registry);
 
-        _cameraSystem.Update(_registry);
+        _cameraSystem->Update(_registry);
 
         _editorCameraMoveSystem->Update(Time::GetDeltaTime(), _registry);
 

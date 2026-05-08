@@ -15,6 +15,8 @@ Mesh MeshController::CreateMesh(RawMeshData&& rawMeshData) {
     const auto& textureCoords{meshData.RawMeshData.TextureCoords};
     const auto& indices{meshData.RawMeshData.Indices};
     const auto& normals{meshData.RawMeshData.Normals};
+
+    assert(!vertices.empty() && !indices.empty());
     
     // Modern openGL: see https://github.com/fendevel/Guide-to-Modern-OpenGL-Functions for reference
     glCreateBuffers(1, &vbo);
