@@ -8,6 +8,11 @@ public:
 
     ~Framebuffer();
 
+    Framebuffer(const Framebuffer&) = delete;
+    Framebuffer& operator=(const Framebuffer&) = delete;
+    Framebuffer(Framebuffer&&) = delete;
+    Framebuffer& operator=(Framebuffer&&) = delete;
+
     void Bind() const;
 
     [[nodiscard]] uint32_t GetColorAttachmentID() const;

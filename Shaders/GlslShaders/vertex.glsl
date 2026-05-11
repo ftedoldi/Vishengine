@@ -3,9 +3,16 @@
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec2 aTexCoord;
 layout (location = 2) in vec3 aNormal;
-layout (location = 3) in vec3 ViewPosition;
-layout (location = 4) in float Scale;
-layout (location = 5) in vec4 ViewRotation;
+
+struct InstanceData {
+    vec3 ViewPosition;
+    float Scale;
+    vec4 ViewRotation;
+};
+
+layout(std430, binding = 0) readonly buffer InstanceBuffer {
+    InstanceData instances[];
+};
   
 out vec2 TexCoord;
 out vec3 FragViewPosition;
@@ -19,9 +26,9 @@ vec3 RotateVectorByQuaternion(vec4 quaternion, vec3 vector);
 void main() {
     TexCoord = aTexCoord;
 
-    NormalViewPosition = RotateVectorByQuaternion(ViewRotation, aNormal).xyz;
-    vec3 scaledPosition = vec3(aPos.x * Scale, aPos.y * Scale, aPos.z * Scale);
-    FragViewPosition = RotateVectorByQuaternion(ViewRotation, scaledPosition).xyz + ViewPosition;
+    NormalViewPosition = RotateVectorByQuaternion(instances[gl_InstanceID].ViewRotation, aNormal).xyz;
+    vec3 scaledPosition = vec3(aPos.x * instances[gl_InstanceID].Scale, aPos.y * instances[gl_InstanceID].Scale, aPos.z * instances[gl_InstanceID].Scale);
+    FragViewPosition = RotateVectorByQuaternion(instances[gl_InstanceID].ViewRotation, scaledPosition).xyz + instances[gl_InstanceID].ViewPosition;
 
     gl_Position = Perspective * vec4(FragViewPosition, 1.0);
 }

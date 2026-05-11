@@ -2,8 +2,7 @@
 
 #include "Components/BoundingBox.h"
 #include "Components/BoundingSphere.h"
-#include "Components/InstancedMeshTag.h"
-#include "Components/MeshNodeTag.h"
+#include "Components/MeshNode.h"
 #include "Components/Name.h"
 #include "Components/Relationship.h"
 #include "Components/Transforms/RelativeTransform.h"
@@ -15,6 +14,9 @@
 #include "assimp/postprocess.h"
 
 #include <iostream>
+#include <limits>
+#include <ranges>
+#include <unordered_map>
 
 namespace {
 
@@ -40,9 +42,9 @@ void ModelLoader::ImportModel(const std::string& modelPath) {
     assert(scene);
 
     _modelDirectory = modelPath.substr(0, modelPath.find_last_of('/'));
-    _processedMeshes.clear();
 
     _processNode(scene->mRootNode, scene, entt::null, aiMatrix4x4{});
+    _importer.FreeScene();
 }
 
 void ModelLoader::_processNode(const aiNode* const node,
@@ -67,24 +69,45 @@ void ModelLoader::_processNode(const aiNode* const node,
             assert(currentNumberOfChildren < Relationship::MAX_NUM_OF_CHILDREN);
         }
 
-        uint32_t allocationSize{};
-        for(uint32_t i{0}; i < node->mNumMeshes; ++i) {
-            const auto meshIndex{node->mMeshes[i]};
-            const auto* const aiMesh{scene->mMeshes[meshIndex]};
-            allocationSize += aiMesh->mNumVertices;
+        // Pass 1: compute bounding box (min/max) and sphere center (average vertex)
+        // Streaming over Assimp data - no large intermediate buffer needed.
+        glm::vec3 bboxMin{std::numeric_limits<float>::max()};
+        glm::vec3 bboxMax{std::numeric_limits<float>::lowest()};
+        glm::vec3 sphereCenter{};
+        uint32_t totalVertices{};
+        for (uint32_t i{0}; i < node->mNumMeshes; ++i) {
+            const auto* const mesh{scene->mMeshes[node->mMeshes[i]]};
+            for (uint32_t v{0}; v < mesh->mNumVertices; ++v) {
+                const glm::vec3 pos{mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z};
+                bboxMin = glm::min(bboxMin, pos);
+                bboxMax = glm::max(bboxMax, pos);
+                sphereCenter += pos;
+            }
+            totalVertices += mesh->mNumVertices;
         }
-        std::vector<glm::vec3> nodeMeshesVertices{};
-        nodeMeshesVertices.reserve(allocationSize);
-        for(uint32_t i{0}; i < node->mNumMeshes; ++i) {
-            const auto meshIndex{node->mMeshes[i]};
-            const auto* const aiMesh{scene->mMeshes[meshIndex]};
-            const auto mesh{_processMesh(aiMesh, scene, nodeEntity, meshIndex)};
-            const auto& meshVertices{_meshController->GetMeshData(mesh.meshID).RawMeshData.Vertices};
-            nodeMeshesVertices.insert(nodeMeshesVertices.cend(), meshVertices.cbegin(), meshVertices.cend());
+        sphereCenter /= static_cast<float>(totalVertices);
+
+        auto& meshNodeChildren{_registry.get<MeshNode>(nodeEntity).Meshes};
+        for (uint32_t i{0}; i < node->mNumMeshes; ++i) {
+            const auto aiMeshIndex{node->mMeshes[i]};
+            const auto* const aiMesh{scene->mMeshes[aiMeshIndex]};
+            const auto mesh{_processMesh(aiMesh, aiMeshIndex, scene)};
+            meshNodeChildren.push_back(mesh);
         }
-        // Create the bounding sphere given all the mesh vertices
-        _generateBoundingSphere(nodeEntity, nodeMeshesVertices);
-        _generateBoundingBox(nodeEntity, nodeMeshesVertices);
+
+        // Pass 2: compute sphere radius (requires center from pass 1)
+        float radiusSquared{};
+        for (uint32_t i{0}; i < node->mNumMeshes; ++i) {
+            const auto* const mesh{scene->mMeshes[node->mMeshes[i]]};
+            for (uint32_t v{0}; v < mesh->mNumVertices; ++v) {
+                const glm::vec3 pos{mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z};
+                const auto delta{pos - sphereCenter};
+                radiusSquared = std::max(radiusSquared, glm::dot(delta, delta));
+            }
+        }
+
+        _registry.emplace<BoundingSphere>(nodeEntity, sphereCenter, glm::sqrt(radiusSquared));
+        _registry.emplace<BoundingBox>(nodeEntity, Box{bboxMin, bboxMax});
         worldTransform = aiMatrix4x4{};
         parentEntity = nodeEntity;
     }
@@ -111,21 +134,18 @@ entt::entity ModelLoader::_createNodeEntity(const entt::entity parentEntity, con
 
     _registry.emplace<TransformDirtyFlag>(nodeEntity);
     _registry.emplace<WorldTransform>(nodeEntity);
-    _registry.emplace<MeshNodeTag>(nodeEntity);
+    _registry.emplace<MeshNode>(nodeEntity);
 
     return nodeEntity;
 }
 
-Mesh ModelLoader::_processMesh(const aiMesh* const aiMesh, const aiScene* const scene, const entt::entity parentEntity, const uint32_t assimpMeshIndex) {
+entt::entity ModelLoader::_processMesh(const aiMesh* const aiMesh, const uint32_t assimpMeshIndex, const aiScene* const scene) {
     const auto meshEntity{_registry.create()};
-
-    auto& relationship{_registry.emplace<Relationship>(meshEntity)};
-    relationship.Parent = parentEntity;
+    _registry.emplace<WorldTransform>(meshEntity);
 
     if (const auto it{_processedMeshes.find(assimpMeshIndex)}; it != _processedMeshes.end()) {
-        _registry.emplace<InstancedMeshTag>(meshEntity);
-        const auto mesh{_registry.emplace<Mesh>(meshEntity, it->second.meshID)};
-        return mesh;
+        _registry.emplace<Mesh>(meshEntity, it->second.MeshID);
+        return meshEntity;
     }
 
     std::vector<glm::vec3> vertices{};
@@ -161,7 +181,7 @@ Mesh ModelLoader::_processMesh(const aiMesh* const aiMesh, const aiScene* const 
         }
     }
 
-    const auto mesh{_meshController->CreateMesh({
+    auto mesh{_meshController->CreateMesh({
             std::move(vertices),
             std::move(indices),
             std::move(textureCoords),
@@ -170,13 +190,13 @@ Mesh ModelLoader::_processMesh(const aiMesh* const aiMesh, const aiScene* const 
     _processedMeshes.emplace(assimpMeshIndex, mesh);
     _registry.emplace<Mesh>(meshEntity, mesh);
 
-    _processMaterials(scene, aiMesh, mesh.meshID);
+    _processMaterials(scene, aiMesh, mesh.MeshID);
 
-    return mesh;
+    return meshEntity;
 }
 
-std::vector<Texture> ModelLoader::_loadMaterialTextures(const aiMaterial* const mat, const aiTextureType type) {
-    std::vector<Texture> textures;
+std::vector<std::shared_ptr<Texture>> ModelLoader::_loadMaterialTextures(const aiMaterial* const mat, const aiTextureType type) {
+    std::vector<std::shared_ptr<Texture>> textures;
 
     for(unsigned i{0}; i < mat->GetTextureCount(type); ++i) {
         aiString str;
@@ -184,34 +204,37 @@ std::vector<Texture> ModelLoader::_loadMaterialTextures(const aiMaterial* const 
 
         auto texturePath{_modelDirectory + "/" + str.C_Str()};
 
-        bool textureAlreadyLoaded{false};
-        for(const auto& texture : _loadedTextures) {
-            if(texturePath == texture) {
-                textureAlreadyLoaded = true;
-            }
+        if (const auto it{_texturesByPath.find(texturePath)}; it != _texturesByPath.end()) {
+            textures.push_back(it->second);
+            continue;
         }
 
-        if(!textureAlreadyLoaded) {
-            Texture texture;
-            texture.CreateTexture(texturePath);
-            textures.emplace_back(texture);
-
-            _loadedTextures.emplace_back(std::move(texturePath));
-        }
+        auto texture{std::make_shared<Texture>()};
+        texture->Create(texturePath);
+        _texturesByPath.emplace(std::move(texturePath), texture);
+        textures.push_back(std::move(texture));
     }
     return textures;
 }
 
-std::vector<Texture> ModelLoader::_loadTextures(const aiScene* const scene, const aiMaterial* const material, const aiTextureType type) {
-    std::vector<Texture> textures{};
+std::vector<std::shared_ptr<Texture>> ModelLoader::_loadTextures(const aiScene* const scene, const aiMaterial* const material, const aiTextureType type) {
+    std::vector<std::shared_ptr<Texture>> textures{};
 
     aiString texture_file{};
     material->Get(AI_MATKEY_TEXTURE(type, 0), texture_file);
 
     if(const auto* const aiTexture{scene->GetEmbeddedTexture(texture_file.C_Str())}){
-        Texture texture{};
-        texture.CreateEmbeddedTexture(aiTexture);
-        textures.emplace_back(texture);
+        // Embedded textures share the cache with file textures; prefix the key
+        // so an embedded "foo" can't collide with an on-disk path called "foo".
+        auto cacheKey{std::string{"embedded:"} + texture_file.C_Str()};
+        if (const auto it{_texturesByPath.find(cacheKey)}; it != _texturesByPath.end()) {
+            textures.push_back(it->second);
+        } else {
+            auto texture{std::make_shared<Texture>()};
+            texture->CreateEmbeddedTexture(aiTexture);
+            _texturesByPath.emplace(std::move(cacheKey), texture);
+            textures.push_back(std::move(texture));
+        }
     }
     else {
         textures = _loadMaterialTextures(material, type);
@@ -221,8 +244,8 @@ std::vector<Texture> ModelLoader::_loadTextures(const aiScene* const scene, cons
 }
 
 void ModelLoader::_processMaterials(const aiScene* const scene, const aiMesh* const mesh, const uint32_t meshID) {
-    std::vector<Texture> texturesDiffuse{};
-    std::vector<Texture> texturesSpecular{};
+    std::vector<std::shared_ptr<Texture>> texturesDiffuse{};
+    std::vector<std::shared_ptr<Texture>> texturesSpecular{};
     glm::vec4 diffuseColor{};
     glm::vec3 specularColor{};
 
@@ -260,28 +283,4 @@ void ModelLoader::_processMaterials(const aiScene* const scene, const aiMesh* co
             diffuseColor,
             specularColor,
     });
-}
-
-void ModelLoader::_generateBoundingSphere(const entt::entity meshNodeEntity, const std::vector<glm::vec3>& objectVertices) const {
-    assert(!objectVertices.empty());
-
-    glm::vec3 center{};
-    for (const auto vertex : objectVertices) {
-        center += vertex;
-    }
-    center /= static_cast<float>(objectVertices.size());
-
-    float radiusSquared{};
-    for (const auto vertex : objectVertices) {
-        const auto delta{vertex - center};
-        radiusSquared = std::max(radiusSquared, glm::dot(delta, delta));
-    }
-
-    _registry.emplace<BoundingSphere>(meshNodeEntity, center, glm::sqrt(radiusSquared));
-}
-
-void ModelLoader::_generateBoundingBox(const entt::entity meshNodeEntity, const std::vector<glm::vec3>& objectVertices) const {
-    Box bbox{objectVertices};
-
-    _registry.emplace<BoundingBox>(meshNodeEntity, bbox);
 }

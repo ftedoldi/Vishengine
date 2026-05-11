@@ -14,6 +14,7 @@ namespace {
 }
 
 void CameraSystem::Update(entt::registry& registry) {
+    // TODO: this should be computed only if the camera has changed the world transform.
     const auto view{registry.view<Camera, WorldTransform>()};
 
     for (const auto entity: view) {

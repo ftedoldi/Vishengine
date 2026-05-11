@@ -1,13 +1,20 @@
 #pragma once
 
+#include <glad/gl.h>
 #include <glm/glm.hpp>
 #include <string>
+#include <unordered_map>
 
 class Shader {
 public:
     Shader(const std::string& vertexShaderRelativePath, const std::string& fragmentShaderRelativePath);
 
     ~Shader();
+
+    Shader(const Shader&) = delete;
+    Shader& operator=(const Shader&) = delete;
+    Shader(Shader&&) = delete;
+    Shader& operator=(Shader&&) = delete;
 
 	void UseProgram() const;
 
@@ -32,7 +39,11 @@ public:
     void SetBool(const std::string& uniformName, bool value) const;
 
 private:
+    [[nodiscard]] GLint _uniformLocation(const std::string& name) const;
+
 	unsigned int _programID{0};
+
+    mutable std::unordered_map<std::string, GLint> _locationCache{};
 
 	void _compileShaders(const std::string& vertexShaderCode, const std::string& fragmentShaderCode);
 };

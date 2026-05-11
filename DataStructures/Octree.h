@@ -45,7 +45,7 @@ public:
 
     [[nodiscard]] std::optional<RaycastHit> Raycast(const Ray& ray, entt::registry& registry) const;
 
-    std::vector<entt::entity> QueryFrustum(const Frustum& frustum) const;
+    [[nodiscard]] std::vector<entt::entity> QueryFrustum(const Frustum& frustum) const;
 
     [[nodiscard]] OC::Node* GetRootNode() const;
 

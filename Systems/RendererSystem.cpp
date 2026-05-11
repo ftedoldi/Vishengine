@@ -1,54 +1,21 @@
 #include "RendererSystem.h"
 
 #include "Components/BoundingBox.h"
-#include "Platform/Framebuffer.h"
-
 #include "Components/Camera/Camera.h"
 #include "Components/Camera/EditorCameraTag.h"
-#include "Components/InstancedMeshTag.h"
 #include "Components/Lights/DirectionalLight.h"
 #include "Components/Lights/PointLight.h"
 #include "Components/Mesh.h"
-#include "Components/Relationship.h"
 #include "Components/RenderableTag.h"
 #include "Components/RenderingComponents.h"
-#include "Components/Transforms/RelativeTransform.h"
 #include "Components/Transforms/WorldTransform.h"
 #include "Coordinates/CoordinateUtils.h"
+#include "Platform/Framebuffer.h"
 #include "RenderingComponents/LineDrawer.h"
+#include "ScopedTimer.h"
 #include "Shaders/Shader.h"
 
-#include <algorithm>
 #include <glad/gl.h>
-
-namespace {
-
-void DrawMesh(const std::vector<Transform>& instanceTransforms,
-              const MeshGpuData& gpuData,
-              const std::vector<uint32_t>& indices) {
-    std::vector<InstanceData> instanceData{};
-    instanceData.reserve(instanceTransforms.size());
-    for (const auto& t : instanceTransforms) {
-        instanceData.push_back({
-            t.Position,
-            t.Scale,
-            glm::vec4{t.Rotation.x, t.Rotation.y, t.Rotation.z, t.Rotation.w},
-        });
-    }
-
-    const auto dataSize{static_cast<GLsizeiptr>(instanceData.size() * sizeof(InstanceData))};
-    glNamedBufferData(gpuData.InstanceVbo, dataSize, instanceData.data(), GL_DYNAMIC_DRAW);
-
-    glBindVertexArray(gpuData.Vao);
-    glDrawElementsInstanced(GL_TRIANGLES,
-                            static_cast<GLsizei>(indices.size()),
-                            GL_UNSIGNED_INT,
-                            nullptr,
-                            static_cast<GLsizei>(instanceTransforms.size()));
-    glBindVertexArray(0);
-}
-
-}
 
 RendererSystem::RendererSystem(entt::dispatcher& windowDispatcher,
                                MaterialController* const materialController,
@@ -63,28 +30,16 @@ RendererSystem::RendererSystem(entt::dispatcher& windowDispatcher,
 }
 
 void RendererSystem::Update(entt::registry& registry) {
-    _meshInstances.clear();
-    const auto allMeshView{registry.view<Mesh, Relationship>(entt::exclude<InstancedMeshTag>)};
-    for (const auto& [meshEntity, mesh, relationship] : allMeshView.each()) {
-        _meshInstances.push_back({
-            mesh.meshID,
-            registry.get<WorldTransform>(relationship.Parent).Value,
-            registry.all_of<RenderableTag>(relationship.Parent),
-        });
-    }
-    std::ranges::sort(_meshInstances,
-              [](const MeshInstance& a, const MeshInstance& b){ return a.meshID < b.meshID; });
-
     const auto viewEntities{registry.view<Camera, RenderTarget>()};
     for (const auto viewEntity : viewEntities) {
-        const auto renderTarget{registry.get<RenderTarget>(viewEntity)};
+        const auto& renderTarget{registry.get<RenderTarget>(viewEntity)};
         const auto* const framebuffer{_framebuffersController->GetFramebuffer(renderTarget.FramebufferHandle)};
         assert(framebuffer);
         framebuffer->Bind();
 
-        for (const auto pass : renderTarget.Passes) {
+        for (const auto& pass : renderTarget.Passes) {
             if (pass.RenderLayers.Layers.test(static_cast<size_t>(RenderLayer::SceneMeshes))) {
-                _drawSceneMeshes(viewEntity, pass.ShaderHandle, registry, pass.Meshes);
+                _drawSceneMeshes(viewEntity, pass.ShaderHandle, registry);
             }
             if (pass.RenderLayers.Layers.test(static_cast<size_t>(RenderLayer::DebugFrustumIntersections))) {
                 _drawDebugFrustumIntersections(viewEntity, pass.ShaderHandle, registry);
@@ -94,9 +49,8 @@ void RendererSystem::Update(entt::registry& registry) {
 }
 
 void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
-                                    const ShaderID shaderId,
-                                    entt::registry& registry,
-                                    const MeshSet meshSet) {
+                                      const ShaderID shaderId,
+                                      entt::registry& registry) {
     const auto& camera{registry.get<Camera>(viewEntity)};
 
     const auto* const shader{_shadersController->GetShader(shaderId)};
@@ -108,36 +62,78 @@ void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
         _setupLighting(shader, camera.ViewTransform, registry);
     }
 
-    std::vector<Transform> viewTransforms{};
-    auto it{_meshInstances.cbegin()};
-    while (it != _meshInstances.cend()) {
-        const uint32_t currentMeshID{it->meshID};
+    const auto meshGroup = registry.group<Mesh, WorldTransform, RenderableTag>();
 
-        auto groupEnd{it};
-        while (groupEnd != _meshInstances.cend() && groupEnd->meshID == currentMeshID) {
-            ++groupEnd;
-        }
+    std::unordered_map<uint32_t, std::vector<InstanceData>> perMeshData{};
 
-        viewTransforms.clear();
-        for (auto cur{it}; cur != groupEnd; ++cur) {
-            if (meshSet == MeshSet::Visible && !cur->renderable) {
-                continue;
-            }
-            viewTransforms.push_back(camera.ViewTransform.Cumulate(cur->transform));
-        }
+    perMeshData.reserve(meshGroup.size());
 
-        if (!viewTransforms.empty()) {
-            const auto& materialData{_materialController->GetMaterialData(currentMeshID)};
+    auto makeInstanceData = [](const auto& vt) {
+        return InstanceData{
+            vt.Position,
+            vt.Scale,
+            glm::vec4{vt.Rotation.x, vt.Rotation.y, vt.Rotation.z, vt.Rotation.w}
+        };
+    };
+
+    {
+        PROFILE_SCOPE("BuildInstances");
+        meshGroup.each([&](const Mesh& mesh, const WorldTransform& meshWorldTransform) {
+            auto& vec = perMeshData[mesh.MeshID];
+            vec.push_back(makeInstanceData(camera.ViewTransform.Cumulate(meshWorldTransform.Value)));
+        });
+    }
+
+    {
+        PROFILE_SCOPE("DrawLoop");
+        using clock = std::chrono::steady_clock;
+        clock::duration uniformsTotal{}, uploadTotal{}, drawTotal{};
+        size_t totalInstances{0};
+        size_t uploadedBytes{0};
+        for (const auto& [meshID, viewTransforms] : perMeshData) {
+            const auto& materialData = _materialController->GetMaterialData(meshID);
+
+            const auto t0 = clock::now();
             shader->SetUniformVec4("DiffuseColor", materialData.ColorDiffuse);
             shader->SetUniformVec3("SpecularColor", materialData.ColorSpecular);
             _bindTextures(shader, materialData.TexturesDiffuse, materialData.TexturesSpecular);
 
-            const auto& meshData{_meshController->GetMeshData(currentMeshID)};
-            DrawMesh(viewTransforms, meshData.MeshGpuData, meshData.RawMeshData.Indices);
-        }
+            const auto t1 = clock::now();
+            const auto& gpuData{_meshController->GetMeshGpuData(meshID)};
+            const auto dataSize{static_cast<GLsizeiptr>(viewTransforms.size() * sizeof(InstanceData))};
+            glNamedBufferData(gpuData.InstanceSsbo,
+                                 dataSize,
+                                 viewTransforms.data(),
+                                 GL_DYNAMIC_DRAW);
 
-        it = groupEnd;
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, gpuData.InstanceSsbo);
+
+            const auto t2 = clock::now();
+            glBindVertexArray(gpuData.Vao);
+            glDrawElementsInstanced(GL_TRIANGLES,
+                                    static_cast<GLsizei>(gpuData.IndexCount),
+                                    GL_UNSIGNED_INT,
+                                    nullptr,
+                                    static_cast<GLsizei>(viewTransforms.size()));
+            const auto t3 = clock::now();
+
+            uniformsTotal += t1 - t0;
+            uploadTotal   += t2 - t1;
+            drawTotal     += t3 - t2;
+            totalInstances += viewTransforms.size();
+            uploadedBytes += static_cast<size_t>(dataSize);
+        }
+        const auto us = [](auto d) {
+            return std::chrono::duration_cast<std::chrono::microseconds>(d).count();
+        };
+        std::cout << "  uniqueMeshes=" << perMeshData.size()
+                  << " totalInstances=" << totalInstances
+                  << " uploadedBytes=" << uploadedBytes
+                  << " | Uniforms+Tex=" << us(uniformsTotal) << "us"
+                  << " Upload=" << us(uploadTotal) << "us"
+                  << " Draw=" << us(drawTotal) << "us\n";
     }
+    glBindVertexArray(0);
 }
 
 void RendererSystem::_drawDebugFrustumIntersections(const entt::entity viewEntity, const ShaderID shaderId, entt::registry& registry) {
@@ -155,7 +151,7 @@ void RendererSystem::_drawDebugFrustumIntersections(const entt::entity viewEntit
 
         for (auto entity : registry.view<BoundingBox, WorldTransform>()) {
             const auto worldBox = CoordUtils::ComputeWorldSpaceBox(entity, registry);
-            auto& target{FrustumUtils::IsAABBInsideFrustum(worldBox, editorCamera.ViewFrustum)
+            auto& target{FrustumUtils::IntersectsFrustum(worldBox, editorCamera.ViewFrustum)
                            ? insideBatch : outsideBatch};
             target.AddBox(worldBox.Min, worldBox.Max);
         }
@@ -163,8 +159,8 @@ void RendererSystem::_drawDebugFrustumIntersections(const entt::entity viewEntit
 }
 
 void RendererSystem::_bindTextures(const Shader* const shader,
-                                   const std::vector<Texture>& diffuseTextures,
-                                   const std::vector<Texture>& specularTextures) {
+                                   const std::vector<std::shared_ptr<Texture>>& diffuseTextures,
+                                   const std::vector<std::shared_ptr<Texture>>& specularTextures) {
     int currentTextureIndex{0};
 
     shader->SetBool("HasTextureDiffuse", !diffuseTextures.empty());
@@ -172,11 +168,11 @@ void RendererSystem::_bindTextures(const Shader* const shader,
 
     for (unsigned i{0}; i < diffuseTextures.size(); ++i) {
         shader->SetUniformInt("TextureDiffuse" + std::to_string(i), currentTextureIndex);
-        diffuseTextures.at(i).BindTexture(currentTextureIndex++);
+        diffuseTextures.at(i)->BindTexture(currentTextureIndex++);
     }
     for (unsigned i{0}; i < specularTextures.size(); ++i) {
         shader->SetUniformInt("TextureSpecular" + std::to_string(i), currentTextureIndex);
-        specularTextures.at(i).BindTexture(currentTextureIndex++);
+        specularTextures.at(i)->BindTexture(currentTextureIndex++);
     }
 }
 
@@ -191,7 +187,7 @@ void RendererSystem::_setupLighting(const Shader* const shader,
             return;
         }
         const std::string p{"pointLights[" + std::to_string(pointLightCount) + "]."};
-        shader->SetUniformVec3(p + "Position", lightWorldTransform.Value.Cumulate(cameraViewTransform).Position);
+        shader->SetUniformVec3(p + "Position", cameraViewTransform.Cumulate(lightWorldTransform.Value).Position);
         shader->SetUniformVec3(p + "Diffuse",  pointLight.Diffuse);
         shader->SetUniformVec3(p + "Ambient",  pointLight.Ambient);
         shader->SetUniformVec3(p + "Specular", pointLight.Specular);
@@ -221,8 +217,6 @@ void RendererSystem::_setupLighting(const Shader* const shader,
 }
 
 void RendererSystem::_onFramebufferSizeChanged(const WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const {
-    // TODO: is this what should really happens as if I have many different framebuffers, do I want to do this?
-    // probably not correct because I can have framebuffers in panels that are not docked with the main window.
     _framebuffersController->ResizeAll(static_cast<int32_t>(frameBufferSizeChangedEvent.Width),
                                        static_cast<int32_t>(frameBufferSizeChangedEvent.Height));
 }

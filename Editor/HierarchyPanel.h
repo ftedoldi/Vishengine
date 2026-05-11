@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Controllers/MeshController.h"
 #include "IPanel.h"
 
 #include <entt/entt.hpp>
@@ -17,11 +18,11 @@ public:
     void OnRender(entt::dispatcher& dispatcher, entt::registry& registry) override;
 
 private:
-    void _drawEntity(entt::registry& registry, entt::entity entity, const char* displayName);
+    void _drawEntity(entt::dispatcher& dispatcher, entt::registry& registry, entt::entity entity, const char* displayName);
 
-    void _drawMeshes(entt::registry& registry);
+    void _drawMeshes(entt::dispatcher& dispatcher, entt::registry& registry);
 
-    void _drawLights(entt::registry& registry);
+    void _drawLights(entt::dispatcher& dispatcher, entt::registry& registry);
 
-    void _drawEntityNode(entt::entity entity, entt::registry& registry);
+    void _drawEntityNode(entt::dispatcher& dispatcher, entt::entity entity, entt::registry& registry);
 };

@@ -14,8 +14,8 @@
 
 #include <iostream>
 
-PickingSystem::PickingSystem(Window* window, Octree* octree, entt::dispatcher& dispatcher, entt::registry& registry)
-    : _window{window}, _octree{octree}, _registry{registry} {
+PickingSystem::PickingSystem(Octree* octree, entt::dispatcher& dispatcher, entt::registry& registry)
+    : _octree{octree}, _registry{registry} {
     dispatcher.sink<WindowsEvents::MousePressedEvent>().connect<&PickingSystem::_onMouseButtonPressed>(this);
     dispatcher.sink<ScenePanelEvents::ScenePanelResizedEvent>().connect<&PickingSystem::_onScenePanelResized>(this);
     dispatcher.sink<ScenePanelEvents::ScenePanelMouseMovedEvent>().connect<&PickingSystem::_onScenePanelMouseMovedEvent>(this);

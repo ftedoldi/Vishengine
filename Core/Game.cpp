@@ -6,6 +6,7 @@
 #include "Components/Light.h"
 #include "Components/Lights/DirectionalLight.h"
 #include "Components/Lights/PointLight.h"
+#include "Components/Name.h"
 #include "Components/Relationship.h"
 #include "Components/RenderingComponents.h"
 #include "Components/Transforms/RelativeTransform.h"
@@ -16,6 +17,7 @@
 #include "Platform/Framebuffer.h"
 #include "Platform/Time.h"
 #include "RenderingComponents/LineDrawer.h"
+#include "ScopedTimer.h"
 
 #include <filesystem>
 
@@ -49,7 +51,7 @@ void Game::_initRenderer() {
     auto frustumDebugShader{std::make_unique<Shader>(shadersBasePath + "debug_vertex.glsl", shadersBasePath + "debug_fragment.glsl")};
     _shadersController->AddShader(ShaderID::FrustumDebug, std::move(frustumDebugShader));
 
-    _meshController = std::make_unique<MeshController>();
+    _meshController = std::make_unique<MeshController>(_registry);
     _materialController = std::make_unique<MaterialController>();
     _rendererSystem = std::make_unique<RendererSystem>(_dispatcher, _materialController.get(), _meshController.get(), _shadersController.get(), _framebuffersController.get());
 }
@@ -61,7 +63,7 @@ void Game::_initSystems() {
         45.,
         static_cast<float>(_window->GetWidth()) / static_cast<float>(_window->GetHeight()),
         0.1,
-        100.,
+        300.,
         CameraType::Perspective)};
     _registry.emplace<ActiveCameraTag>(editorCamera);
     _cameraProjectionUpdaterSystem = std::make_unique<CameraProjectionUpdaterSystem>(_registry, _dispatcher);
@@ -74,14 +76,14 @@ void Game::_initSystems() {
     editorCameraRenderTarget.FramebufferHandle = FramebufferID::Main;
     std::bitset<32> layers{};
     layers.set(static_cast<size_t>(RenderLayer::SceneMeshes));
-    const RenderPass editorCameraRenderPass{.ShaderHandle = ShaderID::Standard, .RenderLayers = {layers}, .Meshes = MeshSet::Visible};
+    const RenderPass editorCameraRenderPass{.ShaderHandle = ShaderID::Standard, .RenderLayers = {layers}};
     editorCameraRenderTarget.Passes.push_back(editorCameraRenderPass);
     _registry.emplace<LitPassTag>(editorCamera);
 
     _transformSystem = std::make_unique<TransformSystem>(_dispatcher);
     _octree = std::make_unique<Octree>();
     _spatialSystem = std::make_unique<SpatialSystem>(_octree.get(), _registry, _dispatcher);
-    _pickingSystem = std::make_unique<PickingSystem>(_window.get(), _octree.get(), _dispatcher, _registry);
+    _pickingSystem = std::make_unique<PickingSystem>(_octree.get(), _dispatcher, _registry);
     LineDrawer::Initialize(_registry);
 }
 
@@ -104,34 +106,18 @@ void Game::Update() {
     while (!_window->ShouldWindowClose()) {
         glfwPollEvents();
         _inputManager->Update();
-
         Time::UpdateDeltaTime();
 
-        // Update entity transforms and camera view matrix.
-        _transformSystem->Update(_registry);
-
-        _cameraSystem->Update(_registry);
-
-        _editorCameraMoveSystem->Update(Time::GetDeltaTime(), _registry);
-
-        _spatialSystem->Update(_registry);
-
-        // ── Render frame ──────────────────────────────────────────────────
-        // 1. Clear the default framebuffer and start the ImGui frame.
-        _guiDrawer->BeginFrame();
-
-        // 2. Render the scene into the offscreen framebuffer.
-        _rendererSystem->Update(_registry);
-        _pickingSystem->DrawPickingRay();
-
-        // 3. Build ImGui panel draw-lists (ScenePanel reads the now-populated
-        //    offscreen framebuffer texture).
-        _guiDrawer->DrawUI(_dispatcher, _registry);
-
-        // 4. Submit ImGui draw-lists to the default framebuffer.
-        _guiDrawer->Render();
-
-        _window->Update();
+        { PROFILE_SCOPE("Transform");  _transformSystem->Update(_registry); }
+        { PROFILE_SCOPE("Camera");     _cameraSystem->Update(_registry); }
+        { PROFILE_SCOPE("EditorCam");  _editorCameraMoveSystem->Update(Time::GetDeltaTime(), _registry); }
+        { PROFILE_SCOPE("Spatial");    _spatialSystem->Update(_registry); }
+        { PROFILE_SCOPE("GUI Begin");  _guiDrawer->BeginFrame(); }
+        { PROFILE_SCOPE("Renderer");   _rendererSystem->Update(_registry); }
+        { PROFILE_SCOPE("Picking");    _pickingSystem->DrawPickingRay(); }
+        { PROFILE_SCOPE("GUI Draw");   _guiDrawer->DrawUI(_dispatcher, _registry); }
+        { PROFILE_SCOPE("GUI Render"); _guiDrawer->Render(); }
+        { PROFILE_SCOPE("SwapBuffers"); _window->Update(); }
     }
 }
 

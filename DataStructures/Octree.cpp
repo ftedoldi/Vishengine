@@ -4,6 +4,7 @@
 #include "Components/BoundingBox.h"
 #include "Components/OctreeLocation.h"
 #include "Components/Transforms/WorldTransform.h"
+#include "Components/WorldBoundingBox.h"
 #include "Coordinates/CoordinateUtils.h"
 #include "Frustum.h"
 
@@ -37,14 +38,16 @@ void BuildOctreeNodes(Node* parentNode, const glm::vec3 center, const glm::vec3 
     }
 }
 
-void CollectEntitiesInFrustum(const Node* const node, const Frustum& frustum, std::vector<entt::entity>& result) {
-    if (!node) {
-        return;
-    }
+void CollectEntitiesInFrustum(const Node* const node, const Frustum& frustum,
+                               std::vector<entt::entity>& result, const bool fullyInside) {
+    if (!node) return;
 
-    if (const Box nodeBox{Box::FromCenterHalfWidth(node->Center, node->HalfWidth)};
-        !FrustumUtils::IsAABBInsideFrustum(nodeBox, frustum)) {
-        return;
+    bool childrenFullyInside = fullyInside;
+    if (!fullyInside) {
+        const Box nodeBox{Box::FromCenterHalfWidth(node->Center, node->HalfWidth)};
+        const auto classification{FrustumUtils::ClassifyAABB(nodeBox, frustum)};
+        if (classification == FrustumUtils::Intersection::Outside) return;
+        childrenFullyInside = (classification == FrustumUtils::Intersection::Inside);
     }
 
     for (const auto entity : node->Entities) {
@@ -52,7 +55,7 @@ void CollectEntitiesInFrustum(const Node* const node, const Frustum& frustum, st
     }
 
     for (const auto& child : node->Children) {
-        CollectEntitiesInFrustum(child.get(), frustum, result);
+        CollectEntitiesInFrustum(child.get(), frustum, result, childrenFullyInside);
     }
 }
 
@@ -77,7 +80,11 @@ bool IsSubtreeEmpty(const Node* node) {
 
 void InsertEntityAtDepth(Node* const node, const entt::entity entity, entt::registry& registry, const int32_t remainingDepth) {
     assert(node);
-    const Box worldSpaceBox{CoordUtils::ComputeWorldSpaceBox(entity, registry)};
+    const Box worldSpaceBox{
+        registry.all_of<WorldBoundingBox>(entity)
+            ? registry.get<WorldBoundingBox>(entity).Box
+            : CoordUtils::ComputeWorldSpaceBox(entity, registry)
+    };
     const auto worldSpaceCenter{worldSpaceBox.GetCenter()};
     const auto worldSpaceExtent{worldSpaceBox.GetExtent()};
 
@@ -147,7 +154,11 @@ void Octree::InsertEntity(OC::Node* const node, const entt::entity entity, entt:
 }
 
 void Octree::Update(const entt::entity entity, entt::registry& registry) {
-    const Box entityWorldSpaceBoundingBox{CoordUtils::ComputeWorldSpaceBox(entity, registry)};
+    const Box entityWorldSpaceBoundingBox{
+        registry.all_of<WorldBoundingBox>(entity)
+            ? registry.get<WorldBoundingBox>(entity).Box
+            : CoordUtils::ComputeWorldSpaceBox(entity, registry)
+    };
 
     auto* const oldNode{registry.get<OctreeLocation>(entity).Node};
     assert(oldNode);
@@ -259,7 +270,7 @@ std::optional<RaycastHit> Octree::Raycast(const Ray& ray, entt::registry& regist
 std::vector<entt::entity> Octree::QueryFrustum(const Frustum& frustum) const {
     std::vector<entt::entity> result{};
     if (_rootNode) {
-        OC::CollectEntitiesInFrustum(_rootNode.get(), frustum, result);
+        OC::CollectEntitiesInFrustum(_rootNode.get(), frustum, result, false);
     }
     return result;
 }

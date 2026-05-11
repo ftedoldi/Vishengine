@@ -8,8 +8,10 @@
 #include "assimp/scene.h"
 #include <entt/entt.hpp>
 
+#include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 class ModelLoader {
 public:
@@ -22,17 +24,13 @@ private:
 
     entt::entity _createNodeEntity(entt::entity parentEntity, const aiMatrix4x4& matrixTransform, const std::string& nodeName) const;
 
-    Mesh _processMesh(const aiMesh* aiMesh, const aiScene* scene, entt::entity parentEntity, uint32_t assimpMeshIndex);
+    entt::entity _processMesh(const aiMesh* aiMesh, uint32_t assimpMeshIndex, const aiScene* scene);
 
-    std::vector<Texture> _loadMaterialTextures(const aiMaterial* mat, aiTextureType type);
+    std::vector<std::shared_ptr<Texture>> _loadMaterialTextures(const aiMaterial* mat, aiTextureType type);
 
-    std::vector<Texture> _loadTextures(const aiScene* scene, const aiMaterial* material, aiTextureType type);
+    std::vector<std::shared_ptr<Texture>> _loadTextures(const aiScene* scene, const aiMaterial* material, aiTextureType type);
 
     void _processMaterials(const aiScene* scene, const aiMesh* mesh, uint32_t meshID);
-
-    void _generateBoundingSphere(entt::entity meshNodeEntity, const std::vector<glm::vec3>& objectVertices) const;
-
-    void _generateBoundingBox(entt::entity meshNodeEntity, const std::vector<glm::vec3>& objectVertices) const;
 
     entt::registry& _registry;
 
@@ -44,7 +42,7 @@ private:
 
     std::string _modelDirectory{};
 
-    std::vector<std::string> _loadedTextures{};
+    std::unordered_map<std::string, std::shared_ptr<Texture>> _texturesByPath{};
 
     std::unordered_map<uint32_t, Mesh> _processedMeshes{};
 };

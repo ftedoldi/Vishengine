@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Core/Window.h"
 #include "DataStructures/Octree.h"
 #include "Events/WindowEvents.h"
 #include "Events/ScenePanelEvents.h"
@@ -11,7 +10,7 @@
 
 class PickingSystem {
 public:
-    PickingSystem(Window* window, Octree* octree, entt::dispatcher& dispatcher, entt::registry& registry);
+    PickingSystem(Octree* octree, entt::dispatcher& dispatcher, entt::registry& registry);
 
     void Update();
 
@@ -27,8 +26,6 @@ private:
     void _removeSelectedEntities() const;
 
     void _drawDebug(const RaycastHit& raycastHit) const;
-
-    Window* _window{};
 
     Octree* _octree{};
 

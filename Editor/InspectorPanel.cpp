@@ -5,7 +5,7 @@
 #include "Components/Lights/DirectionalLight.h"
 
 #include "Components/Camera/Camera.h"
-#include "Components/MeshNodeTag.h"
+#include "Components/MeshNode.h"
 #include "Components/Name.h"
 #include "Components/SelectedTag.h"
 #include "Components/Transforms/RelativeTransform.h"
@@ -139,15 +139,14 @@ void InspectorPanel::_drawTransformComponent(const entt::entity selectedEntity, 
     if (ImGui::TreeNodeEx("##Transform", flags, "Transform")) {
         // Position
         auto& relativeTransform{registry.get<RelativeTransform>(selectedEntity).Value};
-        auto& transformFlag{registry.get<TransformDirtyFlag>(selectedEntity)};
         if (DrawAndUpdateVec3Widget("Position", relativeTransform.Position)) {
-            transformFlag.ShouldUpdateTransform = true;
+            registry.emplace<TransformDirtyFlag>(selectedEntity);
         }
 
         glm::vec3 euler{glm::degrees(glm::eulerAngles(relativeTransform.Rotation))};
         if (DrawAndUpdateVec3Widget("Rotation", euler)) {
             relativeTransform.Rotation = glm::quat{glm::radians(euler)};
-            transformFlag.ShouldUpdateTransform = true;
+            registry.emplace<TransformDirtyFlag>(selectedEntity);
         }
 
         ImGui::Columns(2);
@@ -156,7 +155,7 @@ void InspectorPanel::_drawTransformComponent(const entt::entity selectedEntity, 
         ImGui::NextColumn();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::DragFloat("##Scale", &relativeTransform.Scale, 0.01f, 0.001f, 100.f, "%.3f")) {
-            transformFlag.ShouldUpdateTransform = true;
+            registry.emplace<TransformDirtyFlag>(selectedEntity);
         }
         ImGui::Columns(1);
 
@@ -165,7 +164,7 @@ void InspectorPanel::_drawTransformComponent(const entt::entity selectedEntity, 
 }
 
 void InspectorPanel::_drawMeshComponent(const entt::entity selectedEntity, entt::registry& registry) const {
-    if (!registry.any_of<MeshNodeTag>(selectedEntity)) {
+    if (!registry.any_of<MeshNode>(selectedEntity)) {
         return;
     }
 

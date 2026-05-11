@@ -5,12 +5,14 @@
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
 
+#include <memory>
 #include <unordered_map>
+#include <vector>
 
 struct MaterialData {
-    std::vector<Texture> TexturesDiffuse{};
-    std::vector<Texture> TexturesSpecular{};
-    std::vector<Texture> TexturesNormal{};
+    std::vector<std::shared_ptr<Texture>> TexturesDiffuse{};
+    std::vector<std::shared_ptr<Texture>> TexturesSpecular{};
+    std::vector<std::shared_ptr<Texture>> TexturesNormal{};
     glm::vec4 ColorDiffuse{};
     glm::vec3 ColorSpecular{};
 };

@@ -4,10 +4,10 @@
 #include "stb_image.h"
 
 Texture::~Texture() {
-    glDeleteTextures(1, &_id);
+    if (_id) glDeleteTextures(1, &_id);
 }
 
-void Texture::CreateTexture(const std::string& path) {
+void Texture::Create(const std::string& path) {
 	int textureWidth{}, textureHeight{}, nrChannels{};
 
 	stbi_set_flip_vertically_on_load(true);
@@ -46,7 +46,7 @@ void Texture::_createTexture(const int textureWidth, const int textureHeight, co
     glTextureParameteri(_id, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     glTextureParameteri(_id, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTextureParameteri(_id, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTextureParameteri(_id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     // TODO: remove magic numbers with actual parameters
 
@@ -71,7 +71,10 @@ void Texture::_createTexture(const int textureWidth, const int textureHeight, co
                 internalFormat = GL_RGBA;
                 sizedInternalFormat = GL_RGBA8;
                 break;
-            default: break;
+            default:
+                std::cerr << "Unsupported channel count: " << nrChannels << '\n';
+                stbi_image_free(textureData);
+                return;
         }
 
         // TODO: check how to set various mip-map levels

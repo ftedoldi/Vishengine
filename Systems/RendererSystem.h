@@ -11,6 +11,7 @@
 
 #include <entt/entt.hpp>
 
+#include <memory>
 #include <vector>
 
 class RendererSystem {
@@ -24,30 +25,20 @@ public:
     void Update(entt::registry& registry);
 
 private:
-    struct MeshInstance {
-        uint32_t meshID{};
-        Transform transform{};
-        bool renderable{};
-    };
-
     void _drawSceneMeshes(entt::entity viewEntity,
-                        ShaderID shaderId,
-                        entt::registry& registry,
-                        MeshSet meshSet);
+                          ShaderID shaderId,
+                          entt::registry& registry);
 
     void _drawDebugFrustumIntersections(entt::entity viewEntity, ShaderID shaderId, entt::registry& registry);
 
     void _bindTextures(const Shader* shader,
-                       const std::vector<Texture>& diffuseTextures,
-                       const std::vector<Texture>& specularTextures);
+                       const std::vector<std::shared_ptr<Texture>>& diffuseTextures,
+                       const std::vector<std::shared_ptr<Texture>>& specularTextures);
 
     void _setupLighting(const Shader* shader,
                         const Transform& cameraViewTransform,
                         entt::registry& registry);
-
     void _onFramebufferSizeChanged(WindowsEvents::FrameBufferSizeChangedEvent frameBufferSizeChangedEvent) const;
-
-    std::vector<MeshInstance> _meshInstances;
 
     MaterialController* _materialController{};
 

@@ -1,7 +1,14 @@
 #include "MeshController.h"
 
+#include "Components/MeshNode.h"
+#include "Components/Relationship.h"
+#include "Events/GameEvents.h"
 #include "glad/gl.h"
 #include "glm/vec4.hpp"
+
+MeshController::MeshController(entt::registry& registry) : _registry{registry} {
+    registry.on_destroy<MeshNode>().connect<&MeshController::_onMeshBeginDeletion>(this);
+}
 
 Mesh MeshController::CreateMesh(RawMeshData&& rawMeshData) {
     MeshData meshData{};
@@ -17,6 +24,8 @@ Mesh MeshController::CreateMesh(RawMeshData&& rawMeshData) {
     const auto& normals{meshData.RawMeshData.Normals};
 
     assert(!vertices.empty() && !indices.empty());
+    assert(textureCoords.size() == vertices.size());
+    assert(normals.size() == vertices.size());
     
     // Modern openGL: see https://github.com/fendevel/Guide-to-Modern-OpenGL-Functions for reference
     glCreateBuffers(1, &vbo);
@@ -58,31 +67,14 @@ Mesh MeshController::CreateMesh(RawMeshData&& rawMeshData) {
     glVertexArrayAttribBinding(vao, 1, 1);
     glVertexArrayAttribBinding(vao, 2, 2);
 
-    // Create an initially-empty instance VBO (filled every frame by RendererSystem)
-    auto& instanceVbo{meshData.MeshGpuData.InstanceVbo};
-    glCreateBuffers(1, &instanceVbo);
+    auto& instanceSsbo{meshData.MeshGpuData.InstanceSsbo};
+    glCreateBuffers(1, &instanceSsbo);
 
-    glVertexArrayVertexBuffer(vao, 3, instanceVbo, 0, sizeof(InstanceData));
+    meshData.MeshGpuData.IndexCount = static_cast<uint32_t>(indices.size());
+    meshData.RawMeshData = {};
 
-    glEnableVertexArrayAttrib(vao, 3);
-    glVertexArrayAttribFormat(vao, 3, 3, GL_FLOAT, GL_FALSE, offsetof(InstanceData, position));
-    glVertexArrayAttribBinding(vao, 3, 3);
-
-    glEnableVertexArrayAttrib(vao, 4);
-    glVertexArrayAttribFormat(vao, 4, 1, GL_FLOAT, GL_FALSE, offsetof(InstanceData, scale));
-    glVertexArrayAttribBinding(vao, 4, 3);
-
-    glEnableVertexArrayAttrib(vao, 5);
-    glVertexArrayAttribFormat(vao, 5, 4, GL_FLOAT, GL_FALSE, offsetof(InstanceData, rotation));
-    glVertexArrayAttribBinding(vao, 5, 3);
-
-    glVertexArrayBindingDivisor(vao, 3, 1);
-
-    // TODO: change with a guid
-    static uint32_t meshID{0};
-    _meshIDToMeshData.emplace(meshID, std::move(meshData));
-
-    return Mesh{meshID++};
+    _meshIDToMeshData.emplace(_nextMeshId, std::move(meshData));
+    return Mesh{_nextMeshId++};
 }
 
 const MeshGpuData& MeshController::GetMeshGpuData(const uint32_t meshID) const {
@@ -110,8 +102,15 @@ void MeshController::DeleteMesh(const uint32_t meshID) {
     glDeleteVertexArrays(1, &meshData.MeshGpuData.Vao);
     glDeleteBuffers(1, &meshData.MeshGpuData.Vbo);
     glDeleteBuffers(1, &meshData.MeshGpuData.Ebo);
-    glDeleteBuffers(1, &meshData.MeshGpuData.InstanceVbo);
+    glDeleteBuffers(1, &meshData.MeshGpuData.InstanceSsbo);
 
     _meshIDToMeshData.erase(meshID);
 }
 
+void MeshController::_onMeshBeginDeletion(const entt::entity meshNodeEntity) {
+    const auto& meshNode{_registry.get<MeshNode>(meshNodeEntity)};
+    for (const auto entity : meshNode.Meshes) {
+        DeleteMesh(_registry.get<Mesh>(entity).MeshID);
+    }
+    // TODO: fix need to also delete the children
+}

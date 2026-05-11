@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Components/Mesh.h"
+#include "Events/GameEvents.h"
 
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
@@ -13,7 +14,8 @@ struct MeshGpuData {
     uint32_t Vbo{0};
     uint32_t Vao{0};
     uint32_t Ebo{0};
-    uint32_t InstanceVbo{0};
+    uint32_t InstanceSsbo{0};
+    uint32_t IndexCount{0};
 };
 
 struct RawMeshData {
@@ -29,13 +31,15 @@ struct MeshData {
 };
 
 struct InstanceData {
-    glm::vec3 position{};
-    float scale{};
-    glm::vec4 rotation{};
+    glm::vec3 Position{};
+    float Scale{};
+    glm::vec4 Rotation{};
 };
 
 class MeshController {
 public:
+    explicit MeshController(entt::registry& registry);
+
     Mesh CreateMesh(RawMeshData&& rawMeshData);
 
     [[nodiscard]] const MeshGpuData& GetMeshGpuData(uint32_t meshID) const;
@@ -47,5 +51,11 @@ public:
     void DeleteMesh(uint32_t meshID);
 
 private:
+    void _onMeshBeginDeletion(entt::entity meshNodeEntity);
+
     std::unordered_map<uint32_t, MeshData> _meshIDToMeshData{};
+
+    uint32_t _nextMeshId{0};
+
+    entt::registry& _registry;
 };

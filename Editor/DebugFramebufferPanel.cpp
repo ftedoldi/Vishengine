@@ -30,7 +30,7 @@ void DebugFramebufferPanel::OnRender(entt::dispatcher& dispatcher, entt::registr
         auto& cameraRenderTarget{registry.emplace<RenderTarget>(_debugViewEntity, FramebufferID::FrustumDebugView)};
         std::bitset<32> sceneMeshLayer{};
         sceneMeshLayer.set(static_cast<size_t>(RenderLayer::SceneMeshes));
-        const RenderPass sceneMeshRenderPass{.ShaderHandle = ShaderID::Standard, .RenderLayers = {sceneMeshLayer}, .Meshes = MeshSet::All};
+        const RenderPass sceneMeshRenderPass{.ShaderHandle = ShaderID::Standard, .RenderLayers = {sceneMeshLayer}};
         cameraRenderTarget.Passes.push_back(sceneMeshRenderPass);
 
 

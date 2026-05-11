@@ -82,6 +82,7 @@ file(GLOB PROJECT_HEADERS
         DataStructures/*.h
         RenderingComponents/*.h
         Coordinates/*.h
+        ./*.h
 )
 
 file(GLOB PROJECT_SOURCES

@@ -6,7 +6,11 @@ namespace GameEvents {
 
 struct TransformUpdated {
     // The entity to which the transform was updated.
-    entt::entity entity{};
+    entt::entity Entity{};
+};
+
+struct EntityBeginDeletion {
+    entt::entity Entity{};
 };
 
 }

@@ -116,7 +116,5 @@ void ScenePanel::_drawGizmo(const ImVec2 panelPos, const ImVec2 panelSize, entt:
         relTransform = newWorldTransform;
     }
 
-    if (auto* dirty{registry.try_get<TransformDirtyFlag>(selectedEntity)}) {
-        dirty->ShouldUpdateTransform = true;
-    }
+    registry.emplace<TransformDirtyFlag>(selectedEntity);
 }

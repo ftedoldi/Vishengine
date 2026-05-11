@@ -89,6 +89,7 @@ void Window::Initialize(const int width, const int height, const std::string& wi
 
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(WindowSystemHelpers::MessageCallback, nullptr);
+    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE);
     glEnable(GL_DEPTH_TEST);
     // Cull faces with vertices in a clockwise order by default
     glEnable(GL_CULL_FACE);

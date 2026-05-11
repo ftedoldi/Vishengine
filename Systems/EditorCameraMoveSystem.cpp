@@ -39,7 +39,7 @@ void EditorCameraMoveSystem::Update(const float deltaTime, entt::registry& regis
     const bool mmb{mmbDown && _mmbCapturedByScene};
     const float scrollDelta{sceneHovered ? rawScrollDelta : 0.f};
 
-    auto view{registry.view<Camera, EditorCameraTag, ActiveCameraTag, RelativeTransform, TransformDirtyFlag>()};
+    auto view{registry.view<Camera, EditorCameraTag, ActiveCameraTag, RelativeTransform>()};
 
     for (const auto entity : view) {
         auto& camera{view.get<Camera>(entity)};
@@ -99,7 +99,7 @@ void EditorCameraMoveSystem::Update(const float deltaTime, entt::registry& regis
         }
 
         if (changed) {
-            view.get<TransformDirtyFlag>(entity).ShouldUpdateTransform = true;
+            registry.emplace<TransformDirtyFlag>(entity);
         }
     }
 }

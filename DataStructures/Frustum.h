@@ -13,6 +13,10 @@ struct Frustum {
 
 namespace FrustumUtils {
 
-    bool IsAABBInsideFrustum(const Box& box, const Frustum& frustum);
+    enum class Intersection { Outside, Partial, Inside };
+
+    bool IntersectsFrustum(const Box& box, const Frustum& frustum);
+
+    Intersection ClassifyAABB(const Box& box, const Frustum& frustum);
 
 }

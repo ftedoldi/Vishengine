@@ -6,15 +6,17 @@ class Transform {
 public:
     explicit Transform(glm::vec3 position = {0.f, 0.f, 0.f}, glm::quat rotation = {0.f, 0.f, 0.f, 1.f}, float scale = 1.f);
 
-    Transform Cumulate(const Transform& otherTransform) const;
+    [[nodiscard]] Transform Cumulate(const Transform& otherTransform) const;
 
-    Transform Invert() const;
+    [[nodiscard]] Transform Invert() const;
 
-    glm::vec3 TransformPosition(glm::vec3 position) const;
+    [[nodiscard]] glm::vec3 TransformPosition(glm::vec3 position) const;
 
-    glm::mat4 ToMatrix() const;
+    [[nodiscard]] glm::mat4 ToMatrix() const;
 
     glm::vec3 Position{};
+
     glm::quat Rotation{};
+
     float Scale{};
 };
