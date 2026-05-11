@@ -187,8 +187,7 @@ void Octree::Update(const entt::entity entity, entt::registry& registry) {
     }
 
     // Remove entity from its old node.
-    const auto removedElementsNum{oldNode->Entities.remove(entity)};
-    assert(removedElementsNum == 1);
+    assert(oldNode->Entities.remove(entity) == 1);
 
     // Insert entity starting from the ancestor found above.
     InsertEntity(octreeNode, entity, registry);

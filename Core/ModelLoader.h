@@ -8,9 +8,10 @@
 #include "assimp/scene.h"
 #include <entt/entt.hpp>
 
+#include <ankerl/unordered_dense.h>
+
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 class ModelLoader {
@@ -42,7 +43,7 @@ private:
 
     std::string _modelDirectory{};
 
-    std::unordered_map<std::string, std::shared_ptr<Texture>> _texturesByPath{};
+    ankerl::unordered_dense::map<std::string, std::shared_ptr<Texture>> _texturesByPath{};
 
-    std::unordered_map<uint32_t, Mesh> _processedMeshes{};
+    ankerl::unordered_dense::map<uint32_t, Mesh> _processedMeshes{};
 };

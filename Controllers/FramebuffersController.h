@@ -3,9 +3,10 @@
 #include "Components/RenderingComponents.h"
 #include "Platform/Framebuffer.h"
 
+#include <ankerl/unordered_dense.h>
+
 #include <cstdint>
 #include <memory>
-#include <unordered_map>
 
 class FramebuffersController {
 public:
@@ -16,5 +17,5 @@ public:
     void ResizeAll(int32_t width, int32_t height);
 
 private:
-    std::unordered_map<FramebufferID, std::unique_ptr<Framebuffer>> _framebufferIDToFramebuffer{};
+    ankerl::unordered_dense::map<FramebufferID, std::unique_ptr<Framebuffer>> _framebufferIDToFramebuffer{};
 };

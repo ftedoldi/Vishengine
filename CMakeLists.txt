@@ -145,14 +145,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         Libs/stb
         Libs/glm
         Libs/entt/src
+        Libs/unordered_dense/include
 )
 
 # -----------------------------
 # Compiler settings
 # -----------------------------
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
-
-target_precompile_headers(${PROJECT_NAME} PRIVATE pch.h)
 
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4)

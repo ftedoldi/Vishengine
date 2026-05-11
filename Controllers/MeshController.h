@@ -7,14 +7,14 @@
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
 
-#include <unordered_map>
+#include <ankerl/unordered_dense.h>
+
 #include <vector>
 
 struct MeshGpuData {
     uint32_t Vbo{0};
     uint32_t Vao{0};
     uint32_t Ebo{0};
-    uint32_t InstanceSsbo{0};
     uint32_t IndexCount{0};
 };
 
@@ -52,7 +52,7 @@ public:
 private:
     void _onMeshBeginDeletion(entt::entity meshNodeEntity);
 
-    std::unordered_map<uint32_t, MeshData> _meshIDToMeshData{};
+    ankerl::unordered_dense::map<uint32_t, MeshData> _meshIDToMeshData{};
 
     uint32_t _nextMeshId{0};
 

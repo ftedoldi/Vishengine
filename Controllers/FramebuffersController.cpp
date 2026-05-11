@@ -1,5 +1,6 @@
 ﻿#include "FramebuffersController.h"
 
+#include <cassert>
 #include <ranges>
 
 void FramebuffersController::AddFramebuffer(const FramebufferID framebufferID, std::unique_ptr<Framebuffer> framebuffer) {

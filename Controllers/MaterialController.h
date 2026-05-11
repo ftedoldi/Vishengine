@@ -5,8 +5,9 @@
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
 
+#include <ankerl/unordered_dense.h>
+
 #include <memory>
-#include <unordered_map>
 #include <vector>
 
 struct MaterialData {
@@ -26,5 +27,5 @@ public:
     void UpdateMaterialData(uint32_t meshID, MaterialData&& materialData);
 
 private:
-    std::unordered_map<uint32_t, MaterialData> _materialIDToTexturesList{};
+    ankerl::unordered_dense::map<uint32_t, MaterialData> _materialIDToTexturesList{};
 };

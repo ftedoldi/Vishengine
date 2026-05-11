@@ -1,9 +1,11 @@
 #pragma once
 
+#include <ankerl/unordered_dense.h>
+
 #include <glad/gl.h>
 #include <glm/glm.hpp>
+#include "glm/detail/type_quat.hpp"
 #include <string>
-#include <unordered_map>
 
 class Shader {
 public:
@@ -43,7 +45,7 @@ private:
 
 	unsigned int _programID{0};
 
-    mutable std::unordered_map<std::string, GLint> _locationCache{};
+    mutable ankerl::unordered_dense::map<std::string, GLint> _locationCache{};
 
 	void _compileShaders(const std::string& vertexShaderCode, const std::string& fragmentShaderCode);
 };

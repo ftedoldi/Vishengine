@@ -47,4 +47,8 @@ private:
     ShadersController* _shadersController{};
 
     FramebuffersController* _framebuffersController{};
+
+    uint32_t _globalInstanceSsbo{};
+
+    size_t _ssboCapacityBytes{};
 };

@@ -27,6 +27,12 @@ RendererSystem::RendererSystem(entt::dispatcher& windowDispatcher,
       _shadersController{shadersController},
       _framebuffersController{framebuffersController} {
     windowDispatcher.sink<WindowsEvents::FrameBufferSizeChangedEvent>().connect<&RendererSystem::_onFramebufferSizeChanged>(this);
+
+    glCreateBuffers(1, &_globalInstanceSsbo);
+    // Optionally pre-size it to avoid early reallocations:
+    constexpr GLsizeiptr initialCapacity{4096 * sizeof(InstanceData)};
+    glNamedBufferData(_globalInstanceSsbo, initialCapacity, nullptr, GL_DYNAMIC_DRAW);
+    _ssboCapacityBytes = initialCapacity;
 }
 
 void RendererSystem::Update(entt::registry& registry) {
@@ -64,7 +70,7 @@ void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
 
     const auto meshGroup = registry.group<Mesh, WorldTransform, RenderableTag>();
 
-    std::unordered_map<uint32_t, std::vector<InstanceData>> perMeshData{};
+    ankerl::unordered_dense::map<uint32_t, std::vector<InstanceData>> perMeshData{};
 
     perMeshData.reserve(meshGroup.size());
 
@@ -83,13 +89,42 @@ void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
         });
     }
 
+    // Flatten all instance data into one contiguous vector
+    std::vector<InstanceData> allInstances{};
+    struct DrawRange {
+        GLuint meshID{};
+        GLuint baseInstance{};
+        GLuint instanceCount{};
+    };
+    std::vector<DrawRange> drawRanges{};
+    drawRanges.reserve(perMeshData.size());
+
+    for (const auto& [meshID, viewTransforms] : perMeshData) {
+        drawRanges.push_back({
+            meshID,
+            static_cast<GLuint>(allInstances.size()),
+            static_cast<GLuint>(viewTransforms.size())
+        });
+        allInstances.insert(allInstances.end(), viewTransforms.begin(), viewTransforms.end());
+    }
+
+    const auto neededBytes{allInstances.size() * sizeof(InstanceData)};
+
+    if (neededBytes > _ssboCapacityBytes) {
+        // Grow with some headroom so we don't reallocate every frame
+        _ssboCapacityBytes = neededBytes * 2;
+        glNamedBufferData(_globalInstanceSsbo, _ssboCapacityBytes, nullptr, GL_DYNAMIC_DRAW);
+    }
+
+    glNamedBufferSubData(_globalInstanceSsbo, 0, neededBytes, allInstances.data());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _globalInstanceSsbo);
+
     {
         PROFILE_SCOPE("DrawLoop");
         using clock = std::chrono::steady_clock;
         clock::duration uniformsTotal{}, uploadTotal{}, drawTotal{};
         size_t totalInstances{0};
-        size_t uploadedBytes{0};
-        for (const auto& [meshID, viewTransforms] : perMeshData) {
+        for (const auto& [meshID, baseInstance, instanceCount] : drawRanges) {
             const auto& materialData = _materialController->GetMaterialData(meshID);
 
             const auto t0 = clock::now();
@@ -99,35 +134,28 @@ void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
 
             const auto t1 = clock::now();
             const auto& gpuData{_meshController->GetMeshGpuData(meshID)};
-            const auto dataSize{static_cast<GLsizeiptr>(viewTransforms.size() * sizeof(InstanceData))};
-            glNamedBufferData(gpuData.InstanceSsbo,
-                                 dataSize,
-                                 viewTransforms.data(),
-                                 GL_DYNAMIC_DRAW);
-
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, gpuData.InstanceSsbo);
 
             const auto t2 = clock::now();
             glBindVertexArray(gpuData.Vao);
-            glDrawElementsInstanced(GL_TRIANGLES,
-                                    static_cast<GLsizei>(gpuData.IndexCount),
-                                    GL_UNSIGNED_INT,
-                                    nullptr,
-                                    static_cast<GLsizei>(viewTransforms.size()));
+            glDrawElementsInstancedBaseInstance(
+                GL_TRIANGLES,
+                static_cast<GLsizei>(gpuData.IndexCount),
+                GL_UNSIGNED_INT,
+                nullptr,
+                instanceCount,
+                baseInstance);
             const auto t3 = clock::now();
 
             uniformsTotal += t1 - t0;
             uploadTotal   += t2 - t1;
             drawTotal     += t3 - t2;
-            totalInstances += viewTransforms.size();
-            uploadedBytes += static_cast<size_t>(dataSize);
+            totalInstances += instanceCount;
         }
         const auto us = [](auto d) {
             return std::chrono::duration_cast<std::chrono::microseconds>(d).count();
         };
         std::cout << "  uniqueMeshes=" << perMeshData.size()
                   << " totalInstances=" << totalInstances
-                  << " uploadedBytes=" << uploadedBytes
                   << " | Uniforms+Tex=" << us(uniformsTotal) << "us"
                   << " Upload=" << us(uploadTotal) << "us"
                   << " Draw=" << us(drawTotal) << "us\n";

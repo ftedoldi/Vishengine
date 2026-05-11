@@ -1,9 +1,11 @@
 #pragma once
 
+#include "glad/gl.h"
 #include <assimp/scene.h>
 
-#include <string>
 #include <iostream>
+#include <string>
+#include <utility>
 
 class Texture {
 public:

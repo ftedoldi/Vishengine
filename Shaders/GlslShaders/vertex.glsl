@@ -1,4 +1,5 @@
 #version 460 core
+#extension GL_ARB_shader_draw_parameters : require
 
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec2 aTexCoord;
@@ -25,11 +26,13 @@ vec3 RotateVectorByQuaternion(vec4 quaternion, vec3 vector);
 void main() {
     TexCoord = aTexCoord;
 
-    NormalViewPosition = RotateVectorByQuaternion(instances[gl_InstanceID].ViewRotation, aNormal).xyz;
-    const float scale = instances[gl_InstanceID].ViewPositionAndScale.w;
-    const vec3 viewPosition = instances[gl_InstanceID].ViewPositionAndScale.xyz;
+    InstanceData instanceData = instances[gl_InstanceID + gl_BaseInstanceARB];
+
+    NormalViewPosition = RotateVectorByQuaternion(instanceData.ViewRotation, aNormal).xyz;
+    const float scale = instanceData.ViewPositionAndScale.w;
+    const vec3 viewPosition = instanceData.ViewPositionAndScale.xyz;
     vec3 scaledPosition = vec3(aPos.x * scale, aPos.y * scale, aPos.z * scale);
-    FragViewPosition = RotateVectorByQuaternion(instances[gl_InstanceID].ViewRotation, scaledPosition).xyz + viewPosition;
+    FragViewPosition = RotateVectorByQuaternion(instanceData.ViewRotation, scaledPosition).xyz + viewPosition;
 
     gl_Position = Perspective * vec4(FragViewPosition, 1.0);
 }

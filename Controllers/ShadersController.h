@@ -3,8 +3,9 @@
 #include "Shaders/Shader.h"
 #include "Components/RenderingComponents.h"
 
+#include <ankerl/unordered_dense.h>
+
 #include <memory>
-#include <unordered_map>
 
 class ShadersController {
 public:
@@ -13,5 +14,5 @@ public:
     Shader* GetShader(ShaderID shaderID);
 
 private:
-    std::unordered_map<ShaderID, std::unique_ptr<Shader>> _shaderIdToShader{};
+    ankerl::unordered_dense::map<ShaderID, std::unique_ptr<Shader>> _shaderIdToShader{};
 };

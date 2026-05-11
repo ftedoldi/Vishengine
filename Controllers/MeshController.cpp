@@ -67,9 +67,6 @@ Mesh MeshController::CreateMesh(RawMeshData&& rawMeshData) {
     glVertexArrayAttribBinding(vao, 1, 1);
     glVertexArrayAttribBinding(vao, 2, 2);
 
-    auto& instanceSsbo{meshData.MeshGpuData.InstanceSsbo};
-    glCreateBuffers(1, &instanceSsbo);
-
     meshData.MeshGpuData.IndexCount = static_cast<uint32_t>(indices.size());
     meshData.RawMeshData = {};
 
@@ -102,7 +99,6 @@ void MeshController::DeleteMesh(const uint32_t meshID) {
     glDeleteVertexArrays(1, &meshData.MeshGpuData.Vao);
     glDeleteBuffers(1, &meshData.MeshGpuData.Vbo);
     glDeleteBuffers(1, &meshData.MeshGpuData.Ebo);
-    glDeleteBuffers(1, &meshData.MeshGpuData.InstanceSsbo);
 
     _meshIDToMeshData.erase(meshID);
 }

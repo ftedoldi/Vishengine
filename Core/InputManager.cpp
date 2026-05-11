@@ -1,8 +1,8 @@
 #include "InputManager.h"
 
-#include <unordered_map>
+#include <ankerl/unordered_dense.h>
 
-static std::unordered_map<GLFWwindow*, InputManager*> s_inputManagers;
+static ankerl::unordered_dense::map<GLFWwindow*, InputManager*> s_inputManagers;
 
 InputManager::InputManager(GLFWwindow* const window) : _mainWindow{window} {
     double x{}, y{};
