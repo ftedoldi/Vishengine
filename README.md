@@ -3,7 +3,7 @@
 A 3D engine written in modern C++20, built on OpenGL with an
 entity–component–system (ECS) architecture and an integrated ImGui-based editor.
 
-<!-- TODO: replace with a screenshot or short GIF of the editor in action -->
+![Screenshot](Docs/Venezia.png)
 
 ## Features
 
