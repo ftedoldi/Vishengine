@@ -5,8 +5,7 @@ layout (location = 1) in vec2 aTexCoord;
 layout (location = 2) in vec3 aNormal;
 
 struct InstanceData {
-    vec3 ViewPosition;
-    float Scale;
+    vec4 ViewPositionAndScale;
     vec4 ViewRotation;
 };
 
@@ -27,8 +26,10 @@ void main() {
     TexCoord = aTexCoord;
 
     NormalViewPosition = RotateVectorByQuaternion(instances[gl_InstanceID].ViewRotation, aNormal).xyz;
-    vec3 scaledPosition = vec3(aPos.x * instances[gl_InstanceID].Scale, aPos.y * instances[gl_InstanceID].Scale, aPos.z * instances[gl_InstanceID].Scale);
-    FragViewPosition = RotateVectorByQuaternion(instances[gl_InstanceID].ViewRotation, scaledPosition).xyz + instances[gl_InstanceID].ViewPosition;
+    const float scale = instances[gl_InstanceID].ViewPositionAndScale.w;
+    const vec3 viewPosition = instances[gl_InstanceID].ViewPositionAndScale.xyz;
+    vec3 scaledPosition = vec3(aPos.x * scale, aPos.y * scale, aPos.z * scale);
+    FragViewPosition = RotateVectorByQuaternion(instances[gl_InstanceID].ViewRotation, scaledPosition).xyz + viewPosition;
 
     gl_Position = Perspective * vec4(FragViewPosition, 1.0);
 }

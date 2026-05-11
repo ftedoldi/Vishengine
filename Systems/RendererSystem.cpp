@@ -70,8 +70,7 @@ void RendererSystem::_drawSceneMeshes(const entt::entity viewEntity,
 
     auto makeInstanceData = [](const auto& vt) {
         return InstanceData{
-            vt.Position,
-            vt.Scale,
+            glm::vec4{vt.Position, vt.Scale},
             glm::vec4{vt.Rotation.x, vt.Rotation.y, vt.Rotation.z, vt.Rotation.w}
         };
     };

@@ -31,8 +31,7 @@ struct MeshData {
 };
 
 struct InstanceData {
-    glm::vec3 Position{};
-    float Scale{};
+    glm::vec4 PositionAndScale{};
     glm::vec4 Rotation{};
 };
 
